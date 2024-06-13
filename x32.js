@@ -1,22 +1,24 @@
 const strToArg = (argString) => {
-	if ( parseInt(argString, 10) == argString ) { return { type : 'integer', value : parseInt(argString,10) }}
+	// eslint-disable-next-line eqeqeq
+	if ( parseInt(argString, 10) == argString ) { return { type : 'integer', value : parseInt(argString, 10) }}
 	if ( argString.startsWith('%') ) {
-		return { type : 'bitmask', value : argString.slice(1).split('').map((x) => x === '1')}
+		// eslint-disable-next-line unicorn/no-useless-spread
+		return { type : 'bitmask', value : [...argString.slice(1)].map((x) => x === '1')}
 	}
 
 	return { type : 'string', value : argString }
 }
-const getIndex = (address) => parseInt(address.slice(address.lastIndexOf('/')+1),10)
+const getIndex = (address) => parseInt(address.slice(address.lastIndexOf('/')+1), 10)
 const getCueNum = (num) => {
 	const x = num.toString()
-	return `${x.slice(0,x.length-2)}.${x.slice(-2,-1)}.${x.slice(-1)}`
+	return `${x.slice(0, x.length-2)}.${x.slice(-2, -1)}.${x.slice(-1)}`
 }
 
 const unwrapArgs = (msgObj) => {
 	if ( msgObj.address === '/-show/showfile/show' ) {
 		msgObj.props.subType = 'show'
 		msgObj.props.name   = msgObj.args[0].value
-	} else if ( msgObj.address.match(/\/-show\/showfile\/cue\/\d\d\d/) ) {
+	} else if ( msgObj.address.match(/\/-show\/showfile\/cue\/\d{3}/) ) {
 		msgObj.props.subType    = 'cue'
 		msgObj.props.name       = msgObj.args[1].value
 		msgObj.props.index      = getIndex(msgObj.address)
@@ -24,12 +26,12 @@ const unwrapArgs = (msgObj) => {
 		msgObj.props.cueSkip    = Boolean(msgObj.args[2].value)
 		msgObj.props.cueScene   = msgObj.args[3].value
 		msgObj.props.cueSnippet = msgObj.args[4].value
-	} else if ( msgObj.address.match(/\/-show\/showfile\/scene\/\d\d\d/) ) {
+	} else if ( msgObj.address.match(/\/-show\/showfile\/scene\/\d{3}/) ) {
 		msgObj.props.subType    = 'cue'
 		msgObj.props.name       = msgObj.args[0].value
 		msgObj.props.note       = msgObj.args[1].value
 		msgObj.props.index      = getIndex(msgObj.address)
-	} else if ( msgObj.address.match(/\/-show\/showfile\/snippet\/\d\d\d/) ) {
+	} else if ( msgObj.address.match(/\/-show\/showfile\/snippet\/\d{3}/) ) {
 		msgObj.props.subType    = 'cue'
 		msgObj.props.name       = msgObj.args[0].value
 		msgObj.props.index      = getIndex(msgObj.address)
@@ -41,26 +43,25 @@ const processNodeMessage = (strNodeMessage) => {
 	const argsMessagePart   = strNodeMessage.slice(indexOfFirstSpace+1)
 	const oscMessageObject = {
 		address : strNodeMessage.slice(0, indexOfFirstSpace),
-		type    : 'osc-message-x32-node',
-		origArg : argsMessagePart,
 		args    : [],
+		origArg : argsMessagePart,
+		type    : 'osc-message-x32-node',
 
 		props   : {
-			subType    : null,
-			name       : null,
-			note       : null,
-			index      : null,
 			cueNumber  : null,
 			cueScene   : null,
-			cueSnippet : null,
 			cueSkip    : null,
-		}
+			cueSnippet : null,
+			index      : null,
+			name       : null,
+			note       : null,
+			subType    : null,
+		},
 	}
 
 	let quoteOpen = false
 	let currentArgValue = ''
-	for ( let i = 0; i < argsMessagePart.length; i++) {
-		const thisChar = argsMessagePart[i]
+	for ( const thisChar of argsMessagePart) {
 		if ( thisChar === ' ' && quoteOpen ) {
 			// space, open quotes, add to variable value
 			currentArgValue += thisChar
@@ -80,12 +81,7 @@ const processNodeMessage = (strNodeMessage) => {
 		oscMessageObject.args.push(strToArg(currentArgValue))
 	}
 
-
-
-	// console.log(argsMessagePart)
 	return unwrapArgs(oscMessageObject)
-	// const parts = nodeString.replace(/\n/, '').split(/ (.*)/s)
-	// return [parts[0], parts[1]]
 }
 
 module.exports.processNodeMessage = processNodeMessage

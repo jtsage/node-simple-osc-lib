@@ -1,6 +1,15 @@
+/**
+ * Simple OSC communication for nodeJS
+ * @module simple-osc-lib
+ */
+
+/**
+ * @constant {String} uNULL Unicode null
+ */
 const uNULL     = '\u0000'
 const UNIX_EPOCH = 2208988800
 const TWO_POW_32 = 4294967296
+
 
 /**
  * @property {object}  options                - simple-osc-lib options.
@@ -418,10 +427,10 @@ const normalizeTypeString = (type) => {
 
 /**
  * Encode an OSC Data type - low level function
- * @param {String} type OSC Data type
- * @param {*} value Value for data
- * @param  {...any} args 
- * @returns {Buffer} fixed length buffer
+ * @param {String} type OSC Data type string/char
+ * @param {*} value Value for data (must be null for null types)
+ * @param  {...any} args Additional arguments for the encoder, typically strictMode
+ * @returns {Buffer} buffer padded to 32-bit blocks with NULLs
  */
 const encodeToBuffer = (type, value, ...args) => {
 	const thisType = normalizeTypeString(type)
@@ -431,8 +440,8 @@ const encodeToBuffer = (type, value, ...args) => {
 /**
  * Decode an OSC Data buffer - low level function
  * @param {String} type OSC Data type
- * @param {Buffer} buffer_in 4-byte chunked buffer
- * @param  {...any} args 
+ * @param {Buffer} buffer_in buffer padded to 32-bit blocks with NULLs
+ * @param  {...any} args Additional arguments for the decoder, typically strictMode
  * @returns {Object} Contains the type, value, and unused portion of the buffer
  */
 const decodeToArray = ( type, buffer_in, ...args) => {
@@ -449,11 +458,6 @@ const _decodedBuffer = ( value, buffer_remain, type = 'message', error = null ) 
 	}
 }
 
-/**
- * Exposed for test suite
- * @param {Number} seconds 
- * @returns {Array} unix seconds, fractional seconds
- */
 const calcTimeTagFromSeconds = (seconds) => {
 	const unixSeconds = Math.floor(seconds)
 	const fracSeconds = seconds - unixSeconds
@@ -499,28 +503,28 @@ const _countOccurrences = (haystack, needle) => {
 }
 
 /**
- * Make a timetag from a timestamp
+ * Generate a timetag buffer from a timestamp
  * @param {Number} number timestamp (from epoch)
- * @returns {Buffer} 8 byte buffer
+ * @returns {Buffer} 8 byte / 32 bit buffer
  */
 const generateTimeTagFromTimestamp = (number) => {
 	return encodeToBuffer('t', _buildTimeTagArray(number))
 }
 
 /**
- * Make a timetag from a date instance
+ * Generate a timetag buffer from a date instance
  * @param {Date} date javascript date instance
- * @returns {Buffer} 8 byte buffer
+ * @returns {Buffer} 8 byte / 32 bit buffer
  */
 const generateTimeTagFromDate = (date) => {
 	return encodeToBuffer('t', _buildTimeTagArray(date))
 }
 
 /**
- * Make a timetag for [seconds] in the future
+ * Generate a timetag buffer for [seconds] in the future
  * @param {Number} seconds seconds in the future
  * @param {Date|null} now point to calculate from
- * @returns {Buffer} 8 byte buffer
+ * @returns {Buffer} 8 byte / 32 bit buffer
  */
 const generateTimeTagFromDelta = (seconds, now = null) => {
 	const n = (now !== null ? now : new Date()) / 1000
@@ -569,7 +573,7 @@ const _isBundle = ( buffer_in ) => {
 /**
  * Build a single OSC message buffer
  * @param {Object} oscMessageObject single OSC message object
- * @returns {Buffer} 4 byte chunked buffer
+ * @returns {Buffer} buffer padded to 32-bit blocks with NULLs
  */
 const oscBuildMessage = (oscMessageObject) => {
 	if ( typeof oscMessageObject !== 'object' || typeof oscMessageObject.address === 'undefined' ) {
@@ -590,6 +594,12 @@ const oscBuildMessage = (oscMessageObject) => {
 
 /**
  * Build an OSC bundle buffer
+ * 
+ * `timetag` is a required key, containing a timetag buffer
+ * 
+ * `elements` can contain objects to be passed to oscBuildMessage or 
+ * pre-prepared buffers padded to 32-bit blocks with NULLs
+ * 
  * @param {object} oscBundleObject osc bundle object
  * @returns {Buffer} 4 byte chunked buffer
  */
@@ -622,11 +632,13 @@ const oscBuildBundle = (oscBundleObject) => {
 
 /**
  * Decode a single OSC message.
- * @param {Buffer} buffer_in binary OSC message
- * @param {Boolean} useStrict strict mode
+ * @param {Buffer} buffer_in buffer padded to 32-bit blocks with NULLs
+ * @param {Object} options options
+ * @param {Object} options.strictMode use strict mode
+ * @param {Object} options.messageCallback callback to run on each message
  * @returns {Object} osc-message object
  */
-const oscReadMessage = ( buffer_in, useStrict = options.strictMode ) => {
+const oscReadMessage = ( buffer_in, { useStrict = options.strictMode, messageCallback = null } = {} ) => {
 	if ( ! Buffer.isBuffer(buffer_in) ) {
 		throw new TypeError('buffer expected')
 	}
@@ -641,7 +653,9 @@ const oscReadMessage = ( buffer_in, useStrict = options.strictMode ) => {
 
 	oscMessage.address = thisAddress_array.value
 
-	if ( thisAddress_array.buffer_remain.length === 0 ) { return oscMessage }
+	if ( thisAddress_array.buffer_remain.length === 0 ) {
+		return typeof messageCallback === 'function' ? messageCallback(oscMessage) : oscMessage
+	}
 
 	const thisArgList_array = decodeToArray('s', thisAddress_array.buffer_remain, useStrict)
 
@@ -691,16 +705,18 @@ const oscReadMessage = ( buffer_in, useStrict = options.strictMode ) => {
 
 		buffer_remain = thisArg_array.buffer_remain
 	}
-	return oscMessage
+	return typeof messageCallback === 'function' ? messageCallback(oscMessage) : oscMessage
 }
 
 /**
  * Decode an OSC bundle
- * @param {Buffer} buffer_in binary OSC message
- * @param {Boolean} useStrict strict mode
+ * @param {Buffer} buffer_in buffer padded to 32-bit blocks with NULLs
+ * @param {Object} options options
+ * @param {Object} options.strictMode use strict mode
+ * @param {Object} options.messageCallback callback to run on each message
  * @returns {Object} osc-bundle object
  */
-const oscReadBundle = ( buffer_in, useStrict = options.strictMode ) => {
+const oscReadBundle = ( buffer_in, { useStrict = options.strictMode, messageCallback = null } = {}  ) => {
 	if ( ! Buffer.isBuffer(buffer_in) ) {
 		throw new TypeError('buffer expected')
 	}
@@ -725,7 +741,7 @@ const oscReadBundle = ( buffer_in, useStrict = options.strictMode ) => {
 		const nextMessageSize = decodeToArray('i', buffer_remain)
 		const nextMessage     = nextMessageSize.buffer_remain.subarray(0, nextMessageSize.value)
 
-		bundleObject.elements.push(oscReadPacket(nextMessage))
+		bundleObject.elements.push(oscReadPacket(nextMessage, { useStrict : useStrict, messageCallback : messageCallback }))
 
 		buffer_remain = buffer_remain.subarray(nextMessageSize.value+4)
 	}
@@ -734,12 +750,14 @@ const oscReadBundle = ( buffer_in, useStrict = options.strictMode ) => {
 }
 
 /**
- * Decode an OSC packet.  Useful for when the client can send bundles or messages
- * @param {Buffer} buffer_in binary OSC packet
- * @param {Boolean} useStrict strict mode
- * @returns {Object} osc-bundle object
+ * Decode an OSC packet.  Useful for when the client might send bundles or messages
+ * @param {Buffer} buffer_in buffer padded to 32-bit blocks with NULLs
+ * @param {Object} options options
+ * @param {Object} options.strictMode use strict mode
+ * @param {Object} options.messageCallback callback to run on each message
+ * @returns {Object} osc-bundle object or osc-message object
  */
-const oscReadPacket = ( buffer_in, useStrict = options.strictMode ) => {
+const oscReadPacket = ( buffer_in, { useStrict = options.strictMode, messageCallback = null } = {} ) => {
 	if ( ! Buffer.isBuffer(buffer_in) ) {
 		throw new TypeError('buffer expected')
 	}
@@ -747,9 +765,9 @@ const oscReadPacket = ( buffer_in, useStrict = options.strictMode ) => {
 	if ( buffer_in.size === 0 ) { return null }
 
 	if ( _isBundle(buffer_in) ) {
-		return oscReadBundle(buffer_in, useStrict)
+		return oscReadBundle(buffer_in, { useStrict : useStrict, messageCallback : messageCallback })
 	}
-	return oscReadMessage(buffer_in, useStrict)
+	return oscReadMessage(buffer_in, { useStrict : useStrict, messageCallback : messageCallback })
 }
 
 module.exports = {

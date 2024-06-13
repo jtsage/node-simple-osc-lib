@@ -1,0 +1,135 @@
+# simple-osc-lib
+
+This package provides some node.js utilities for working with [OSC](http://opensoundcontrol.org/), a format for sound and systems control.  
+
+Here we implement the OSC 1.1 specification.  OSC is a transport-independent protocol, so we don't provide any server objects, as you should be able to use OSC over any transport you like.  The most common is probably udp, but tcp is not unheard of.
+
+This package was heavily influenced by the [osc-min](https://github.com/russellmcc/node-osc-min) API
+
+## Differences from osc-min
+
++ no support for the message translation stuff
++ no support for parameter guessing in oscBuildMessage() or oscBuildBundle()
++ added `c` and `r` data types
++ zero-dependency package
+
+## Input types
+
++ `s` :: `string` - string value (String padded to 32 bit block with nulls)
++ `f` :: `float` - numeric value (FloatBE - 32 bits)
++ `d` :: `double` - numeric value (DoubleBE - 64 bits)
++ `i` :: `integer` - numeric value (Int32BE - 32 bits)
++ `b` :: `blob` - node.js Buffer value (Buffer padded to 32 bit block with nulls)
++ `T` :: `true` - no value (0 bits)
++ `F` :: `false` - no value (0 bits)
++ `N` :: `null` - no value (0 bits)
++ `I` :: `bang` - no value (0 bits)
++ `r` :: `color` - RGBA as an array [R(0-255),G,B,A] (4 x UInt8 - 32 bits)
++ `c` :: `char` - Character (Int32BE - 32 bits)
++ `t` :: `timetag` - numeric value (pair of UInt32BE - 64 bits)
++ `A` :: `address` - non-stander string value, with special processing to ensure a valid osc address string (String padded to 32 bit block with nulls)
+
+Note that `type` is always a string - i.e. `"true"` rather than `true`.
+
+## Standard Usage
+
+```javascript
+const osc = require('simple-osc-lib')
+const x32 = require('simple-osc-lib/x32') // X32 specific processing (optional)
+```
+
+### Build an OSC Single Message Buffer for sending
+
+```javascript
+osc.oscBuildMessage({
+    address : '/hello',
+    args    : [
+        { type : 'string', value : 'hi' },
+        { type : 'string', value : 'there' },
+    ],
+})
+```
+
+### Build an OSC Bundle Buffer for sending
+
+```javascript
+const oscMessage1 = { address : '/hello', args : [...] }
+const oscMessage2 = { address : '/goodbye', args : [...] }
+
+// Generate a timetag half a second into the future
+const timeTag = osc.generateTimeTagFromDelta(0.5)
+
+osc.oscBuildBundle({
+    timetag : timeTag,
+    elements : [oscMessage1, oscMessage2],
+})
+```
+
+### Decode an OSC Packet from receiving
+
+```javascript
+
+// messageCallback allows you to inject a pre-processor to the returned types.
+// this is how the x32 extension works.
+
+osc.oscReadPacket(buffer, { strictMode : false, messageCallback : (oscMessage) => {} })
+```
+
+Single message
+
+```json
+{
+    "type": "osc-message",
+    "address": "/goodbye",
+    "args": [
+        { "type": "string", "value": "cruel" },
+        { "type": "string", "value": "world" }
+    ]
+}
+```
+
+Bundle (note that bundles can be nested)
+
+```javascript
+{
+    type     : 'osc-bundle',
+    timetag  : [ /* date Object */ ],
+    elements : [ /* zero or more osc-messages or osc-bundles */ ]
+}
+```
+
+## Return arguments
+
+The type list above gives the text representation of what will appear in the `type` field of the `osc-message`. Additionally, arrays will be nested as such
+
+```javascript
+{
+    "type": "osc-message",
+    "address": "/goodbye",
+    "args": [
+		{ "type": "array", "value": [
+            { "type": "string", "value": "cruel" },
+            { "type": "string", "value": "world" }
+        ]}
+    ]
+}
+```
+
+## timetag Processing of Bundles
+
+This package provides no pre-processing for timetags - they are returned as found, in all circumstances.  The OSC 1.1 spec does not clarify the proper handling of timetags in the past, as different implementations do different things with them. A timetag in the past may mean the bundle should be discarded, or it may mean it should be acted on immediately - this behavior is left to your preference. Please do not assume a received timetag refers to a future event.
+
+## Overriding default options
+
+The options data structure is exported - you can change the values directly in your code.  _Please note:_ this is ineffective in a child process, so you may have to reset the options if forked or pass them. By default, no strict mode options are enabled.
+
+> "The code is more what you'd call 'guidelines' than actual rules."
+>  _– Barbossa, Pirates of the Caribbean_
+
+## Exported Functions and Data Structures
+
+{{>main}}
+
+* * *
+
+&copy; 2024 J.T.Sage - ISC License

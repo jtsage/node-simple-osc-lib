@@ -89,7 +89,7 @@ class x32PreProcessor {
 
 	processNodeMessage( strNodeMessage ) {
 		const indexOfFirstSpace = strNodeMessage.indexOf(' ')
-		const argsMessagePart   = strNodeMessage.slice(indexOfFirstSpace+1)
+		const argsMessagePart   = strNodeMessage.slice(indexOfFirstSpace+1).replace('\n', '')
 		const oscMessageObject = {
 			address      : strNodeMessage.slice(0, indexOfFirstSpace),
 			args         : [],

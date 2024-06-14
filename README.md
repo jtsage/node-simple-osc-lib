@@ -501,6 +501,7 @@ const oscRegular = new osc.simpleOscLib({
 
 `node` messages are specially formatted, and have `node` (no leading slash) as the address. Output from the preprocessor strips the node part, replacing it with a more understandable address, and the results will have a props.subtype of something like `busConfig`
 
+    /-show/prepos/current
     /-show/showfile/cue/###
     /-show/showfile/scene/###
     /-show/showfile/show
@@ -522,6 +523,7 @@ const oscRegular = new osc.simpleOscLib({
 
 ### Standard Message coverage:
 
+    /-show/prepos/current
     /auxin/##/config/name
     /auxin/##/mix/fader
     /auxin/##/mix/on

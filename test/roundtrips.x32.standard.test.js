@@ -13,7 +13,7 @@ const oscX32 = new osc.simpleOscLib({
 
 describe('x32 extras - standard addresses', () => {
 	test.each([
-		['/-show/prepos/current', 1, 'integer', false, 0],
+		['/-show/prepos/current', 1, 'integer', true, 2],
 		['/-show/prepos', 1, 'integer', false, 0],
 		['/bus/14/mix/fader', 0.4878, 'float', true, 4],
 		['/dca/1/fader', 0.7498, 'float', true, 3],

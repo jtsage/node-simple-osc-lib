@@ -13,6 +13,7 @@ const oscX32 = new osc.simpleOscLib({
 
 describe('x32 node extras', () => {
 	test.each([
+		[2, 40, '/-show/prepos/current -1'],
 		[2, 39, '/-show/showfile/show "MyShow" 0 0 0 0 0 0 0 0 0 0 "2.08"'],
 		[7, 125, '/-show/showfile/cue/000 1200 "Cue Idx0 Num1200" 0 -1 -1 0 1 0 0'],
 		[7, 124, '/-show/showfile/cue/001 1210 "Cue Idx1 Num1210" 0 1 -1 0 1 0 0'],

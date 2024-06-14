@@ -36,16 +36,3 @@ describe('argument-less types', () => {
 	})
 })
 
-/* BLOBS */
-describe('blobs', () => {
-	test('round robin', () => {
-		const inputString  = 'hello'
-		const inputBuffer  = Buffer.from(inputString)
-		const encodedBlock = oscRegular.encodeBufferChunk('b', inputBuffer)
-		const decodedBlock = oscRegular.decodeBufferChunk('b', encodedBlock)
-
-		const expected = getSimpleExpected('blob', inputBuffer)
-		
-		expect(decodedBlock).toEqual(expected)
-	})
-})

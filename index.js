@@ -430,6 +430,9 @@ class simpleOscLib {
 	 * @returns {Object} Contains the type, value, and unused portion of the buffer
 	 */
 	decodeBufferChunk( type, buffer_in ) {
+		if ( this.options.strictMode && buffer_in.length % 4 !== 0 ) {
+			throw new OSCSyntaxError('buffer is not a 4-byte multiple')
+		}
 		const thisType = this.getTypeCharFromStringOrChar(type)
 		return this.#operations[thisType].toArray(buffer_in)
 	}
@@ -634,6 +637,10 @@ class simpleOscLib {
 
 		if ( buffer_in.size === 0 ) { return null }
 
+		if ( this.options.strictMode && buffer_in.length % 4 !== 0 ) {
+			throw new OSCSyntaxError('buffer is not a 4-byte multiple')
+		}
+
 		if ( this.#isBundle(buffer_in) ) {
 			return this.readBundle(buffer_in)
 		}
@@ -691,7 +698,7 @@ class simpleOscLib {
 			throw new TypeError('buffer expected')
 		}
 
-		if ( this.options.useStrict && buffer_in.length % 4 !== 0 ) {
+		if ( this.options.strictMode && buffer_in.length % 4 !== 0 ) {
 			throw new OSCSyntaxError('buffer is not a 4-byte multiple')
 		}
 
@@ -722,7 +729,7 @@ class simpleOscLib {
 			const thisItem = thisArgList_array.value[i]
 			if ( i === 0 ) {
 				if ( thisItem === ',' ) { continue }
-				if ( this.options.useStrict ) {
+				if ( this.options.strictMode ) {
 					throw new OSCSyntaxError('argument list requires leading comma')
 				}
 			}

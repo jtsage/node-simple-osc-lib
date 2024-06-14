@@ -16,7 +16,10 @@
     "url" : "https://github.com/jtsage/node-simple-osc-lib.git"
   },
   "bugs": "https://github.com/jtsage/node-simple-osc-lib/issues/",
-  "author": "J.T.Sage",
+  "author": {
+    "name": "J.T.Sage",
+    "email": "jtsage@gmail.com"
+  },
   "devDependencies": {
     "@babel/core": "^7.24.7",
     "@babel/eslint-parser": "^7.24.7",

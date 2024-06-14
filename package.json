@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "jest",
-    "docs": "npx jsdoc-to-markdown --template API.hbs index.js x32.js > API.md"
+    "docs": "npx jsdoc-to-markdown --template readme_template.hbs index.js x32.js > README.md"
   },
   "keywords": [
     "osc"

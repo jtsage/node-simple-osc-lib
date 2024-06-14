@@ -1,5 +1,5 @@
-const osc = require('./index.js')
-const pre = require('./lib/x32_preprocessors.js')
+// const osc = require('./index.js')
+const data = require('./lib/x32_preprocessors.js')
 
 /**
  * Extended processing for Behringer X32/M32 consoles.
@@ -9,213 +9,166 @@ const pre = require('./lib/x32_preprocessors.js')
  * @module simple-osc-lib/x32
  */
 
-const strToArg = (argString) => {
-	// eslint-disable-next-line eqeqeq
-	if ( parseInt(argString, 10) == argString ) { return { type : 'integer', value : parseInt(argString, 10) }}
-	if ( argString.startsWith('%') ) {
-		// eslint-disable-next-line unicorn/no-useless-spread
-		return { type : 'bitmask', value : [...argString.slice(1)].map((x) => x === '1')}
-	}
-
-	return { type : 'string', value : argString }
-}
-
-const getIndex  = (x) => parseInt(x.slice(x.lastIndexOf('/')+1), 10)
-const getCueNum = (x) => `${x.slice(0, x.length-2)}.${x.slice(-2, -1)}.${x.slice(-1)}`
-
 
 /**
  * Convert a string or number decibel representation to a floating point number
  * @param {String|Number} db_in string or float representation of decibel level +10->-90
  * @returns {Number} floating point representation of decibel level 0->1
  */
-const dB2Float = pre.dB2Float
+const dB2Float = data.dB2Float
 
 /**
  * Convert floating point 0->1 to decibel level
  * @param {Number} f 0->1 floating point level
  * @returns {String} text level [+/-##.# dB]
  */
-const float2dB = pre.float2dB
+const float2dB = data.float2dB
 
-/**
- * This object is used to pre-process those messages that have an address of `node` or `/node`.
- * 
- * Note that the X32 family does not use a leading slash on node messages it sends.
- * @property {Object} nodeArgMap node message coverage
- * @property {RegExp} nodeArgMap[key].regex match regex for this message type
- * @property {Function} nodeArgMap[key].props function that returns an object that is saved to the `props` key of the original message object
- * @example
- * nodeArgMap.show = {
- *     regex : /^\/-show\/showfile\/show$/,
- *     props : (msgObj) => ({
- *         name       : msgObj.args[0].value,
- *         subType    : 'show',
- *     }),
- * }
- */
-const nodeArgMap = {
-	cue : {
-		regEx : /^\/-show\/showfile\/cue\/\d{3}$/,
-		props : (msgObj) => ({
-			cueNumber  : getCueNum(msgObj.args[0].value.toString()),
-			cueScene   : msgObj.args[3].value,
-			cueSkip    : Boolean(msgObj.args[2].value),
-			cueSnippet : msgObj.args[4].value,
-			index      : getIndex(msgObj.address),
-			name       : msgObj.args[1].value,
-			subType    : 'cue',
-		}),
-	},
-	dca : {
-		// '/dca/2 OFF   -32.5',
-		// dca/[number] mute level
-		regEx : /^\/dca\/\d$/,
-		props : (msgObj) => ({
-			index   : getIndex(msgObj.address),
-			isOn    : {
-				bool : msgObj.args[0].value === 'ON',
-				text : msgObj.args[0].value,
-			},
-			level   : {
-				float : dB2Float(msgObj.args[1].value),
-				db    : `${msgObj.args[1].value} dB`,
-			},
-			subType : 'dcaMuteLevel',
-		}),
-	},
-	dcaConfig : {
-		// '/dca/2/config "THEATER" 1 RD',
-		// dca/[number]/config name ...unknown...
-		regEx : /^\/dca\/\d\/config$/,
-		props : (msgObj) => ({
-			index   : parseInt(msgObj.address.slice(5, 6)),
-			name    : msgObj.args[0].value,
-			subType : 'dcaName',
-		}),
-	},
-	scene : {
-		regEx : /^\/-show\/showfile\/scene\/\d{3}$/,
-		props : (msgObj) => ({
-			index      : getIndex(msgObj.address),
-			name       : msgObj.args[0].value,
-			note       : msgObj.args[1].value,
-			subType    : 'scene',
-		}),
-	},
-	show : {
-		regEx : /^\/-show\/showfile\/show$/,
-		props : (msgObj) => ({
-			name       : msgObj.args[0].value,
-			subType    : 'show',
-		}),
-	},
-	snippet : {
-		regEx : /^\/-show\/showfile\/snippet\/\d{3}$/,
-		props : (msgObj) => ({
-			index      : getIndex(msgObj.address),
-			name       : msgObj.args[0].value,
-			subType    : 'snippet',
-		}),
-	},
-}
 
-const unwrapX32Args = (msgObj) => {
-	for ( const thisTest of Object.values(nodeArgMap) ) {
-		if ( msgObj.address.match(thisTest.regEx) ) {
-			msgObj.wasProcessed = true
-			msgObj.props        = thisTest.props(msgObj)
-			break
-		}
-	}
-	return msgObj
-}
-
-/**
- * Decode an OSC packet.  Useful for when the client might send bundles or messages.
- * 
- * This version runs the X32 preprocessor on received messages
- * @param {Buffer} buffer_in buffer padded to 32-bit blocks with NULLs
- * @param {Object} options options
- * @param {Object} options.strictMode use strict mode
- * @param {Object} options.messageCallback callback to run on each message
- * @returns {Object} osc-bundle object or osc-message object
- */
-const oscReadPacket = ( buffer_in, { useStrict = osc.options.strictMode, messageCallback = null } = {} ) => {
-	return osc.oscReadPacket( buffer_in, {
-		useStrict       : useStrict,
-		messageCallback : (oscMessage) => {
-			return typeof messageCallback === 'function' ?
-				messageCallback(x32PacketProcessor(oscMessage)) :
-				x32PacketProcessor(oscMessage)
-		},
-	})
-}
-
-/**
- * This is the processor for X32 style messages
- * 
- * @param {Object} oscMessage an OSC message object
- * @returns {Object} an OSC message object with additional data
- */
-const x32PacketProcessor = (oscMessage) => {
-	if ( typeof oscMessage !== 'object' && oscMessage.address !== null ) { return oscMessage }
-
-	oscMessage.wasProcessed = false
-
-	if ( oscMessage.address === 'node' || oscMessage.address === '/node' ) {
-		return processNodeMessage(oscMessage.args[0].value)
-	}
-	return processRegularMessage(oscMessage)
-}
-
-const processRegularMessage = (oscMessage) => {
-	return oscMessage
-}
-
-const processNodeMessage = (strNodeMessage) => {
-	const indexOfFirstSpace = strNodeMessage.indexOf(' ')
-	const argsMessagePart   = strNodeMessage.slice(indexOfFirstSpace+1)
-	const oscMessageObject = {
-		address     : strNodeMessage.slice(0, indexOfFirstSpace),
-		args        : [],
-		origNodeArg : argsMessagePart,
-		props       : {},
-		type        : 'osc-message-x32-extend',
+class x32PreProcessor {
+	#activeTypes = {
+		node    : [],
+		regular : [],
 	}
 
-	let quoteOpen = false
-	let currentArgValue = ''
-	for ( const thisChar of argsMessagePart) {
-		if ( thisChar === ' ' && quoteOpen ) {
-			// space, open quotes, add to variable value
-			currentArgValue += thisChar
-		} else if ( thisChar === ' ' && !quoteOpen ) {
-			// space, closed quotes, commit variable
-			if ( currentArgValue !== '' ) {
-				oscMessageObject.args.push(strToArg(currentArgValue))
-			}
-			currentArgValue = ''
-		} else if ( thisChar === '"' ) {
-			// quote, flip open status
-			quoteOpen = !quoteOpen
+	/**
+	 * @param {object}  options                    - x32 Preprocessor options.
+	 * @param {Boolean} options.activeNodeTypes    - Active node message preprocessors from lib/x32_preprocessors (or 'all')
+	 * @param {String}  options.activeRegularTypes - Active regular message preprocessors from lib/x32_preprocessors (or 'all')
+	 */
+	constructor({activeNodeTypes = null, activeRegularTypes = null} = {}) {
+		if ( activeNodeTypes === null || activeNodeTypes === 'all' ) {
+			this.#activeTypes.node = Object.keys(data.node)
+		} else if ( Array.isArray(activeNodeTypes) ) {
+			this.#activeTypes.node = activeNodeTypes
 		} else {
-			// add anything else to current
-			currentArgValue += thisChar
+			throw new TypeError('expected array of node types')
+		}
+
+		if ( activeRegularTypes === null || activeRegularTypes === 'all' ) {
+			this.#activeTypes.regular = Object.keys(data.regular)
+		} else if ( Array.isArray(activeRegularTypes) ) {
+			this.#activeTypes.regular = activeRegularTypes
+		} else {
+			throw new TypeError('expected array of regular types')
 		}
 	}
-	if ( currentArgValue !== '' ) {
-		oscMessageObject.args.push(strToArg(currentArgValue))
+
+	/**
+	 * This is the processor for X32 style messages
+	 * 
+	 * @param {Object} oscMessage an OSC message object
+	 * @returns {Object} an OSC message object with additional data
+	 * @example
+	 * const osc     = require('simple-osc-lib')
+	 * const osc_x32 = require('simple-osc-lib/x32')
+	 * 
+	 * const x32Pre = new osc_x32.x32PreProcessor({
+	 *     activeNodeTypes : 'all',
+	 *     activeRegularTypes : 'all',
+	 * })
+	 * 
+	 * const oscRegular = new osc.simpleOscLib({
+	 *     preprocessor : (msg) => x32Pre.readMessage(msg),
+	 * })
+	 */
+	readMessage( oscMessage ) {
+		if ( typeof oscMessage !== 'object' && oscMessage.address !== null ) { return oscMessage }
+
+		oscMessage.wasProcessed = false
+
+		if ( oscMessage.address === 'node' || oscMessage.address === '/node' ) {
+			return this.processNodeMessage(oscMessage.args[0].value)
+		}
+		return this.processRegularMessage(oscMessage)
 	}
 
-	return unwrapX32Args(oscMessageObject)
+	processRegularMessage( oscMessage ) {
+		return this.#doArgs_regular(oscMessage)
+	}
+
+	processNodeMessage( strNodeMessage ) {
+		const indexOfFirstSpace = strNodeMessage.indexOf(' ')
+		const argsMessagePart   = strNodeMessage.slice(indexOfFirstSpace+1)
+		const oscMessageObject = {
+			address      : strNodeMessage.slice(0, indexOfFirstSpace),
+			args         : [],
+			origNodeArg  : argsMessagePart,
+			props        : {},
+			type         : 'osc-message-x32-extend',
+			wasProcessed : false,
+		}
+
+		let quoteOpen = false
+		let currentArgValue = ''
+		for ( const thisChar of argsMessagePart) {
+			if ( thisChar === ' ' && quoteOpen ) {
+				// space, open quotes, add to variable value
+				currentArgValue += thisChar
+			} else if ( thisChar === ' ' && !quoteOpen ) {
+				// space, closed quotes, commit variable
+				if ( currentArgValue !== '' ) {
+					oscMessageObject.args.push(this.#strToArg(currentArgValue))
+				}
+				currentArgValue = ''
+			} else if ( thisChar === '"' ) {
+				// quote, flip open status
+				if ( quoteOpen && currentArgValue === '' ) {
+					// catch empty strings
+					oscMessageObject.args.push(this.#strToArg(currentArgValue))
+				}
+				quoteOpen = !quoteOpen
+			} else {
+				// add anything else to current
+				currentArgValue += thisChar
+			}
+		}
+		if ( currentArgValue !== '' ) {
+			oscMessageObject.args.push(this.#strToArg(currentArgValue))
+		}
+
+		return this.#doArgs_node(oscMessageObject)
+	}
+
+
+	#doArgs_node(msgObj) {
+		for ( const thisTestName of this.#activeTypes.node ) {
+			if ( msgObj.address.match(data.node[thisTestName].regEx) ) {
+				msgObj.wasProcessed  = true
+				msgObj.props         = data.node[thisTestName].props(msgObj)
+				msgObj.props.subtype = `node-${thisTestName}`
+				break
+			}
+		}
+		return msgObj
+	}
+
+	#doArgs_regular(msgObj) {
+		for ( const thisTestName of this.#activeTypes.regular ) {
+			if ( msgObj.address.match(data.regular[thisTestName].regEx) ) {
+				msgObj.wasProcessed  = true
+				msgObj.props         = data.regular[thisTestName].props(msgObj)
+				msgObj.props.subtype = thisTestName
+				break
+			}
+		}
+		return msgObj
+	}
+
+	#strToArg( argString ) {
+		// eslint-disable-next-line eqeqeq
+		if ( parseInt(argString, 10) == argString && !argString.endsWith('.0')) { return { type : 'integer', value : parseInt(argString, 10) }}
+		if ( argString.startsWith('%') ) {
+			// eslint-disable-next-line unicorn/no-useless-spread
+			return { type : 'bitmask', value : [...argString.slice(1)].map((x) => x === '1')}
+		}
+	
+		return { type : 'string', value : argString }
+	}
 }
 
 module.exports = {
 	dB2Float           : dB2Float,
 	float2dB           : float2dB,
-	oscReadPacket      : oscReadPacket,
-	x32PacketProcessor : x32PacketProcessor,
-
-	nodeArgMap : nodeArgMap,
+	x32PreProcessor    : x32PreProcessor,
 }

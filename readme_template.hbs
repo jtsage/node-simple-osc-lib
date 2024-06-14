@@ -34,14 +34,15 @@ Note that `type` is always a string - i.e. `"true"` rather than `true`.
 ## Standard Usage
 
 ```javascript
-const osc = require('simple-osc-lib')
-const x32 = require('simple-osc-lib/x32') // X32 specific processing (optional)
+const osc     = require('simple-osc-lib')
+
+const oscRegular = new osc.simpleOscLib( /* options */)
 ```
 
 ### Build an OSC Single Message Buffer for sending
 
 ```javascript
-osc.oscBuildMessage({
+const buffer = oscRegular.buildMessage({
     address : '/hello',
     args    : [
         { type : 'string', value : 'hi' },
@@ -57,9 +58,9 @@ const oscMessage1 = { address : '/hello', args : [...] }
 const oscMessage2 = { address : '/goodbye', args : [...] }
 
 // Generate a timetag half a second into the future
-const timeTag = osc.generateTimeTagFromDelta(0.5)
+const timeTag = oscRegular.getTimeTagBufferFromDelta(0.5)
 
-osc.oscBuildBundle({
+const buffer = oscRegular.buildBundle({
     timetag : timeTag,
     elements : [oscMessage1, oscMessage2],
 })
@@ -68,22 +69,18 @@ osc.oscBuildBundle({
 ### Decode an OSC Packet from receiving
 
 ```javascript
-
-// messageCallback allows you to inject a pre-processor to the returned types.
-// this is how the x32 extension works.
-
-osc.oscReadPacket(buffer, { strictMode : false, messageCallback : (oscMessage) => {} })
+const oscMessage = oscRegular.readPacket(buffer)
 ```
 
 Single message
 
-```json
+```javascript
 {
-    "type": "osc-message",
-    "address": "/goodbye",
-    "args": [
-        { "type": "string", "value": "cruel" },
-        { "type": "string", "value": "world" }
+    type    : osc-message,
+    address : /goodbye,
+    args: [
+        { type : 'string', value : 'cruel' },
+        { type : 'string', value : 'world' }
     ]
 }
 ```
@@ -104,13 +101,13 @@ The type list above gives the text representation of what will appear in the `ty
 
 ```javascript
 {
-    "type": "osc-message",
-    "address": "/goodbye",
-    "args": [
-		{ "type": "array", "value": [
-            { "type": "string", "value": "cruel" },
-            { "type": "string", "value": "world" }
-        ]}
+    type    : osc-message,
+    address : /goodbye,
+    args: [
+        { type : 'array',  value : [
+            { type : 'string', value : 'cruel' },
+            { type : 'string', value : 'world' },
+        ]},
     ]
 }
 ```
@@ -121,7 +118,18 @@ This package provides no pre-processing for timetags - they are returned as foun
 
 ## Overriding default options
 
-The options data structure is exported - you can change the values directly in your code.  _Please note:_ this is ineffective in a child process, so you may have to reset the options if forked or pass them. By default, no strict mode options are enabled.
+Options are set when initializing the class - they can be accessed or changed at any time by accessing the `options` key.
+
++ __asciiOnly__ - Limit strings to ASCII characters.
++ __blockCharacter__ - Character to delineate 4-byte blocks in debug output (or '')
++ __debugCharacter__ - Character to replace NULLs in debug output.
++ __preprocessor__ - osc-message processor, take a single argument of an osc-message.  Only run on individual messages.
++ __strictAddress__ - Use strict address mode (all string rules, must begin with slash).
++ __strictMode__ - Use strict mode.
+
+By default, no strict mode options are enabled.
+
+The preprocessor can be used as a callback for each message received.  See section below for an example
 
 > "The code is more what you'd call 'guidelines' than actual rules."
 >  _– Barbossa, Pirates of the Caribbean_
@@ -130,6 +138,66 @@ The options data structure is exported - you can change the values directly in y
 
 {{>main}}
 
-* * *
+## X32 Pre-Processing
+
+The X32 version of the oscMessage processor adds some additional data, found in the `props` key.
+
+Additionally the `wasProcessed` will be set true if the message was covered.
+
+The following example enables all current X32 extra processing - if you are only interesting in a subset you can set `activeNodeTypes` and `activeRegularTypes` to only process what you care about.
+
+### Example
+
+```javascript
+const osc     = require('simple-osc-lib')
+const osc_x32 = require('simple-osc-lib/x32') // X32 specific processing (optional)
+
+const x32Pre = new osc_x32.x32PreProcessor({
+	activeNodeTypes : 'all',
+	activeRegularTypes : 'all',
+})
+
+const oscRegular = new osc.simpleOscLib({
+	preprocessor : (msg) => x32Pre.readMessage(msg),
+})
+```
+
+### `node` Message coverage:
+
+`node` messages are specially formatted, and have `node` (no leading slash) as the address. Output from the preprocessor strips the node part, replacing it with a more understandable address, and the results will have a props.subtype of something like `busConfig`
+
+    /-show/showfile/cue/###
+    /-show/showfile/scene/###
+    /-show/showfile/show
+    /-show/showfile/snippet/###
+    /auxin/##/config
+    /auxin/##/mix
+    /bus/##/config
+    /bus/##/mix
+    /ch/##/mix
+    /ch/02/config
+    /dca/#
+    /dca/#/config
+    /main/m/config
+    /main/m/mix
+    /main/st/config
+    /main/st/mix
+    /mtx/##/config
+    /mtx/##/mix
+
+### Standard Message coverage:
+
+    /auxin/##/config/name
+    /auxin/##/mix/fader
+    /auxin/##/mix/on
+    /ch/##/config/name
+    /ch/##/mix/fader
+    /ch/##/mix/on
+    /bus/##/config/name
+    /bus/##/mix/fader
+    /bus/##/mix/on
+    /dca/#/config/name
+    /dca/#/fader
+    /dca/#/on
 
 &copy; 2024 J.T.Sage - ISC License

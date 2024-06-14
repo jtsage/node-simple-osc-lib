@@ -3,24 +3,26 @@ const osc = require('../index.js')
 const getSimpleExpected = (type, value, emptyBuffer = true) => {
 	return {
 		buffer_remain : emptyBuffer ? Buffer.alloc(0) : expect.any(Buffer),
-		error         : null,
 		type          : type,
 		value         : value,
 	}
 }
 
+const oscRegular = new osc.simpleOscLib()
+const oscStrict  = new osc.simpleOscLib({strictMode : true, strictAddress : true, asciiOnly : true})
+
 describe('boilerplate', () => {
 	test('invalid encode type (char)', () => {
-		expect(() => osc.encodeToBuffer('x', '')).toThrow(RangeError)
+		expect(() => oscRegular.encodeBufferChunk('x', '')).toThrow(RangeError)
 	})
 	test('invalid encode type (string)', () => {
-		expect(() => osc.encodeToBuffer('badType', '')).toThrow(RangeError)
+		expect(() => oscRegular.encodeBufferChunk('badType', '')).toThrow(RangeError)
 	})
 	test('invalid decode type (char)', () => {
-		expect(() => osc.decodeToArray('x', Buffer.alloc(0))).toThrow(RangeError)
+		expect(() => oscRegular.decodeBufferChunk('x', Buffer.alloc(0))).toThrow(RangeError)
 	})
 	test('invalid decode type (string)', () => {
-		expect(() => osc.decodeToArray('badType', Buffer.alloc(0))).toThrow(RangeError)
+		expect(() => oscRegular.decodeBufferChunk('badType', Buffer.alloc(0))).toThrow(RangeError)
 	})
 })
 
@@ -28,21 +30,21 @@ describe('boilerplate', () => {
 describe('string type', () => {
 	describe('encode', () => {
 		test('low level encode string : non-string fail', () => {
-			expect(() => osc.encodeToBuffer('s', 69)).toThrow(TypeError)
+			expect(() => oscRegular.encodeBufferChunk('s', 69)).toThrow(TypeError)
 		})
 
 		test('low level encode string : unicode pass in normal mode', () => {
-			expect(() => osc.encodeToBuffer('s', '❤️')).not.toThrow(osc.OSCSyntaxError)
+			expect(() => oscRegular.encodeBufferChunk('s', '❤️')).not.toThrow(osc.OSCSyntaxError)
 		})
 
 		test('low level encode string : unicode fail in ascii only mode', () => {
-			expect(() => osc.encodeToBuffer('s', '❤️', true)).toThrow(osc.OSCSyntaxError)
+			expect(() => oscStrict.encodeBufferChunk('s', '❤️')).toThrow(osc.OSCSyntaxError)
 		})
 
 		test('low level encode string : expected length met', () => {
 			const expected = Buffer.from(`hello world${osc.null}`)
 
-			expect(osc.encodeToBuffer('s', 'hello world')).toEqual(expected)
+			expect(oscRegular.encodeBufferChunk('s', 'hello world')).toEqual(expected)
 		})
 	})
 
@@ -51,39 +53,39 @@ describe('string type', () => {
 			const input = Buffer.from(`hello world${osc.null}`)
 			const expected = getSimpleExpected('string', 'hello world')
 
-			expect(osc.decodeToArray('s', input)).toEqual(expected)
+			expect(oscRegular.decodeBufferChunk('s', input)).toEqual(expected)
 		})
 
 		test('low level decode string : fail on non buffer', () => {
 			const input = 'hi there'
 
-			expect(() => osc.decodeToArray('s', input, true)).toThrow(TypeError)
+			expect(() => oscRegular.decodeBufferChunk('s', input, true)).toThrow(TypeError)
 		})
 
 		test('low level decode string : pass invalid end padding (non strict)', () => {
 			const input = Buffer.from(`hello world${osc.null}${osc.null}`)
 			const expected = getSimpleExpected('string', 'hello world', false)
 
-			expect(osc.decodeToArray('s', input)).toEqual(expected)
+			expect(oscRegular.decodeBufferChunk('s', input)).toEqual(expected)
 		})
 
 		test('low level decode string : fail on invalid end padding (strict)', () => {
 			const input = Buffer.from(`he${osc.null}`)
 
-			expect(() => osc.decodeToArray('s', input, true)).toThrow(osc.OSCSyntaxError)
+			expect(() => oscStrict.decodeBufferChunk('s', input)).toThrow(osc.OSCSyntaxError)
 		})
 
 		test('low level decode string : fail on invalid interior padding (strict)', () => {
 			const input = Buffer.from(`he${osc.null}ll${osc.null}${osc.null}${osc.null}`)
 
-			expect(() => osc.decodeToArray('s', input, true)).toThrow(osc.OSCSyntaxError)
+			expect(() => oscStrict.decodeBufferChunk('s', input)).toThrow(osc.OSCSyntaxError)
 		})
 
 		test('low level decode string : pair of strings', () => {
 			const input = Buffer.from(`hel${osc.null}bye${osc.null}`)
 			const expected = getSimpleExpected('string', 'hel', false)
 
-			expect(osc.decodeToArray('s', input, true)).toEqual(expected)
+			expect(oscRegular.decodeBufferChunk('s', input, true)).toEqual(expected)
 		})
 	})
 })
@@ -92,23 +94,23 @@ describe('string type', () => {
 describe('integer type', () => {
 	describe('encode', () => {
 		test('low level encode integer : string fail', () => {
-			expect(() => osc.encodeToBuffer('i', 'hi')).toThrow(TypeError)
+			expect(() => oscRegular.encodeBufferChunk('i', 'hi')).toThrow(TypeError)
 		})
 
 		test('low level encode integer : float fail', () => {
-			expect(() => osc.encodeToBuffer('i', 69.69)).toThrow(TypeError)
+			expect(() => oscRegular.encodeBufferChunk('i', 69.69)).toThrow(TypeError)
 		})
 
 		test('low level encode integer : good positive integer', () => {
 			const expected = Buffer.alloc(4)
 			expected.writeInt32BE(69)
-			expect(osc.encodeToBuffer('i', 69)).toEqual(expected)
+			expect(oscRegular.encodeBufferChunk('i', 69)).toEqual(expected)
 		})
 
 		test('low level encode integer : good negative integer', () => {
 			const expected = Buffer.alloc(4)
 			expected.writeInt32BE(-23)
-			expect(osc.encodeToBuffer('i', -23)).toEqual(expected)
+			expect(oscRegular.encodeBufferChunk('i', -23)).toEqual(expected)
 		})
 	})
 
@@ -118,7 +120,7 @@ describe('integer type', () => {
 			input.writeInt32BE(69)
 			const expected = getSimpleExpected('integer', 69)
 
-			expect(osc.decodeToArray('i', input)).toEqual(expected)
+			expect(oscRegular.decodeBufferChunk('i', input)).toEqual(expected)
 		})
 
 		test('low level decode integer : good negative integer', () => {
@@ -126,19 +128,19 @@ describe('integer type', () => {
 			input.writeInt32BE(-23)
 			const expected = getSimpleExpected('integer', -23)
 
-			expect(osc.decodeToArray('i', input)).toEqual(expected)
+			expect(oscRegular.decodeBufferChunk('i', input)).toEqual(expected)
 		})
 
 		test('low level decode integer : fail on non buffer', () => {
 			const input = 'hi there'
 
-			expect(() => osc.decodeToArray('i', input, true)).toThrow(TypeError)
+			expect(() => oscRegular.decodeBufferChunk('i', input, true)).toThrow(TypeError)
 		})
 
 		test('low level decode integer : fail on buffer underrun', () => {
 			const input = Buffer.alloc(3)
 			
-			expect(() => osc.decodeToArray('i', input)).toThrow(osc.OSCSyntaxError)
+			expect(() => oscRegular.decodeBufferChunk('i', input)).toThrow(osc.OSCSyntaxError)
 		})
 
 		test('low level decode integer : good integer pair', () => {
@@ -148,7 +150,7 @@ describe('integer type', () => {
 			number2.writeInt32BE(23)
 			const expected = getSimpleExpected('integer', -69, false)
 
-			expect(osc.decodeToArray('i', Buffer.concat([number1, number2]))).toEqual(expected)
+			expect(oscRegular.decodeBufferChunk('i', Buffer.concat([number1, number2]))).toEqual(expected)
 		})
 	})
 })
@@ -157,13 +159,13 @@ describe('integer type', () => {
 describe('float type', () => {
 	describe('encode', () => {
 		test('low level encode float : string fail', () => {
-			expect(() => osc.encodeToBuffer('f', 'hi')).toThrow(TypeError)
+			expect(() => oscRegular.encodeBufferChunk('f', 'hi')).toThrow(TypeError)
 		})
 
 		test('low level encode float : good float', () => {
 			const expected = Buffer.alloc(4)
 			expected.writeFloatBE(69.69)
-			expect(osc.encodeToBuffer('f', 69.69)).toEqual(expected)
+			expect(oscRegular.encodeBufferChunk('f', 69.69)).toEqual(expected)
 		})
 	})
 	describe('decode', () => {
@@ -172,19 +174,19 @@ describe('float type', () => {
 			input.writeFloatBE(69.69)
 			const expected = getSimpleExpected('float', expect.closeTo(69.69))
 
-			expect(osc.decodeToArray('f', input)).toEqual(expected)
+			expect(oscRegular.decodeBufferChunk('f', input)).toEqual(expected)
 		})
 
 		test('low level decode float : fail on non buffer', () => {
 			const input = 'hi there'
 
-			expect(() => osc.decodeToArray('f', input, true)).toThrow(TypeError)
+			expect(() => oscRegular.decodeBufferChunk('f', input, true)).toThrow(TypeError)
 		})
 
 		test('low level decode float : fail on buffer underrun', () => {
 			const input = Buffer.alloc(3)
 			
-			expect(() => osc.decodeToArray('f', input)).toThrow(osc.OSCSyntaxError)
+			expect(() => oscRegular.decodeBufferChunk('f', input)).toThrow(osc.OSCSyntaxError)
 		})
 
 		test('low level decode integer : good float pair', () => {
@@ -194,7 +196,7 @@ describe('float type', () => {
 			number2.writeFloatBE(23.23)
 			const expected = getSimpleExpected('float', expect.closeTo(69.69), false)
 
-			expect(osc.decodeToArray('f', Buffer.concat([number1, number2]))).toEqual(expected)
+			expect(oscRegular.decodeBufferChunk('f', Buffer.concat([number1, number2]))).toEqual(expected)
 		})
 	})
 })
@@ -204,13 +206,13 @@ describe('float type', () => {
 describe('double type', () => {
 	describe('encode', () => {
 		test('low level encode double : string fail', () => {
-			expect(() => osc.encodeToBuffer('d', 'hi')).toThrow(TypeError)
+			expect(() => oscRegular.encodeBufferChunk('d', 'hi')).toThrow(TypeError)
 		})
 
 		test('low level encode double : good double', () => {
 			const expected = Buffer.alloc(8)
 			expected.writeDoubleBE(3.40282347e+40)
-			expect(osc.encodeToBuffer('d', 3.40282347e+40)).toEqual(expected)
+			expect(oscRegular.encodeBufferChunk('d', 3.40282347e+40)).toEqual(expected)
 		})
 	})
 	describe('decode', () => {
@@ -219,19 +221,19 @@ describe('double type', () => {
 			input.writeDoubleBE(3.40282347e+40)
 			const expected = getSimpleExpected('double', expect.closeTo(3.40282347e+40))
 
-			expect(osc.decodeToArray('d', input)).toEqual(expected)
+			expect(oscRegular.decodeBufferChunk('d', input)).toEqual(expected)
 		})
 
 		test('low level decode double : fail on non buffer', () => {
 			const input = 'hi there'
 
-			expect(() => osc.decodeToArray('d', input, true)).toThrow(TypeError)
+			expect(() => oscRegular.decodeBufferChunk('d', input, true)).toThrow(TypeError)
 		})
 
 		test('low level decode double : fail on buffer underrun', () => {
 			const input = Buffer.alloc(7)
 			
-			expect(() => osc.decodeToArray('d', input)).toThrow(osc.OSCSyntaxError)
+			expect(() => oscRegular.decodeBufferChunk('d', input)).toThrow(osc.OSCSyntaxError)
 		})
 
 	})
@@ -248,7 +250,7 @@ describe('argument-less types', () => {
 			['I', 'bang'],
 		])('low level encode [%s] %s : empty zero length buffer', (a, _b) => {
 			const expected = Buffer.alloc(0)
-			expect(osc.encodeToBuffer(a, 'ignored value')).toEqual(expected)
+			expect(oscRegular.encodeBufferChunk(a)).toEqual(expected)
 		})
 	})
 	describe('decode', () => {
@@ -260,7 +262,7 @@ describe('argument-less types', () => {
 		])('low level decode [%s] %s', (a, _b, expectType) => {
 			const input    = Buffer.alloc(0)
 			const expected = getSimpleExpected(expectType, null)
-			expect(osc.decodeToArray(a, input)).toEqual(expected)
+			expect(oscRegular.decodeBufferChunk(a, input)).toEqual(expected)
 		})
 	})
 })
@@ -270,8 +272,8 @@ describe('blobs', () => {
 	test('round robin', () => {
 		const inputString  = 'hello'
 		const inputBuffer  = Buffer.from(inputString)
-		const encodedBlock = osc.encodeToBuffer('b', inputBuffer)
-		const decodedBlock = osc.decodeToArray('b', encodedBlock)
+		const encodedBlock = oscRegular.encodeBufferChunk('b', inputBuffer)
+		const decodedBlock = oscRegular.decodeBufferChunk('b', encodedBlock)
 
 		const expected = getSimpleExpected('blob', inputBuffer)
 		
@@ -284,17 +286,17 @@ describe('blobs', () => {
 describe('char type', () => {
 	describe('encode', () => {
 		test('low level encode char : multi-char fail', () => {
-			expect(() => osc.encodeToBuffer('c', 'hi')).toThrow(TypeError)
+			expect(() => oscRegular.encodeBufferChunk('c', 'hi')).toThrow(TypeError)
 		})
 
 		test('low level encode char : non-ascii fail', () => {
-			expect(() => osc.encodeToBuffer('c', '❤️')).toThrow(TypeError)
+			expect(() => oscRegular.encodeBufferChunk('c', '❤️')).toThrow(TypeError)
 		})
 
 		test('low level encode char : good character', () => {
 			const expected = Buffer.alloc(4)
 			expected.writeUInt32BE('a'.charCodeAt(0))
-			expect(osc.encodeToBuffer('c', 'a')).toEqual(expected)
+			expect(oscRegular.encodeBufferChunk('c', 'a')).toEqual(expected)
 		})
 	})
 
@@ -304,19 +306,19 @@ describe('char type', () => {
 			input.writeUInt32BE('a'.charCodeAt(0))
 			const expected = getSimpleExpected('char', 'a')
 
-			expect(osc.decodeToArray('c', input)).toEqual(expected)
+			expect(oscRegular.decodeBufferChunk('c', input)).toEqual(expected)
 		})
 
 		test('low level decode char : fail on non buffer', () => {
 			const input = 'hi there'
 
-			expect(() => osc.decodeToArray('c', input, true)).toThrow(TypeError)
+			expect(() => oscRegular.decodeBufferChunk('c', input, true)).toThrow(TypeError)
 		})
 
 		test('low level decode char : fail on buffer underrun', () => {
 			const input = Buffer.alloc(3)
 			
-			expect(() => osc.decodeToArray('c', input)).toThrow(osc.OSCSyntaxError)
+			expect(() => oscRegular.decodeBufferChunk('c', input)).toThrow(osc.OSCSyntaxError)
 		})
 	})
 })
@@ -325,8 +327,8 @@ describe('char type', () => {
 describe('color', () => {
 	test('round robin', () => {
 		const inputArray   = [204, 170, 136, 255]
-		const encodedBlock = osc.encodeToBuffer('r', inputArray)
-		const decodedBlock = osc.decodeToArray('r', encodedBlock)
+		const encodedBlock = oscRegular.encodeBufferChunk('r', inputArray)
+		const decodedBlock = oscRegular.decodeBufferChunk('r', encodedBlock)
 
 		const expected = getSimpleExpected('color', inputArray)
 		

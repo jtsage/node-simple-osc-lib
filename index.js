@@ -542,15 +542,16 @@ class simpleOscLib {
 		printString += `:: ${blockChar}`
 	
 		while ( consumeBuffer.length !== 0 ) {
-			const thisChunk = consumeBuffer.slice(0, 4)
+			const thisChunk = consumeBuffer.subarray(0, 4)
 			const thisChunkUTF = thisChunk.toString('utf8')
 			// eslint-disable-next-line no-control-regex
-			if ( /[\x01-\x1F\x7F-\x9F]/.test(thisChunkUTF) ) {
+			if ( /[\x01-\x09\x0B-\x1F\x7F-\x9F]/.test(thisChunkUTF) ) {
 				printString += '[..]'
 			} else {
-				printString += thisChunk.toString('utf8').replaceAll('\u0000', rep_char)
+				// eslint-disable-next-line no-control-regex
+				printString += thisChunk.toString('utf8').replaceAll(/[^\u0000\x20-\x7E]/g, '¿').replaceAll('\u0000', rep_char)
 			}
-			consumeBuffer = consumeBuffer.slice(4)
+			consumeBuffer = consumeBuffer.subarray(4)
 			printString += blockChar
 		}
 		return printString

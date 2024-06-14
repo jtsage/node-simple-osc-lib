@@ -48,12 +48,12 @@ describe('timetag type', () => {
 	})
 	describe('decode', () => {
 		test('low level decode timetag : good timetag from date', () => {
-			const testDate = new Date(2000, 3, 25, 13, 30, 0, 250)
-			const timeTagArray = oscRegular.getTimeTagArrayFromUnknownType(testDate)
+			const testDateMS = Date.UTC(2000, 3, 25, 13, 30, 0, 250)
+			const timeTagArray = oscRegular.getTimeTagArrayFromUnknownType(testDateMS/1000)
 			const input = Buffer.alloc(8)
 			input.writeUInt32BE(timeTagArray[0])
 			input.writeUInt32BE(timeTagArray[1], 4)
-			const expected = getSimpleExpected('timetag', [3165672600, 1073741824])
+			const expected = getSimpleExpected('timetag', [3165658200, 1073741824])
 
 			expect(oscRegular.decodeBufferChunk('t', input)).toEqual(expected)
 		})

@@ -28,6 +28,7 @@ class simpleOscLib {
 
 	#stringTypeToCharMap = {
 		bang    : 'I',
+		blob    : 'b',
 		char    : 'c',
 		color   : 'r',
 		double  : 'd',
@@ -600,7 +601,7 @@ class simpleOscLib {
 		if ( ! Buffer.isBuffer(oscBundleObject.timetag) ) {
 			throw new TypeError('expected timetag buffer (use generateTimeTagFrom*)')
 		}
-		if ( ! Array.isArray(oscBundleObject.elements) ) {
+		if ( ! Array.isArray(oscBundleObject.elements) || oscBundleObject.elements.length === 0 ) {
 			throw new RangeError('unable to send empty bundles')
 		}
 		const sendBuffer = [
@@ -753,11 +754,118 @@ class simpleOscLib {
 		}
 		return this.options.preprocessor(oscMessage)
 	}
+
+	/**
+	 * Build an osc message in a chainable way.
+	 * 
+	 * Chainable methods available - for more complex messages, use buildMessage
+	 * 
+	 * ```javascript
+	 * myMessage
+	 *     .i(20)
+	 *     .integer(20)
+	 *     .f(1.0)
+	 *     .float(1.0)
+	 *     .s('hello')
+	 *     .string('world')
+	 *     .b(buffer)
+	 *     .blob(buffer)
+	 * ```
+	 * 
+	 * To get a transmittable buffer, call `myMessage.toBuffer()`
+	 * 
+	 * To get a human readable version of the buffer, call `myMessage.toString()`
+	 * @param {String} address address to send to
+	 * @returns oscBuilder instance
+	 * @example
+	 * const myBuffer = oscLib.messageBuilder('/hello').integer(10).float(2.0).string('world').toBuffer()
+	 */
+	messageBuilder(address) {
+		return new oscBuilder(this, address)
+	}
+}
+
+class oscBuilder {
+	#oscLib   = null
+	#address  = null
+	#argStack = []
+
+	constructor(oscLib, address) {
+		if ( ! (oscLib instanceof simpleOscLib) ) {
+			throw new TypeError('simpleOscLib instance required')
+		}
+		if ( typeof address !== 'string' || address.length === 0 ) {
+			throw new TypeError('address required')
+		}
+
+		this.#oscLib  = oscLib
+		this.#address = address
+	}
+
+	toString() {
+		return this.#oscLib.printableBuffer(this.toBuffer())
+	}
+
+	toBuffer() {
+		return this.#oscLib.buildMessage({
+			address : this.#address,
+			args : this.#argStack,
+		})
+	}
+
+	i(value) { return this.integer(value) }
+	integer(value) {
+		if ( typeof value !== 'number' || ! Number.isInteger(value) ) {
+			throw new TypeError('integer required')
+		}
+		this.#argStack.push({
+			type  : 'integer',
+			value : value,
+		})
+		return this
+	}
+
+	f(value) { return this.float(value) }
+	float(value) {
+		if ( typeof value !== 'number' ) {
+			throw new TypeError('float required')
+		}
+		this.#argStack.push({
+			type  : 'float',
+			value : value,
+		})
+		return this
+	}
+
+	s(value) { return this.string(value) }
+	string(value) {
+		if ( typeof value !== 'string' ) {
+			throw new TypeError('string required')
+		}
+		this.#argStack.push({
+			type  : 'string',
+			value : value,
+		})
+		return this
+	}
+
+	b(value) { return this.blob(value) }
+	blob(value) {
+		if ( ! Buffer.isBuffer(value) ) {
+			throw new TypeError('buffer required')
+		}
+		this.#argStack.push({
+			type  : 'blob',
+			value : value,
+		})
+		return this
+	}
 }
 
 
 module.exports = {
-	simpleOscLib   : simpleOscLib,
+	null           : uNULL,
+	oscBuilder     : oscBuilder,
 	OSCSyntaxError : OSCSyntaxError,
-	null : uNULL,
+	simpleOscLib   : simpleOscLib,
 }

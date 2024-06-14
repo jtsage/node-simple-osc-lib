@@ -173,6 +173,7 @@ Simple OSC communication for nodeJS
         * [.readPacket(buffer_in)](#module_simple-osc-lib..simpleOscLib+readPacket) ⇒ <code>Object</code>
         * [.readBundle(buffer_in)](#module_simple-osc-lib..simpleOscLib+readBundle) ⇒ <code>Object</code>
         * [.readMessage(buffer_in, options)](#module_simple-osc-lib..simpleOscLib+readMessage) ⇒ <code>Object</code>
+        * [.messageBuilder(address)](#module_simple-osc-lib..simpleOscLib+messageBuilder) ⇒
 
 <a name="module_simple-osc-lib..simpleOscLib"></a>
 
@@ -195,6 +196,7 @@ Simple OSC communication for nodeJS
     * [.readPacket(buffer_in)](#module_simple-osc-lib..simpleOscLib+readPacket) ⇒ <code>Object</code>
     * [.readBundle(buffer_in)](#module_simple-osc-lib..simpleOscLib+readBundle) ⇒ <code>Object</code>
     * [.readMessage(buffer_in, options)](#module_simple-osc-lib..simpleOscLib+readMessage) ⇒ <code>Object</code>
+    * [.messageBuilder(address)](#module_simple-osc-lib..simpleOscLib+messageBuilder) ⇒
 
 <a name="new_module_simple-osc-lib..simpleOscLib_new"></a>
 
@@ -382,6 +384,22 @@ Decode a single OSC message.
 | options.strictMode | <code>Object</code> | use strict mode |
 | options.messageCallback | <code>Object</code> | callback to run on each message |
 
+<a name="module_simple-osc-lib..simpleOscLib+messageBuilder"></a>
+
+#### simpleOscLib.messageBuilder(address) ⇒
+Build an osc message in a chainable way.Chainable methods available - for more complex messages, use buildMessage```javascriptmyMessage    .i(20)    .integer(20)    .f(1.0)    .float(1.0)    .s('hello')    .string('world')    .b(buffer)    .blob(buffer)```To get a transmittable buffer, call `myMessage.toBuffer()`To get a human readable version of the buffer, call `myMessage.toString()`
+
+**Kind**: instance method of [<code>simpleOscLib</code>](#module_simple-osc-lib..simpleOscLib)  
+**Returns**: oscBuilder instance  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| address | <code>String</code> | address to send to |
+
+**Example**  
+```js
+const myBuffer = oscLib.messageBuilder('/hello').integer(10).float(2.0).string('world').toBuffer()
+```
 <a name="module_simple-osc-lib/x32"></a>
 
 ## simple-osc-lib/x32

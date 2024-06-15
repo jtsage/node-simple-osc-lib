@@ -1,3 +1,5 @@
+![GitHub package.json version](https://img.shields.io/github/package-json/v/jtsage/node-simple-osc-lib) ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/jtsage/node-simple-osc-lib/node.js.yml) ![Coverage](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fjtsage%2Fnode-simple-osc-lib%2Fmain%2Fcoverage%2Fcoverage-summary.json&query=%24.total.lines.pct&suffix=%25&label=coverage)
+
 # simple-osc-lib
 
 This package provides some node.js utilities for working with [OSC](http://opensoundcontrol.org/), a format for sound and systems control.  

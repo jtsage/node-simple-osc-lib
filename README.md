@@ -499,44 +499,53 @@ const oscRegular = new osc.simpleOscLib({
 })
 ```
 
-### `node` Message coverage:
+### Standard OSC Messages by subtype
 
-`node` messages are specially formatted, and have `node` (no leading slash) as the address. Output from the preprocessor strips the node part, replacing it with a more understandable address, and the results will have a props.subtype of something like `busConfig`
++ __cueCurrent__ :: /-show/prepos/current
++ __showMode__ :: /-prefs/show_control
++ __auxLevel__ :: /auxin/[##]/mix/fader
++ __auxMute__ :: /auxin/[##]/mix/on
++ __auxName__ :: /auxin/[##]/config/name
++ __busLevel__ :: /bus/[##]/mix/fader
++ __busMute__ :: /bus/[##]/mix/on
++ __busName__ :: /bus/[##]/config/name
++ __chanLevel__ :: /ch/[##]/mix/fader
++ __chanMute__ :: /ch/[##]/mix/on
++ __chanName__ :: /ch/[##]/config/name
++ __dcaLevel__ :: /dca/[#]/fader
++ __dcaMute__ :: /dca/[#]/on
++ __dcaName__ :: /dca/[#]/config/name
++ __mainLevel__ :: /main/st/mix/fader
++ __mainMute__ :: /main/st/mix/on
++ __mainName__ :: /main/st/config/name
++ __monoLevel__ :: /main/m/mix/fader
++ __monoMute__ :: /main/m/mix/on
++ __monoName__ :: /main/m/config/name
++ __mtxLevel__ :: /mtx/[##]/mix/fader
++ __mtxMute__ :: /mtx/[##]/mix/on
++ __mtxName__ :: /mtx/[##]/config/name
 
-    /-show/prepos/current
-    /-show/showfile/cue/###
-    /-show/showfile/scene/###
-    /-show/showfile/show
-    /-show/showfile/snippet/###
-    /auxin/##/config
-    /auxin/##/mix
-    /bus/##/config
-    /bus/##/mix
-    /ch/##/mix
-    /ch/02/config
-    /dca/#
-    /dca/#/config
-    /main/m/config
-    /main/m/mix
-    /main/st/config
-    /main/st/mix
-    /mtx/##/config
-    /mtx/##/mix
+### `node` OSC Messages by subtype
 
-### Standard Message coverage:
-
-    /-show/prepos/current
-    /auxin/##/config/name
-    /auxin/##/mix/fader
-    /auxin/##/mix/on
-    /ch/##/config/name
-    /ch/##/mix/fader
-    /ch/##/mix/on
-    /bus/##/config/name
-    /bus/##/mix/fader
-    /bus/##/mix/on
-    /dca/#/config/name
-    /dca/#/fader
-    /dca/#/on
++ __auxConfig__ :: node /auxin/[##]/config
++ __auxMix__ :: node /auxin/[##]/mix
++ __busConfig__ :: node /bus/[##]/config
++ __busMix__ :: node /bus/[##]/mix
++ __chanConfig__ :: node /ch/[##]/config
++ __chanMix__ :: node /ch/[##]/mix
++ __cue__ :: node /-show/showfile/cue/[###]
++ __cueCurrent__ :: node /-show/prepos/current
++ __dcaConfig__ :: node /dca/[#]/config
++ __dcaMix__ :: node /dca/[#]
++ __mainConfig__ :: node /main/st/config
++ __mainMix__ :: node /main/st/mix
++ __monoConfig__ :: node /main/m/config
++ __monoMix__ :: node /main/m/mix
++ __mtxConfig__ :: node /mtx/[##]/config
++ __mtxMix__ :: node /mtx/[##]/mix
++ __scene__ :: node /-show/showfile/scene/[###]
++ __show__ :: node /-show/showfile/show
++ __showMode__ :: node /-prefs/show_control
++ __snippet__ :: node /-show/showfile/snippet/[###]
 
 &copy; 2024 J.T.Sage - ISC License

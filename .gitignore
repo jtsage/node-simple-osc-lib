@@ -2,3 +2,4 @@ node_modules/
 .DS_Store
 coverage/*
 !coverage/coverage-summary.json
+build/osc-coverage.hbs

@@ -164,44 +164,7 @@ const oscRegular = new osc.simpleOscLib({
 })
 ```
 
-### `node` Message coverage:
+{{>osc-coverage}}
 
-`node` messages are specially formatted, and have `node` (no leading slash) as the address. Output from the preprocessor strips the node part, replacing it with a more understandable address, and the results will have a props.subtype of something like `busConfig`
-
-    /-show/prepos/current
-    /-show/showfile/cue/###
-    /-show/showfile/scene/###
-    /-show/showfile/show
-    /-show/showfile/snippet/###
-    /auxin/##/config
-    /auxin/##/mix
-    /bus/##/config
-    /bus/##/mix
-    /ch/##/mix
-    /ch/02/config
-    /dca/#
-    /dca/#/config
-    /main/m/config
-    /main/m/mix
-    /main/st/config
-    /main/st/mix
-    /mtx/##/config
-    /mtx/##/mix
-
-### Standard Message coverage:
-
-    /-show/prepos/current
-    /auxin/##/config/name
-    /auxin/##/mix/fader
-    /auxin/##/mix/on
-    /ch/##/config/name
-    /ch/##/mix/fader
-    /ch/##/mix/on
-    /bus/##/config/name
-    /bus/##/mix/fader
-    /bus/##/mix/on
-    /dca/#/config/name
-    /dca/#/fader
-    /dca/#/on
 
 &copy; 2024 J.T.Sage - ISC License

@@ -6,7 +6,9 @@
   "scripts": {
     "test:coverage": "npm test -- --coverage",
     "test": "jest",
-    "docs": "npx jsdoc-to-markdown --template readme_template.hbs index.js x32.js > README.md"
+    "docs:coverage": "node build/getOSCCoverage",
+    "docs:jsdoc" : "npx jsdoc-to-markdown --partial build/osc-coverage.hbs --template build/readme_template.hbs index.js x32.js > README.md",
+    "docs" : "npm run docs:coverage && npm run docs:jsdoc"
   },
   "keywords": [
     "osc"

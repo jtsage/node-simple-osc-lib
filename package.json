@@ -1,6 +1,6 @@
 {
   "name": "simple-osc-lib",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Simple to use modern Open Sound Control implementation",
   "main": "index.js",
   "scripts": {

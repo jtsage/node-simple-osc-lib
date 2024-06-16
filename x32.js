@@ -1,4 +1,12 @@
-// const osc = require('./index.js')
+/*      _                 _                                  _ _ _     
+ *     (_)               | |                                | (_) |    
+ *  ___ _ _ __ ___  _ __ | | ___ ______ ___  ___  ___ ______| |_| |__  
+ * / __| | '_ ` _ \| '_ \| |/ _ \______/ _ \/ __|/ __|______| | | '_ \ 
+ * \__ \ | | | | | | |_) | |  __/     | (_) \__ \ (__       | | | |_) |
+ * |___/_|_| |_| |_| .__/|_|\___|      \___/|___/\___|      |_|_|_.__/ 
+ *     | |                                                 
+ *     |_|   X32 Preprocessor */
+
 const data = require('./lib/x32_preprocessors.js')
 
 /**
@@ -8,7 +16,6 @@ const data = require('./lib/x32_preprocessors.js')
  * the Behringer uses.
  * @module simple-osc-lib/x32
  */
-
 
 /**
  * Convert a string or number decibel representation to a floating point number

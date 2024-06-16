@@ -1,6 +1,6 @@
-![GitHub package.json version](https://img.shields.io/github/package-json/v/jtsage/node-simple-osc-lib) ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/jtsage/node-simple-osc-lib/node.js.yml) ![Coverage](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fjtsage%2Fnode-simple-osc-lib%2Fmain%2Fcoverage%2Fcoverage-summary.json&query=%24.total.lines.pct&suffix=%25&label=coverage)
-
 # simple-osc-lib
+
+![GitHub package.json version](https://img.shields.io/github/package-json/v/jtsage/node-simple-osc-lib) ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/jtsage/node-simple-osc-lib/node.js.yml) ![Coverage](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fjtsage%2Fnode-simple-osc-lib%2Fmain%2Fcoverage%2Fcoverage-summary.json&query=%24.total.lines.pct&suffix=%25&label=coverage)
 
 This package provides some node.js utilities for working with [OSC](http://opensoundcontrol.org/), a format for sound and systems control.  
 
@@ -26,7 +26,7 @@ This package was heavily influenced by the [osc-min](https://github.com/russellm
 + `F` :: `false` - no value (0 bits)
 + `N` :: `null` - no value (0 bits)
 + `I` :: `bang` - no value (0 bits)
-+ `r` :: `color` - RGBA as an array [R(0-255),G,B,A] (4 x UInt8 - 32 bits)
++ `r` :: `color` - rgbA as an array [R(0-255),G,B,A] (4 x UInt8 - 32 bits)
 + `c` :: `char` - Character (Int32BE - 32 bits)
 + `t` :: `timetag` - numeric value (pair of UInt32BE - 64 bits)
 + `A` :: `address` - non-stander string value, with special processing to ensure a valid osc address string (String padded to 32 bit block with nulls)
@@ -134,7 +134,7 @@ By default, no strict mode options are enabled.
 The preprocessor can be used as a callback for each message received.  See section below for an example
 
 > "The code is more what you'd call 'guidelines' than actual rules."
->  _– Barbossa, Pirates of the Caribbean_
+> _--– Barbossa, Pirates of the Caribbean_
 
 ## Exported Functions and Data Structures
 
@@ -175,6 +175,7 @@ Simple OSC communication for nodeJS
         * [.readPacket(buffer_in)](#module_simple-osc-lib..simpleOscLib+readPacket) ⇒ <code>Object</code>
         * [.readBundle(buffer_in)](#module_simple-osc-lib..simpleOscLib+readBundle) ⇒ <code>Object</code>
         * [.readMessage(buffer_in, options)](#module_simple-osc-lib..simpleOscLib+readMessage) ⇒ <code>Object</code>
+        * [.redirectMessage(buffer_in, newAddress, callBack)](#module_simple-osc-lib..simpleOscLib+redirectMessage) ⇒
         * [.messageBuilder(address)](#module_simple-osc-lib..simpleOscLib+messageBuilder) ⇒
 
 <a name="module_simple-osc-lib..simpleOscLib"></a>
@@ -198,6 +199,7 @@ Simple OSC communication for nodeJS
     * [.readPacket(buffer_in)](#module_simple-osc-lib..simpleOscLib+readPacket) ⇒ <code>Object</code>
     * [.readBundle(buffer_in)](#module_simple-osc-lib..simpleOscLib+readBundle) ⇒ <code>Object</code>
     * [.readMessage(buffer_in, options)](#module_simple-osc-lib..simpleOscLib+readMessage) ⇒ <code>Object</code>
+    * [.redirectMessage(buffer_in, newAddress, callBack)](#module_simple-osc-lib..simpleOscLib+redirectMessage) ⇒
     * [.messageBuilder(address)](#module_simple-osc-lib..simpleOscLib+messageBuilder) ⇒
 
 <a name="new_module_simple-osc-lib..simpleOscLib_new"></a>
@@ -386,6 +388,20 @@ Decode a single OSC message.
 | options.strictMode | <code>Object</code> | use strict mode |
 | options.messageCallback | <code>Object</code> | callback to run on each message |
 
+<a name="module_simple-osc-lib..simpleOscLib+redirectMessage"></a>
+
+#### simpleOscLib.redirectMessage(buffer_in, newAddress, callBack) ⇒
+Readdress an existing message, including the old address as the first or last string argumentCallback detailsThe callback takes a function that receives the following parameters+ newAddressBuffer <Buffer> new destination+ oldAddressBuffer <Buffer> original address as a string buffer+ argumentList <Array> original argument list+ argumentBuffer <Buffer> existing argument buffer.This should return a valid osc buffer.  To simply redirect the existing to a new address you could do something like```javascriptfunction redirectCallback(newAddressBuffer, _oldAddressBuffer, argumentList, argumentBuffer) {    return Buffer.concat([        newAddressBuffer,        oscLibInstance.encodeToBuffer('s', `,${argumentList.join('')}`),        argumentBuffer    ])}```
+
+**Kind**: instance method of [<code>simpleOscLib</code>](#module_simple-osc-lib..simpleOscLib)  
+**Returns**: Buffer  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| buffer_in | <code>Buffer</code> | original message buffer |
+| newAddress | <code>String</code> | address for the new message |
+| callBack | <code>function</code> | callback to apply - must return a buffer |
+
 <a name="module_simple-osc-lib..simpleOscLib+messageBuilder"></a>
 
 #### simpleOscLib.messageBuilder(address) ⇒
@@ -481,7 +497,7 @@ The X32 version of the oscMessage processor adds some additional data, found in 
 
 Additionally the `wasProcessed` will be set true if the message was covered.
 
-The following example enables all current X32 extra processing - if you are only interesting in a subset you can set `activeNodeTypes` and `activeRegularTypes` to only process what you care about.
+The following example enables all current X32 extra processing - if you are only interesting in a subset you can set to only process what you care about.
 
 ### Example
 
@@ -494,7 +510,7 @@ const osc_x32 = require('simple-osc-lib/x32') // X32 specific processing (option
 const x32Pre = new osc_x32.x32PreProcessor('all')
 
 const oscRegular = new osc.simpleOscLib({
-	preprocessor : (msg) => x32Pre.readMessage(msg),
+    preprocessor : (msg) => x32Pre.readMessage(msg),
 })
 ```
 
@@ -549,5 +565,141 @@ const oscRegular = new osc.simpleOscLib({
 + __showCue__ :: node /-show/showfile/cue/[###]
 + __showScene__ :: node /-show/showfile/scene/[###]
 + __showSnippet__ :: node /-show/showfile/snippet/[###]
+### Example Post-Process - Faders
+
+These items will exist in the returned osc-message under the `props` key.  The `props.subtype` rule will be the name of the operation matched.
+
+```javascript
+const all = {
+    index   : 1, 
+    subtype : 'someLevel', // operation name
+    zIndex : '01', // fader text index, 1-8 for dca, 01-?? for all else
+}
+
+const someLevel = {
+    ...all,
+    level   : {
+        float : 0.75,
+        db    : '0 dB',
+    },
+}
+
+const someMute = {
+    ..all,
+    isOn    : {
+        bool : false,
+        int  : 0,
+        text : 'OFF',
+    }
+}
+
+const someName = {
+    ...all,
+    name : 'NAME',
+}
+
+const someMix = {
+    ...all,
+    ...someMute,
+    ...someLevel,
+}
+```
+
+### Example Post-Process - Show Control
+
+These items will exist in the returned osc-message under the `props` key.  The `props.subtype` rule will be the name of the operation matched.
+
+```javascript
+
+const showMode = {
+    index   : 0,
+    name    : 'CUES',
+}
+
+const showCue = {
+    cueNumber  : '1.0.0',
+    cueScene   : -1,
+    cueSkip    : false,
+    cueSnippet : -1,
+    index      : 1,
+    name       : 'Cue Name',
+}
+
+const showScene = {
+    index      : 1,
+    name       : 'Scene Name',
+    note       : 'Scene Note',
+}
+
+const showSnippet = {
+    index      : 1,
+    name       : 'Snippet Name',
+},
+
+// showCueDirty, showSceneDirty and showSnippetDirty
+// all have empty properties.
+```
+
+## OSC Redirection
+
+You can use the `redirectMessage()` function to redirect OSC messages without processing the arguments.  This is particularly useful if you need to deal with unknown types.  By default, the original address is included as the first argument of type string
+
+```js
+const newBuffer = oscLib.redirectMessage(originalBuffer, '/newTown')
+```
+
+It also takes a callback - this example rewrites the first argument, an integer to be the square of that integer, and includes the original address as a second argument.  Any additional original arguments would be discarded.  Not included in this sample is error checking
+
+```js
+// square the first argument which is an integer, add the address to the end
+function redirectCallback (bufferNewAddress, bufferOldAddress, argList, argBuffer) {
+    // Arguments:
+    //  - bufferNewAddress is an 4-byte padded buffer from the address you provided
+    //                     with all of the usual error checking.
+    //
+    //  - bufferOldAddress is a 4-byte padded buffer from the original address.
+    //
+    //                     Note: this is re-encoded from text, so the usual error checking
+    //                     on the original address will take place.  If for some reason
+    //                     you need this to not occur, consider using the low-level
+    //                     functions directly.
+    //
+    //  - argList          is an Array of the original argument list.  It is not checked for
+    //                     array nesting errors *or* valid type definitions. The leading comma
+    //                     from the input buffer is stripped, but in strict mode a lack of that
+    //                     comma will throw an error.
+    //
+    //  - argBuffer        the original unaltered argument buffer. In practice, this is the 
+    //                     message packet minus `bufferOldAddress` and a 4-byte padded buffer from
+    //                     the original argument list.
+
+
+    // really, we should check that the first item of argList is "i", the integer
+    // type, and run catch blocks on both this decodeBufferChunk() and the
+    // below encodeBufferChunk()
+
+    const firstArgument = oscLib.decodeBufferChunk('i', argBuffer)
+
+
+    // return a valid OSC buffer.  simple-osc-lib does not look at this value
+    // during the redirectMessage process, so you could fail to return a buffer
+    // or return nothing at all.
+    //
+    // This function could potentially be used for out-of-band processing to read
+    // and act on message packets that simple-osc-lib doesn't understand, or you
+    // wish to handle yourself.
+
+    return Buffer.concat([
+        bufferNewAddress,
+        oscLib.encodeBufferChunk('s', ',is'),
+        oscLib.encodeBufferChunk('i', firstArgument.value * firstArgument.value),
+        bufferOldAddress
+    ])
+}
+
+const newBuffer = oscLib.redirectMessage(originalBuffer, '/newTown', redirectCallback)
+```
+
+This function could potentially be used for out-of-band processing to read and act on message packets that simple-osc-lib doesn't understand, or you wish to handle yourself - although it does do error checking on the original address. For help in handling the message completely on your own, you will need to look at `.decodeBufferChunk()` and `.encodeBufferChunk()`
 
 &copy; 2024 J.T.Sage - ISC License

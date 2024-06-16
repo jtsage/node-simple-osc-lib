@@ -1,3 +1,12 @@
+/*      _                 _                                  _ _ _     
+ *     (_)               | |                                | (_) |    
+ *  ___ _ _ __ ___  _ __ | | ___ ______ ___  ___  ___ ______| |_| |__  
+ * / __| | '_ ` _ \| '_ \| |/ _ \______/ _ \/ __|/ __|______| | | '_ \ 
+ * \__ \ | | | | | | |_) | |  __/     | (_) \__ \ (__       | | | |_) |
+ * |___/_|_| |_| |_| .__/|_|\___|      \___/|___/\___|      |_|_|_.__/ 
+ *     | |                                                 
+ *     |_|   Simple OSC Communication Library */
+
 /**
  * Simple OSC communication for nodeJS
  * @module simple-osc-lib
@@ -544,30 +553,37 @@ class simpleOscLib {
 	 * @param {String} blockChar Character to delineate 4-byte blocks in buffer (or '')
 	 * @returns {String}
 	 */
-	printableBuffer( buffer_in, replacementCharacter = null, fourByteMarkerCharacter = null ) {
+	printableBuffer( buffer_in, replacementCharacter = null, fourByteMarkerCharacter = null, skipSize = null ) {
 		if ( ! Buffer.isBuffer(buffer_in) ) {
 			throw new TypeError('buffer expected')
 		}
+		const doSize    = skipSize !== true
 		const rep_char  = replacementCharacter === null ? this.options.debugCharacter : replacementCharacter
 		const blockChar = fourByteMarkerCharacter === null ? this.options.blockCharacter : fourByteMarkerCharacter
 
 		let consumeBuffer = buffer_in
-		let printString   = `${`[${buffer_in.length}]`.padEnd(6, ' ')}:: ${blockChar}`
+		const printBuffer = []
+
+		if ( doSize ) {
+			printBuffer.push(`${`[${buffer_in.length}]`.padEnd(6, ' ')}:: ${blockChar}`)
+		} else {
+			printBuffer.push(blockChar)
+		}
 	
 		while ( consumeBuffer.length !== 0 ) {
 			const thisChunk = consumeBuffer.subarray(0, 4)
 			const thisChunkUTF = thisChunk.toString('utf8')
 			// eslint-disable-next-line no-control-regex
 			if ( /[\x01-\x09\x0B-\x1F\x7F-\x9F]/.test(thisChunkUTF) ) {
-				printString += '[..]'
+				printBuffer.push('[..]')
 			} else {
 				// eslint-disable-next-line no-control-regex
-				printString += thisChunk.toString('utf8').replaceAll(/[^\u0000\x20-\x7E]/g, '¿').replaceAll('\u0000', rep_char)
+				printBuffer.push(thisChunk.toString('utf8').replaceAll(/[^\u0000\x20-\x7E]/g, '¿').replaceAll('\u0000', rep_char))
 			}
 			consumeBuffer = consumeBuffer.subarray(4)
-			printString += blockChar
+			printBuffer.push(blockChar)
 		}
-		return printString
+		return printBuffer.join('')
 	}
 
 	/**
@@ -767,6 +783,93 @@ class simpleOscLib {
 			buffer_remain = thisArg_array.buffer_remain
 		}
 		return this.options.preprocessor(oscMessage)
+	}
+
+	/**
+	 * Readdress an existing message, including the old address as the first or last string argument
+	 * 
+	 * Callback details
+	 * 
+	 * The callback takes a function that receives the following parameters
+	 * + newAddressBuffer <Buffer> new destination
+	 * + oldAddressBuffer <Buffer> original address as a string buffer
+	 * + argumentList <Array> original argument list
+	 * + argumentBuffer <Buffer> existing argument buffer.
+	 * 
+	 * This should return a valid osc buffer.  To simply redirect the existing to a new address you could do something like
+	 * ```javascript
+	 * function redirectCallback(newAddressBuffer, _oldAddressBuffer, argumentList, argumentBuffer) {
+	 *     return Buffer.concat([
+	 *         newAddressBuffer,
+	 *         oscLibInstance.encodeToBuffer('s', `,${argumentList.join('')}`),
+	 *         argumentBuffer
+	 *     ])
+	 * }
+	 * ```
+	 * @param {Buffer} buffer_in original message buffer
+	 * @param {String} newAddress address for the new message
+	 * @param {Function} callBack callback to apply - must return a buffer
+	 * @returns Buffer
+	 */
+	redirectMessage ( buffer_in, newAddress, callBack ) {
+		if ( ! Buffer.isBuffer(buffer_in) ) {
+			throw new TypeError('buffer expected')
+		}
+
+		if ( this.options.strictMode && buffer_in.length % 4 !== 0 ) {
+			throw new OSCSyntaxError('buffer is not a 4-byte multiple')
+		}
+
+		const newAddressBuffer = this.encodeBufferChunk('A', newAddress)
+
+		const originalOSC = { address : null, argArray : null, argBuffer : null }
+
+		const thisAddress_array = this.decodeBufferChunk('A', buffer_in)
+
+		originalOSC.address = thisAddress_array.value
+
+		if ( thisAddress_array.buffer_remain.length === 0 ) {
+			// no arguments, add old address and dump
+			return Buffer.concat([
+				newAddressBuffer,
+				this.encodeBufferChunk('s', ',s'),
+				this.encodeBufferChunk('s', originalOSC.address)
+			])
+		}
+
+		const thisArgList_array = this.decodeBufferChunk('s', thisAddress_array.buffer_remain)
+
+		originalOSC.argArray  = [...thisArgList_array.value]
+		originalOSC.argBuffer = thisArgList_array.buffer_remain
+
+		let newArgArray = []
+		
+		if ( originalOSC.argArray[0] !== ',' ) {
+			if ( this.options.strictMode ) {
+				throw new OSCSyntaxError('argument list requires leading comma')
+			}
+			newArgArray = [...originalOSC.argArray]
+		} else {
+			newArgArray = originalOSC.argArray.slice(1)
+		}
+
+		if ( typeof callBack === 'function' ) {
+			return callBack(
+				newAddressBuffer,
+				this.encodeBufferChunk('s', originalOSC.address),
+				newArgArray,
+				originalOSC.argBuffer
+			)
+		}
+
+		newArgArray.unshift('s')
+
+		return Buffer.concat([
+			newAddressBuffer,
+			this.encodeBufferChunk('s', `,${newArgArray.join('')}`),
+			this.encodeBufferChunk('s', originalOSC.address),
+			originalOSC.argBuffer
+		])
 	}
 
 	/**

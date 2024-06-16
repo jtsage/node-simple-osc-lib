@@ -73,9 +73,9 @@ const knownNodeMessages = [
 	},
 
 	{
-		arg       : '/dca/2/config "THEATER" 1 RD',
+		arg       : '/dca/2/config "2024" 1 RD',
 		msgResult : { address : '/dca/2/config', argLength : 3 },
-		result    : normalizedName('THEATER', '2'),
+		result    : normalizedName('2024', '2'),
 		testName  : 'dcaName',
 	},
 	{

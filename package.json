@@ -16,7 +16,7 @@
   "homepage": "https://github.com/jtsage/node-simple-osc-lib#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/jtsage/node-simple-osc-lib.git"
+    "url": "git+https://github.com/jtsage/node-simple-osc-lib.git"
   },
   "bugs": "https://github.com/jtsage/node-simple-osc-lib/issues/",
   "author": {

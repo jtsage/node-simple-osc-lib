@@ -1,3 +1,19 @@
+/*      _                 _                                  _ _ _     
+ *     (_)               | |                                | (_) |    
+ *  ___ _ _ __ ___  _ __ | | ___ ______ ___  ___  ___ ______| |_| |__  
+ * / __| | '_ ` _ \| '_ \| |/ _ \______/ _ \/ __|/ __|______| | | '_ \ 
+ * \__ \ | | | | | | |_) | |  __/     | (_) \__ \ (__       | | | |_) |
+ * |___/_|_| |_| |_| .__/|_|\___|      \___/|___/\___|      |_|_|_.__/ 
+ *     | |                                                 
+ *     |_|   Test Suite - TIMETAG type */
+
+if ( require.main === module ) {
+	const path = require('node:path')
+	const scriptName = path.basename(__filename).replace('.test.js', '')
+	process.stdout.write(`part of the jest test suite, try "npm test ${scriptName}" instead.\n`)
+	process.exit(1)
+}
+
 const osc = require('../index.js')
 
 const getSimpleExpected = (type, value, emptyBuffer = true) => {
@@ -10,84 +26,105 @@ const getSimpleExpected = (type, value, emptyBuffer = true) => {
 
 const oscRegular = new osc.simpleOscLib()
 
-/* TIMETAG */
+const getTimeTagBuffer = () => {
+	const buffer = Buffer.alloc(8)
+	buffer.writeUInt32BE(3165615030)
+	buffer.writeUInt32BE(536870912, 4)
+	return buffer
+}
 
-describe('timetag type', () => {
-	describe('encode', () => {
-		test('low level encode timetag : string fail', () => {
-			expect(() => oscRegular.encodeBufferChunk('t', 'hi')).toThrow(osc.OSCSyntaxError)
+describe('type :: TIMETAG', () => {
+	describe('getDateFromTimeTagArray', () => {
+		test.each([
+			//['name', 'value', 'Passes non-strict']
+			{ humanName : 'buffer', value : Buffer.alloc(4)},
+			{ humanName : 'string', value : 'hello'},
+			{ humanName : 'object', value : {}},
+			{ humanName : '!== 2 item array', value : [111]},
+			{ humanName : 'non numeric 2 item array', value : [111, 'aaa']},
+			{ humanName : 'null', value : null},
+		// eslint-disable-next-line no-unused-vars
+		])('Test with $value ($humanName)', ({humanName, value}) => {
+			expect(() => oscRegular.getDateFromTimeTagArray(value)).toThrow(RangeError)
 		})
-
-		test('low level encode timetag : array to small fail', () => {
-			expect(() => oscRegular.encodeBufferChunk('t', [1111])).toThrow(osc.OSCSyntaxError)
-		})
-
-		test('low level encode timetag : good timetag array', () => {
-			const expected = Buffer.alloc(8)
-			expected.writeUInt32BE(1111)
-			expected.writeUInt32BE(2222, 4)
-			expect(oscRegular.encodeBufferChunk('t', [1111, 2222])).toEqual(expected)
-		})
-
-		test('low level encode timetag : good timetag timestamp', () => {
-			const timeTagArray = oscRegular.getTimeTagArrayFromUnknownType(1718212376.57)
-			const expected = Buffer.alloc(8)
-			expected.writeUInt32BE(timeTagArray[0])
-			expected.writeUInt32BE(timeTagArray[1], 4)
-			expect(oscRegular.encodeBufferChunk('t', 1718212376.57)).toEqual(expected)
-		})
-
-		test('low level encode timetag : good timetag from date', () => {
-			const testDate = new Date(2000, 3, 25, 13, 30, 0, 250)
-			const timeTagArray = oscRegular.getTimeTagArrayFromUnknownType(testDate)
-			const expected = Buffer.alloc(8)
-			expected.writeUInt32BE(timeTagArray[0])
-			expected.writeUInt32BE(timeTagArray[1], 4)
-			expect(oscRegular.encodeBufferChunk('t', testDate)).toEqual(expected)
+		test('get date 2000-04-25T01:30:30.125Z from [3165615030, 536870912]', () => {
+			expect(oscRegular.getDateFromTimeTagArray([3165615030, 536870912]).toISOString()).toEqual('2000-04-25T01:30:30.125Z')
 		})
 	})
-	describe('decode', () => {
-		test('low level decode timetag : good timetag from date', () => {
-			const testDateMS = Date.UTC(2000, 3, 25, 13, 30, 0, 250)
-			const timeTagArray = oscRegular.getTimeTagArrayFromUnknownType(testDateMS/1000)
-			const input = Buffer.alloc(8)
-			input.writeUInt32BE(timeTagArray[0])
-			input.writeUInt32BE(timeTagArray[1], 4)
-			const expected = getSimpleExpected('timetag', [3165658200, 1073741824])
-
-			expect(oscRegular.decodeBufferChunk('t', input)).toEqual(expected)
+	describe('getTimeTagFromUnknownType', () => {
+		test.each([
+			{ input : new Date(Date.UTC(2000, 3, 25, 1, 30, 30, 125)), output : [3165615030, 536870912] },
+			{ input : 956626230.125, output : [3165615030, 536870912] },
+			{ input : [3165615030, 536870912], output : [3165615030, 536870912] },
+		])('get value $output from $input', ({input, output}) => {
+			expect(oscRegular.getTimeTagArrayFromUnknownType(input)).toEqual(output)
+		})
+	})
+	describe('direct functions', () => {
+		test('getTimeTagBufferFromTimestamp', () => {
+			expect(oscRegular.getTimeTagBufferFromTimestamp(956626230.125)).toEqual(getTimeTagBuffer())
+		})
+		test('getTimeTagBufferFromDate', () => {
+			expect(oscRegular.getTimeTagBufferFromDate(new Date(Date.UTC(2000, 3, 25, 1, 30, 30, 125)))).toEqual(getTimeTagBuffer())
+		})
+		test('getTimeTagBufferFromDelta', () => {
+			expect(oscRegular.getTimeTagBufferFromDelta(
+				125 / 1000,
+				new Date(Date.UTC(2000, 3, 25, 1, 30, 30, 0))
+			)).toEqual(getTimeTagBuffer())
+		})
+		test('getTimeTagBufferFromDelta (random)', () => {
+			expect(oscRegular.getTimeTagBufferFromDelta(
+				125 / 1000
+			)).toEqual(expect.any(Buffer))
+		})
+	})
+	describe('encodeBufferChunk', () => {
+		test.each([
+			//['name', 'value', 'Passes non-strict']
+			{ humanName : 'buffer', value : Buffer.alloc(4)},
+			{ humanName : 'string', value : 'hello'},
+			{ humanName : 'unicode', value : '❤️'},
+			{ humanName : 'non-ascii', value : 'Ä'},
+			{ humanName : 'object', value : {}},
+			{ humanName : '!== 2 item array', value : [111]},
+			{ humanName : 'non numeric 2 item array', value : [111, 'aaa']},
+			{ humanName : 'null', value : null},
+		// eslint-disable-next-line no-unused-vars
+		])('Test with $value ($humanName)', ({humanName, value}) => {
+			expect(() => oscRegular.encodeBufferChunk('t', value)).toThrow(TypeError)
 		})
 
-		test('low level decode double : fail on non buffer', () => {
-			const input = 'hi there'
-
-			expect(() => oscRegular.decodeBufferChunk('t', input, true)).toThrow(TypeError)
+		test.each([
+			[new Date(2000, 3, 25, 1, 30, 30, 125), 8],
+			[956640630.125, 8],
+			[[3165615030, 536870912], 8],
+		])('Test expected length %s -> %i', (a, b) => {
+			expect(oscRegular.encodeBufferChunk('t', a).length).toEqual(b)
 		})
-
-		test('low level decode double : fail on buffer underrun', () => {
-			const input = Buffer.alloc(7)
-			
-			expect(() => oscRegular.decodeBufferChunk('t', input)).toThrow(osc.OSCSyntaxError)
+	})
+	describe('decodeBufferChunk', () => {
+		test('good timetag', () => {
+			const expected = getSimpleExpected('timetag', [3165615030, 536870912])
+			expect(oscRegular.decodeBufferChunk('t', getTimeTagBuffer())).toEqual(expected)
 		})
-
-		test('round robin date timetag : good timetag from date', () => {
-			const testDate        = new Date(2000, 3, 25, 13, 30, 0, 250)
-			const roundTripEncDec = oscRegular.decodeBufferChunk('t', oscRegular.encodeBufferChunk('t', testDate))
-			const testDateString  = testDate.toISOString()
-
-			expect(oscRegular.getDateFromTimeTagArray(roundTripEncDec.value).toISOString()).toEqual(testDateString)
+		test('non-buffer', () => {
+			const input    = 'hello'
+			expect(() => oscRegular.decodeBufferChunk('t', input)).toThrow(TypeError)
 		})
-
-		test('round robin date with delta : good timetag from date', () => {
-			const fakeNow         = new Date(2000, 3, 25, 13, 30, 0, 250)
-			const fakeInTen       = oscRegular.getTimeTagBufferFromDelta(600, fakeNow.getTime())
-			const roundTripEncDec = oscRegular.decodeBufferChunk('t', fakeInTen)
-			const timeIsNow       = fakeNow.getTime()
-			const timeIsTen       = oscRegular.getDateFromTimeTagArray(roundTripEncDec.value).getTime()
-			const diffInSec       = (timeIsTen - timeIsNow) / 1000
-
-			expect(diffInSec).toEqual(600)
+		test('insufficiently padded buffer', () => {
+			const input    = Buffer.alloc(7)
+			expect(() => oscRegular.decodeBufferChunk('t', input)).toThrow(RangeError)
 		})
-
+		test('timetag pair (buffer leftover)', () => {
+			const input = Buffer.alloc(12)
+			input.writeUInt32BE(3165615030)
+			input.writeUInt32BE(536870912, 4)
+			input.write('bye', 8)
+			const expected = getSimpleExpected('timetag', [3165615030, 536870912], false)
+			const result = oscRegular.decodeBufferChunk('t', input)
+			expect(result).toEqual(expected)
+			expect(result.buffer_remain.length).toEqual(4)
+		})
 	})
 })

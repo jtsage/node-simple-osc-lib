@@ -448,7 +448,7 @@ This is the processor for X32 style messages
 
 **Example**  
 ```js
-const osc     = require('simple-osc-lib')const osc_x32 = require('simple-osc-lib/x32')const x32Pre = new osc_x32.x32PreProcessor({    activeNodeTypes : 'all',    activeRegularTypes : 'all',})const oscRegular = new osc.simpleOscLib({    preprocessor : (msg) => x32Pre.readMessage(msg),})
+const osc     = require('simple-osc-lib')const osc_x32 = require('simple-osc-lib/x32')const x32Pre = new osc_x32.x32PreProcessor('all')// or a list of types or wildcards.//  + dca*, bus*, mtx*, main*, mono*, show*, aux*, chan*//  + dcaLevel, dcaName, dcaMix, dcaMute etc.// see source for full listing.const oscRegular = new osc.simpleOscLib({    preprocessor : (msg) => x32Pre.readMessage(msg),})
 ```
 <a name="module_simple-osc-lib/x32..dB2Float"></a>
 
@@ -489,10 +489,9 @@ The following example enables all current X32 extra processing - if you are only
 const osc     = require('simple-osc-lib')
 const osc_x32 = require('simple-osc-lib/x32') // X32 specific processing (optional)
 
-const x32Pre = new osc_x32.x32PreProcessor({
-	activeNodeTypes : 'all',
-	activeRegularTypes : 'all',
-})
+// 'all', or a single entry 'dca*', or an array of entries ['dca*', 'bus*', 'show*']
+// see source file for full listing
+const x32Pre = new osc_x32.x32PreProcessor('all')
 
 const oscRegular = new osc.simpleOscLib({
 	preprocessor : (msg) => x32Pre.readMessage(msg),
@@ -501,7 +500,7 @@ const oscRegular = new osc.simpleOscLib({
 
 ### Standard OSC Messages by subtype
 
-+ __cueCurrent__ :: /-show/prepos/current
++ __showCurrent__ :: /-show/prepos/current
 + __showMode__ :: /-prefs/show_control
 + __auxLevel__ :: /auxin/[##]/mix/fader
 + __auxMute__ :: /auxin/[##]/mix/on
@@ -524,28 +523,31 @@ const oscRegular = new osc.simpleOscLib({
 + __mtxLevel__ :: /mtx/[##]/mix/fader
 + __mtxMute__ :: /mtx/[##]/mix/on
 + __mtxName__ :: /mtx/[##]/config/name
++ __showCueDirty__ :: /-show/showfile/cue/[#]{3}//
++ __showSceneDirty__ :: /-show/showfile/scene/[#]{3}/name
++ __showSnippetDirty__ :: /-show/showfile/snippet/[#]{3}/name
 
 ### `node` OSC Messages by subtype
 
-+ __auxConfig__ :: node /auxin/[##]/config
 + __auxMix__ :: node /auxin/[##]/mix
-+ __busConfig__ :: node /bus/[##]/config
++ __auxName__ :: node /auxin/[##]/config
 + __busMix__ :: node /bus/[##]/mix
-+ __chanConfig__ :: node /ch/[##]/config
-+ __chanMix__ :: node /ch/[##]/mix
-+ __cue__ :: node /-show/showfile/cue/[###]
-+ __cueCurrent__ :: node /-show/prepos/current
-+ __dcaConfig__ :: node /dca/[#]/config
++ __busName__ :: node /bus/[##]/config
 + __dcaMix__ :: node /dca/[#]
-+ __mainConfig__ :: node /main/st/config
-+ __mainMix__ :: node /main/st/mix
-+ __monoConfig__ :: node /main/m/config
-+ __monoMix__ :: node /main/m/mix
-+ __mtxConfig__ :: node /mtx/[##]/config
++ __dcaName__ :: node /dca/[#]/config
++ __chanMix__ :: node /ch/[##]/mix
++ __chanName__ :: node /ch/[##]/config
 + __mtxMix__ :: node /mtx/[##]/mix
-+ __scene__ :: node /-show/showfile/scene/[###]
-+ __show__ :: node /-show/showfile/show
++ __mtxName__ :: node /mtx/[##]/config
++ __mainMix__ :: node /main/st/mix
++ __mainName__ :: node /main/st/config
++ __monoMix__ :: node /main/m/mix
++ __monoName__ :: node /main/m/config
++ __showCurrent__ :: node /-show/prepos/current
 + __showMode__ :: node /-prefs/show_control
-+ __snippet__ :: node /-show/showfile/snippet/[###]
++ __showName__ :: node /-show/showfile/show
++ __showCue__ :: node /-show/showfile/cue/[###]
++ __showScene__ :: node /-show/showfile/scene/[###]
++ __showSnippet__ :: node /-show/showfile/snippet/[###]
 
 &copy; 2024 J.T.Sage - ISC License

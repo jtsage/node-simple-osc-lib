@@ -7,8 +7,8 @@
     "test:coverage": "npm test -- --coverage",
     "test": "jest",
     "docs:coverage": "node build/getOSCCoverage",
-    "docs:jsdoc" : "npx jsdoc-to-markdown --partial build/osc-coverage.hbs --template build/readme_template.hbs index.js x32.js > README.md",
-    "docs" : "npm run docs:coverage && npm run docs:jsdoc"
+    "docs:jsdoc": "npx jsdoc-to-markdown --partial build/osc-coverage.hbs --template build/readme_template.hbs index.js x32.js > README.md",
+    "docs": "npm run docs:coverage && npm run docs:jsdoc"
   },
   "keywords": [
     "osc"
@@ -26,6 +26,7 @@
   "devDependencies": {
     "@babel/core": "^7.24.7",
     "@babel/eslint-parser": "^7.24.7",
+    "@types/jest": "^29.5.12",
     "esbuild": "0.21.5",
     "eslint": "^9.4.0",
     "eslint-plugin-unicorn": "^53.0.0",
@@ -35,7 +36,7 @@
   },
   "license": "ISC",
   "jest": {
-    "verbose": true,
+    "verbose": false,
     "errorOnDeprecated": true,
     "coverageReporters": [
       "json-summary",

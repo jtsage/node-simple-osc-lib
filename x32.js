@@ -27,8 +27,8 @@ const float2dB = data.float2dB
 
 class x32PreProcessor {
 	#activeTypes = {
-		node    : [],
-		regular : [],
+		node    : new Set(),
+		regular : new Set(),
 	}
 
 	/**
@@ -36,22 +36,70 @@ class x32PreProcessor {
 	 * @param {Boolean} options.activeNodeTypes    - Active node message preprocessors from lib/x32_preprocessors (or 'all')
 	 * @param {String}  options.activeRegularTypes - Active regular message preprocessors from lib/x32_preprocessors (or 'all')
 	 */
-	constructor({activeNodeTypes = null, activeRegularTypes = null} = {}) {
-		if ( activeNodeTypes === null || activeNodeTypes === 'all' ) {
-			this.#activeTypes.node = Object.keys(data.node)
-		} else if ( Array.isArray(activeNodeTypes) ) {
-			this.#activeTypes.node = activeNodeTypes
+	constructor(activeTypeList = null) {
+		const parsableTypeList = []
+
+		if ( activeTypeList === null ) {
+			parsableTypeList.push('*')
+		} else if ( typeof activeTypeList === 'string' ) {
+			if ( /^all$/i.test(activeTypeList) ) {
+				parsableTypeList.push('*')
+			} else {
+				parsableTypeList.push(activeTypeList)
+			}
+		} else if ( !Array.isArray(activeTypeList) ) {
+			throw new TypeError('list or string expected')
 		} else {
-			throw new TypeError('expected array of node types')
+			parsableTypeList.push(...activeTypeList)
 		}
 
-		if ( activeRegularTypes === null || activeRegularTypes === 'all' ) {
-			this.#activeTypes.regular = Object.keys(data.regular)
-		} else if ( Array.isArray(activeRegularTypes) ) {
-			this.#activeTypes.regular = activeRegularTypes
+		const parsableTypeSet = new Set(parsableTypeList)
+
+		const knownNode    = new Set(Object.keys(data.node))
+		const knownRegular = new Set(Object.keys(data.regular))
+
+		if ( parsableTypeSet.has('*') ) {
+			this.#activeTypes.node    = knownNode
+			this.#activeTypes.regular = knownRegular
 		} else {
-			throw new TypeError('expected array of regular types')
+
+			for ( const thisParsedType of parsableTypeSet ) {
+				let foundOne = false
+				if ( thisParsedType.match(/\*$/) ) {
+					const thisSearchTerm = thisParsedType.replaceAll('*', '')
+					for ( const nodeKey of knownNode ) {
+						if ( nodeKey.startsWith(thisSearchTerm) ) {
+							foundOne = true
+							this.#activeTypes.node.add(nodeKey)
+						}
+					}
+					for ( const regKey of knownRegular ) {
+						if ( regKey.startsWith(thisSearchTerm) ) {
+							foundOne = true
+							this.#activeTypes.regular.add(regKey)
+						}
+					}
+				} else {
+					
+					if ( knownNode.has(thisParsedType) ) {
+						foundOne = true
+						this.#activeTypes.node.add(thisParsedType)
+					}
+					if ( knownRegular.has(thisParsedType) ) {
+						foundOne = true
+						this.#activeTypes.regular.add(thisParsedType)
+					}
+				}
+				if ( !foundOne ) {
+					throw new TypeError(`invalid message type processor '${thisParsedType}'`)
+				}
+				
+			}
 		}
+	}
+
+	getActiveTypes() {
+		return this.#activeTypes
 	}
 
 	/**
@@ -63,17 +111,18 @@ class x32PreProcessor {
 	 * const osc     = require('simple-osc-lib')
 	 * const osc_x32 = require('simple-osc-lib/x32')
 	 * 
-	 * const x32Pre = new osc_x32.x32PreProcessor({
-	 *     activeNodeTypes : 'all',
-	 *     activeRegularTypes : 'all',
-	 * })
+	 * const x32Pre = new osc_x32.x32PreProcessor('all')
+	 * // or a list of types or wildcards.
+	 * //  + dca*, bus*, mtx*, main*, mono*, show*, aux*, chan*
+	 * //  + dcaLevel, dcaName, dcaMix, dcaMute etc.
+	 * // see source for full listing.
 	 * 
 	 * const oscRegular = new osc.simpleOscLib({
 	 *     preprocessor : (msg) => x32Pre.readMessage(msg),
 	 * })
 	 */
 	readMessage( oscMessage ) {
-		if ( typeof oscMessage !== 'object' && oscMessage.address !== null ) { return oscMessage }
+		if ( typeof oscMessage !== 'object' || typeof oscMessage?.address !== 'string' || oscMessage?.address === '' ) { return oscMessage }
 
 		oscMessage.wasProcessed = false
 
@@ -136,7 +185,7 @@ class x32PreProcessor {
 			if ( msgObj.address.match(data.node[thisTestName].regEx) ) {
 				msgObj.wasProcessed  = true
 				msgObj.props         = data.node[thisTestName].props(msgObj)
-				msgObj.props.subtype = `node-${thisTestName}`
+				msgObj.props.subtype = thisTestName
 				break
 			}
 		}

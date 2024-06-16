@@ -154,10 +154,9 @@ The following example enables all current X32 extra processing - if you are only
 const osc     = require('simple-osc-lib')
 const osc_x32 = require('simple-osc-lib/x32') // X32 specific processing (optional)
 
-const x32Pre = new osc_x32.x32PreProcessor({
-	activeNodeTypes : 'all',
-	activeRegularTypes : 'all',
-})
+// 'all', or a single entry 'dca*', or an array of entries ['dca*', 'bus*', 'show*']
+// see source file for full listing
+const x32Pre = new osc_x32.x32PreProcessor('all')
 
 const oscRegular = new osc.simpleOscLib({
 	preprocessor : (msg) => x32Pre.readMessage(msg),

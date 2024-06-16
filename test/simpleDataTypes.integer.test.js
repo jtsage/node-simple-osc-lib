@@ -1,3 +1,19 @@
+/*      _                 _                                  _ _ _     
+ *     (_)               | |                                | (_) |    
+ *  ___ _ _ __ ___  _ __ | | ___ ______ ___  ___  ___ ______| |_| |__  
+ * / __| | '_ ` _ \| '_ \| |/ _ \______/ _ \/ __|/ __|______| | | '_ \ 
+ * \__ \ | | | | | | |_) | |  __/     | (_) \__ \ (__       | | | |_) |
+ * |___/_|_| |_| |_| .__/|_|\___|      \___/|___/\___|      |_|_|_.__/ 
+ *     | |                                                 
+ *     |_|   Test Suite - INTEGER type */
+
+if ( require.main === module ) {
+	const path = require('node:path')
+	const scriptName = path.basename(__filename).replace('.test.js', '')
+	process.stdout.write(`part of the jest test suite, try "npm test ${scriptName}" instead.\n`)
+	process.exit(1)
+}
+
 const osc = require('../index.js')
 
 const getSimpleExpected = (type, value, emptyBuffer = true) => {
@@ -8,69 +24,65 @@ const getSimpleExpected = (type, value, emptyBuffer = true) => {
 	}
 }
 
+const makeIntegerBuffer = (value) => {
+	const buffer = Buffer.alloc(4)
+	buffer.writeInt32BE(value)
+	return buffer
+}
+
 const oscRegular = new osc.simpleOscLib()
 
-/* INTEGERS */
-describe('integer type', () => {
-	describe('encode', () => {
-		test('low level encode integer : string fail', () => {
-			expect(() => oscRegular.encodeBufferChunk('i', 'hi')).toThrow(TypeError)
+describe('type :: INTEGER', () => {
+	describe('encodeBufferChunk', () => {
+		test.each([
+			//['name', 'value', 'Passes non-strict']
+			{ humanName : 'string', value : 'hello'},
+			{ humanName : 'bigint', value : BigInt(45)},
+			{ humanName : 'float', value : 69.69 },
+			{ humanName : 'object', value : {}},
+			{ humanName : 'array', value : []},
+			{ humanName : 'null', value : null},
+			{ humanName : 'buffer', value : Buffer.alloc(4)},
+		// eslint-disable-next-line no-unused-vars
+		])('Test with $value ($humanName)', ({humanName, value}) => {
+			expect(() => oscRegular.encodeBufferChunk('i', value)).toThrow(TypeError)
 		})
 
-		test('low level encode integer : float fail', () => {
-			expect(() => oscRegular.encodeBufferChunk('i', 69.69)).toThrow(TypeError)
-		})
-
-		test('low level encode integer : good positive integer', () => {
-			const expected = Buffer.alloc(4)
-			expected.writeInt32BE(69)
-			expect(oscRegular.encodeBufferChunk('i', 69)).toEqual(expected)
-		})
-
-		test('low level encode integer : good negative integer', () => {
-			const expected = Buffer.alloc(4)
-			expected.writeInt32BE(-23)
-			expect(oscRegular.encodeBufferChunk('i', -23)).toEqual(expected)
+		test.each([
+			[12, 4],
+			[486, 4],
+			[135435345, 4],
+		])('Test expected length %s -> %i', (a, b) => {
+			expect(oscRegular.encodeBufferChunk('i', a).length).toEqual(b)
 		})
 	})
-
-	describe('decode', () => {
-		test('low level decode integer : good positive integer', () => {
-			const input = Buffer.alloc(4)
-			input.writeInt32BE(69)
-			const expected = getSimpleExpected('integer', 69)
-
+	describe('decodeBufferChunk', () => {
+		test('good positive integer', () => {
+			const input    = makeIntegerBuffer(53)
+			const expected = getSimpleExpected('integer', 53)
 			expect(oscRegular.decodeBufferChunk('i', input)).toEqual(expected)
 		})
-
-		test('low level decode integer : good negative integer', () => {
-			const input = Buffer.alloc(4)
-			input.writeInt32BE(-23)
-			const expected = getSimpleExpected('integer', -23)
-
+		test('good negative integer', () => {
+			const input    = makeIntegerBuffer(-32)
+			const expected = getSimpleExpected('integer', -32)
 			expect(oscRegular.decodeBufferChunk('i', input)).toEqual(expected)
 		})
-
-		test('low level decode integer : fail on non buffer', () => {
-			const input = 'hi there'
-
-			expect(() => oscRegular.decodeBufferChunk('i', input, true)).toThrow(TypeError)
+		test('non-buffer', () => {
+			const input    = 'hello'
+			expect(() => oscRegular.decodeBufferChunk('i', input)).toThrow(TypeError)
 		})
-
-		test('low level decode integer : fail on buffer underrun', () => {
-			const input = Buffer.alloc(3)
-			
-			expect(() => oscRegular.decodeBufferChunk('i', input)).toThrow(osc.OSCSyntaxError)
+		test('insufficiently padded buffer', () => {
+			const input    = Buffer.alloc(3)
+			expect(() => oscRegular.decodeBufferChunk('i', input)).toThrow(RangeError)
 		})
-
-		test('low level decode integer : good integer pair', () => {
-			const number1 = Buffer.alloc(4)
-			number1.writeInt32BE(-69)
-			const number2 = Buffer.alloc(4)
-			number2.writeInt32BE(23)
-			const expected = getSimpleExpected('integer', -69, false)
-
-			expect(oscRegular.decodeBufferChunk('i', Buffer.concat([number1, number2]))).toEqual(expected)
+		test('integer pair (buffer leftover)', () => {
+			const input = Buffer.alloc(8)
+			input.writeInt32BE(384)
+			input.write('bye', 4)
+			const expected = getSimpleExpected('integer', 384, false)
+			const result = oscRegular.decodeBufferChunk('i', input)
+			expect(result).toEqual(expected)
+			expect(result.buffer_remain.length).toEqual(4)
 		})
 	})
 })

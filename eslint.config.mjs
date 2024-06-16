@@ -26,6 +26,7 @@ export default [
 			unicorn : eslintPluginUnicorn,
 		},
 		rules : {
+			'no-shadow'    : [ 'error', { 'builtinGlobals': true }],
 			'comma-dangle' : [
 				'error',
 				{
@@ -88,7 +89,6 @@ export default [
 			'no-promise-executor-return'      : 'error',
 			'no-return-await'                 : 'error',
 			'no-sequences'                    : 'error',
-			'no-shadow'                       : 'error',
 			'no-template-curly-in-string'     : 'error',
 			'no-throw-literal'                : 'error',
 			'no-unneeded-ternary'             : 'error',

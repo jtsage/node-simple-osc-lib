@@ -5,7 +5,7 @@
  * \__ \ | | | | | | |_) | |  __/     | (_) \__ \ (__       | | | |_) |
  * |___/_|_| |_| |_| .__/|_|\___|      \___/|___/\___|      |_|_|_.__/ 
  *     | |                                                 
- *     |_|   Test Suite - FLOAT type */
+ *     |_|   Test Suite - BIG INTEGER type */
 
 if ( require.main === module ) {
 	const path = require('node:path')
@@ -20,65 +20,67 @@ const getSimpleExpected = (type, value, emptyBuffer = true) => {
 	return {
 		buffer_remain : emptyBuffer ? Buffer.alloc(0) : expect.any(Buffer),
 		type          : type,
-		value         : expect.closeTo(value),
+		value         : value,
 	}
 }
 
-const makeFloatBuffer = (value) => {
-	const buffer = Buffer.alloc(4)
-	buffer.writeFloatBE(value)
+const makeBigIntegerBuffer = (value) => {
+	const buffer = Buffer.alloc(8)
+	buffer.writeBigInt64BE(value)
 	return buffer
 }
 
 const oscRegular = new osc.simpleOscLib()
 
-describe('type :: FLOAT', () => {
+describe('type :: BIGINT', () => {
 	describe('encodeBufferChunk', () => {
 		test.each([
 			//['name', 'value', 'Passes non-strict']
 			{ humanName : 'string', value : 'hello'},
+			{ humanName : 'float', value : 69.69 },
+			{ humanName : 'integer', value : 69 },
 			{ humanName : 'object', value : {}},
 			{ humanName : 'array', value : []},
 			{ humanName : 'null', value : null},
 			{ humanName : 'buffer', value : Buffer.alloc(4)},
 		// eslint-disable-next-line no-unused-vars
 		])('Test with $value ($humanName)', ({humanName, value}) => {
-			expect(() => oscRegular.encodeBufferChunk('f', value)).toThrow(TypeError)
+			expect(() => oscRegular.encodeBufferChunk('h', value)).toThrow(TypeError)
 		})
 
 		test.each([
-			[12.6, 4],
-			[486.0, 4],
-			[135435345e-8, 4],
+			[BigInt(4), 8],
+			[BigInt(486), 8],
+			[BigInt(9007199254740991), 8],
 		])('Test expected length %s -> %i', (a, b) => {
-			expect(oscRegular.encodeBufferChunk('f', a).length).toEqual(b)
+			expect(oscRegular.encodeBufferChunk('h', a).length).toEqual(b)
 		})
 	})
 	describe('decodeBufferChunk', () => {
-		test('good positive float', () => {
-			const input    = makeFloatBuffer(53.865)
-			const expected = getSimpleExpected('float', 53.865)
-			expect(oscRegular.decodeBufferChunk('f', input)).toEqual(expected)
+		test('good positive integer', () => {
+			const input    = makeBigIntegerBuffer(BigInt(53))
+			const expected = getSimpleExpected('bigint', BigInt(53))
+			expect(oscRegular.decodeBufferChunk('h', input)).toEqual(expected)
 		})
-		test('good negative float', () => {
-			const input    = makeFloatBuffer(-3265.4)
-			const expected = getSimpleExpected('float', -3265.4)
-			expect(oscRegular.decodeBufferChunk('f', input)).toEqual(expected)
+		test('good negative integer', () => {
+			const input    = makeBigIntegerBuffer(BigInt(-9007199254740991))
+			const expected = getSimpleExpected('bigint', BigInt(-9007199254740991))
+			expect(oscRegular.decodeBufferChunk('h', input)).toEqual(expected)
 		})
 		test('non-buffer', () => {
 			const input    = 'hello'
-			expect(() => oscRegular.decodeBufferChunk('f', input)).toThrow(TypeError)
+			expect(() => oscRegular.decodeBufferChunk('h', input)).toThrow(TypeError)
 		})
 		test('insufficiently padded buffer', () => {
-			const input    = Buffer.alloc(3)
-			expect(() => oscRegular.decodeBufferChunk('f', input)).toThrow(RangeError)
+			const input    = Buffer.alloc(7)
+			expect(() => oscRegular.decodeBufferChunk('h', input)).toThrow(RangeError)
 		})
-		test('float pair (buffer leftover)', () => {
-			const input = Buffer.alloc(8)
-			input.writeFloatBE(384.6)
-			input.write('bye', 4)
-			const expected = getSimpleExpected('float', 384.6, false)
-			const result = oscRegular.decodeBufferChunk('f', input)
+		test('bigint pair (buffer leftover)', () => {
+			const input = Buffer.alloc(12)
+			input.writeBigInt64BE(BigInt(384))
+			input.write('bye', 8)
+			const expected = getSimpleExpected('bigint', BigInt(384), false)
+			const result = oscRegular.decodeBufferChunk('h', input)
 			expect(result).toEqual(expected)
 			expect(result.buffer_remain.length).toEqual(4)
 		})

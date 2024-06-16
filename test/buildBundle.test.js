@@ -1,3 +1,18 @@
+/*      _                 _                                  _ _ _     
+ *     (_)               | |                                | (_) |    
+ *  ___ _ _ __ ___  _ __ | | ___ ______ ___  ___  ___ ______| |_| |__  
+ * / __| | '_ ` _ \| '_ \| |/ _ \______/ _ \/ __|/ __|______| | | '_ \ 
+ * \__ \ | | | | | | |_) | |  __/     | (_) \__ \ (__       | | | |_) |
+ * |___/_|_| |_| |_| .__/|_|\___|      \___/|___/\___|      |_|_|_.__/ 
+ *     | |                                                 
+ *     |_|   Test Suite - buildBundle */
+
+if ( require.main === module ) {
+	const path = require('node:path')
+	const scriptName = path.basename(__filename).replace('.test.js', '')
+	process.stdout.write(`part of the jest test suite, try "npm test ${scriptName}" instead.\n`)
+	process.exit(1)
+}
 const osc  = require('../index.js')
 
 const oscRegular = new osc.simpleOscLib()
@@ -21,6 +36,9 @@ const bundleMsgPair = [
 
 describe('bundle testing', () => {
 	describe('building', () => {
+		test('build with non-object failse', () => {
+			expect(() => oscRegular.buildBundle('hello')).toThrow(TypeError)
+		})
 		test('build with no timetag fails', () => {
 			const thisBundle = {
 				elements : bundleMsgPair,
@@ -73,7 +91,7 @@ describe('bundle testing', () => {
 			expect(JSON.stringify(oscRegular.readBundle(emptyBundle)).length).toEqual(72)
 		})
 
-		test('read with incorrect ID fails works', () => {
+		test('read with incorrect ID fail', () => {
 			const emptyBundle = Buffer.alloc(16)
 			emptyBundle.write('#blundl')
 			emptyBundle.writeUInt32BE(2222, 8)

@@ -1,3 +1,19 @@
+/*      _                 _                                  _ _ _     
+ *     (_)               | |                                | (_) |    
+ *  ___ _ _ __ ___  _ __ | | ___ ______ ___  ___  ___ ______| |_| |__  
+ * / __| | '_ ` _ \| '_ \| |/ _ \______/ _ \/ __|/ __|______| | | '_ \ 
+ * \__ \ | | | | | | |_) | |  __/     | (_) \__ \ (__       | | | |_) |
+ * |___/_|_| |_| |_| .__/|_|\___|      \___/|___/\___|      |_|_|_.__/ 
+ *     | |                                                 
+ *     |_|   Test Suite - ADDRESS type */
+
+if ( require.main === module ) {
+	const path = require('node:path')
+	const scriptName = path.basename(__filename).replace('.test.js', '')
+	process.stdout.write(`part of the jest test suite, try "npm test ${scriptName}" instead.\n`)
+	process.exit(1)
+}
+
 const osc  = require('../index.js')
 
 const getSimpleExpected = (type, value, emptyBuffer = true) => {
@@ -8,85 +24,100 @@ const getSimpleExpected = (type, value, emptyBuffer = true) => {
 	}
 }
 
+const makeStringBuffer = (size, content) => {
+	const buffer = Buffer.alloc(size)
+	buffer.write(content)
+	return buffer
+}
+
 const oscRegular = new osc.simpleOscLib()
 const oscStrict  = new osc.simpleOscLib({strictMode : true, strictAddress : true, asciiOnly : true})
 
-describe('address type', () => {
-	describe('encode', () => {
-		test('low level encode address : non-string fail', () => {
-			expect(() => oscRegular.encodeBufferChunk('A', 69)).toThrow(osc.OSCSyntaxError)
+describe('type :: ADDRESS', () => {
+	describe('encodeBufferChunk', () => {
+		describe.each([
+			//['name', 'value', 'Passes non-strict']
+			{ humanName : 'number', value : 69, passSTD : false},
+			{ humanName : 'object', value : {}, passSTD : false},
+			{ humanName : 'array', value : [], passSTD : false},
+			{ humanName : 'null', value : null, passSTD : false},
+			{ humanName : 'non-ascii', value : '/hi❤️', passSTD : false},
+			{ humanName : 'buffer', value : Buffer.alloc(4), passSTD : false},
+			{ humanName : 'no lead slash', value : 'hello', passSTD : true},
+		])('Test with $value address', ({humanName, value, passSTD}) => {
+			test(`STRICT FAIL :: ${humanName}`, () => {
+				expect(() => oscStrict.encodeBufferChunk('A', value)).toThrow(osc.OSCSyntaxError)
+			})
+			test(`NON-STRICT ${passSTD?'PASS':'FAIL'} :: ${humanName}`, () => {
+				if ( passSTD ) {
+					expect(() => oscRegular.encodeBufferChunk('A', value)).not.toThrow()
+				} else {
+					expect(() => oscRegular.encodeBufferChunk('A', value)).toThrow(osc.OSCSyntaxError)
+				}
+			})
 		})
 
-		test('low level encode address : unicode fail in normal mode', () => {
-			expect(() => oscRegular.encodeBufferChunk('A', '/hi❤️')).toThrow(osc.OSCSyntaxError)
-		})
-
-		test('low level encode address : unicode fail in strict mode', () => {
-			expect(() => oscStrict.encodeBufferChunk('A', '/hi❤️')).toThrow(osc.OSCSyntaxError)
-		})
-
-		test('low level encode address : no leading slash pass in standard mode', () => {
-			const expected = Buffer.from(`hello${osc.null}${osc.null}${osc.null}`)
-
-			expect(oscRegular.encodeBufferChunk('A', 'hello')).toEqual(expected)
-		})
-
-		test('low level encode address : no leading slash fail in strict mode', () => {
-			expect(() => oscStrict.encodeBufferChunk('A', 'hello')).toThrow(osc.OSCSyntaxError)
-		})
-
-		test('low level encode address : expected length met', () => {
-			const expected = Buffer.from(`/hello${osc.null}${osc.null}`)
-
-			expect(oscRegular.encodeBufferChunk('A', '/hello')).toEqual(expected)
-		})
-
-		test('fail to build message with no address', () => {
-			const badPack = {
-				args : [
-					{ type : 'string', value : 'hi'}
-				],
-			}
-			expect(() => oscRegular.buildMessage(badPack)).toThrow(RangeError)
-		})
-
-		test('fail to build message with empty address', () => {
-			const badPack = {
-				address : '',
-				args : [
-					{ type : 'string', value : 'hi'}
-				],
-			}
-			expect(() => oscRegular.buildMessage(badPack)).toThrow(osc.OSCSyntaxError)
+		test.each([
+			['/h', 4],
+			['/he', 4],
+			['/hel', 8],
+			['/hell', 8],
+			['/hello', 8],
+			['/helloW', 8],
+			['/helloWo', 12],
+			['/helloWorld', 12],
+		])('Test expected length %s -> %i', (a, b) => {
+			expect(oscRegular.encodeBufferChunk('A', a).length).toEqual(b)
 		})
 	})
-
-	describe('decode', () => {
-		test('low level decode address : good address', () => {
-			const input = Buffer.from(`/hello${osc.null}${osc.null}`)
+	describe('decodeBufferChunk', () => {
+		describe('good address', () => {
+			const input    = makeStringBuffer(8, '/hello')
 			const expected = getSimpleExpected('address', '/hello')
-
-			expect(oscRegular.decodeBufferChunk('A', input)).toEqual(expected)
+			test('STRICT :: PASS', () => {
+				expect(oscStrict.decodeBufferChunk('A', input)).toEqual(expected)
+			})
+			test('NON-STRICT :: PASS', () => {
+				expect(oscRegular.decodeBufferChunk('A', input)).toEqual(expected)
+			})
 		})
-
-		test('low level decode address : no leading slash non strict pass', () => {
-			const input = Buffer.from(`hello${osc.null}${osc.null}${osc.null}`)
+		describe('no leading slash', () => {
+			const input    = makeStringBuffer(8, 'hello')
 			const expected = getSimpleExpected('address', 'hello')
-
-			expect(oscRegular.decodeBufferChunk('A', input)).toEqual(expected)
+			test('STRICT :: FAIL', () => {
+				expect(() => oscStrict.decodeBufferChunk('A', input)).toThrow(osc.OSCSyntaxError)
+			})
+			test('NON-STRICT :: PASS', () => {
+				expect(oscRegular.decodeBufferChunk('A', input)).toEqual(expected)
+			})
 		})
-
-		test('low level decode address : no leading slash strict fail', () => {
-			const input = Buffer.from(`hello${osc.null}${osc.null}${osc.null}`)
-
-			expect(() => oscStrict.decodeBufferChunk('A', input)).toThrow(osc.OSCSyntaxError)
+		describe('non-buffer', () => {
+			const input    = 'hello'
+			test('STRICT :: FAIL', () => {
+				expect(() => oscStrict.decodeBufferChunk('A', input)).toThrow(TypeError)
+			})
+			test('NON-STRICT :: FAIL', () => {
+				expect(() => oscRegular.decodeBufferChunk('A', input)).toThrow(TypeError)
+			})
 		})
-
-		test('low level decode address : fail on non buffer', () => {
-			const input = 'hi there'
-
-			expect(() => oscRegular.decodeBufferChunk('A', input)).toThrow(TypeError)
+		describe('incorrectly padded buffer', () => {
+			const input    = makeStringBuffer(6, '/hello')
+			const expected = getSimpleExpected('address', '/hello')
+			test('STRICT :: FAIL', () => {
+				expect(() => oscStrict.decodeBufferChunk('A', input)).toThrow(RangeError)
+			})
+			test('NON-STRICT :: PASS', () => {
+				expect(oscRegular.decodeBufferChunk('A', input)).toEqual(expected)
+			})
 		})
-
+		describe('empty address', () => {
+			const input    = makeStringBuffer(4, '')
+			test('STRICT :: FAIL', () => {
+				expect(() => oscStrict.decodeBufferChunk('A', input)).toThrow(osc.OSCSyntaxError)
+			})
+			test('NON-STRICT :: FAIL', () => {
+				expect(() => oscRegular.decodeBufferChunk('A', input)).toThrow(osc.OSCSyntaxError)
+			})
+		})
 	})
 })

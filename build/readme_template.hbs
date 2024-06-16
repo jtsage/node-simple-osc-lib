@@ -35,6 +35,16 @@ Note that `type` is always a string - i.e. `"true"` rather than `true`.
 
 ## Standard Usage
 
+### Options
+
++ __asciiOnly__ _false_ Prevent non-ASCII characters in strings
++ __blockCharacter__ _"&#xA6;"_ Character to delineate 4-byte blocks in debug output (or '')
++ __coerceStrings__ _false_ For string type, coerce input if non-string found.
++ __debugCharacter__ _"&bull;"_, Character to replace nulls in debug output
++ __preprocessor__ _\<function>_ osc-message processor
++ __strictAddress__ _false_ Require leading slash (address is __always__ asciiOnly)
++ __strictMode__ _false_ Use strict mode elsewhere
+
 ```javascript
 const osc     = require('simple-osc-lib')
 

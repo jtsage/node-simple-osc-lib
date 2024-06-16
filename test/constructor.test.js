@@ -21,6 +21,7 @@ describe('library initialization', () => {
 		const theseOpts = {
 			asciiOnly      : false,
 			blockCharacter : '¦',
+			coerceStrings  : false,
 			debugCharacter : '•',
 			preprocessor   : expect.any(Function),
 			strictAddress  : false,
@@ -33,10 +34,24 @@ describe('library initialization', () => {
 		const theseOpts = {
 			asciiOnly      : true,
 			blockCharacter : '¦',
+			coerceStrings  : false,
 			debugCharacter : '•',
 			preprocessor   : expect.any(Function),
 			strictAddress  : true,
 			strictMode     : true,
+		}
+		expect(thisOSC.options).toEqual(theseOpts)
+	})
+	test('strict mode options', () => {
+		const thisOSC = new osc.simpleOscLib({coerceStrings : true})
+		const theseOpts = {
+			asciiOnly      : false,
+			blockCharacter : '¦',
+			coerceStrings  : true,
+			debugCharacter : '•',
+			preprocessor   : expect.any(Function),
+			strictAddress  : false,
+			strictMode     : false,
 		}
 		expect(thisOSC.options).toEqual(theseOpts)
 	})

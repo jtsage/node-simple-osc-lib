@@ -31,6 +31,7 @@ const makeStringBuffer = (size, content) => {
 }
 
 const oscRegular = new osc.simpleOscLib()
+const oscCoerce  = new osc.simpleOscLib({coerceStrings : true})
 const oscStrict  = new osc.simpleOscLib({strictMode : true, strictAddress : true, asciiOnly : true})
 
 
@@ -38,20 +39,28 @@ describe('type :: STRING', () => {
 	describe('encodeBufferChunk', () => {
 		describe.each([
 			//['name', 'value', 'Passes non-strict']
-			{ humanName : 'number', value : 69, passSTD : false},
-			{ humanName : 'object', value : {}, passSTD : false},
-			{ humanName : 'array', value : [], passSTD : false},
-			{ humanName : 'null', value : null, passSTD : false},
-			{ humanName : 'buffer', value : Buffer.alloc(4), passSTD : false},
-		])('Test with $value string', ({humanName, value, passSTD}) => {
+			{ humanName : 'number',  passCOR : true,  passSTD : false,  value : 69 },
+			{ humanName : 'object',  passCOR : true,  passSTD : false,  value : {} },
+			{ humanName : 'array',   passCOR : true,  passSTD : false,  value : [] },
+			{ humanName : 'null',    passCOR : false, passSTD : false,  value : null },
+			{ humanName : 'buffer',  passCOR : true,  passSTD : false,  value : Buffer.alloc(4) },
+			{ humanName : 'odd OBJ', passCOR : false, passSTD : false,  value : Object.create(null) },
+		])('Test with $humanName', ({humanName, value, passSTD, passCOR}) => {
 			test(`STRICT FAIL :: ${humanName}`, () => {
 				expect(() => oscStrict.encodeBufferChunk('s', value)).toThrow(TypeError)
 			})
-			test(`NON-STRICT ${passSTD?'PASS':'FAIL'} :: ${humanName}`, () => {
+			test(`NON-STRICT ${ passSTD ? 'PASS' : 'FAIL'} :: ${humanName}`, () => {
 				if ( passSTD ) {
 					expect(() => oscRegular.encodeBufferChunk('s', value)).not.toThrow()
 				} else {
 					expect(() => oscRegular.encodeBufferChunk('s', value)).toThrow(TypeError)
+				}
+			})
+			test(`COERCED ${ passCOR ? 'PASS' : 'FAIL'} :: ${humanName}`, () => {
+				if ( passCOR ) {
+					expect(() => oscCoerce.encodeBufferChunk('s', value)).not.toThrow()
+				} else {
+					expect(() => oscCoerce.encodeBufferChunk('s', value)).toThrow(TypeError)
 				}
 			})
 		})

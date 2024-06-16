@@ -25,6 +25,7 @@ class simpleOscLib {
 	#defaultOptions = {
 		asciiOnly      : false,    // Prevent non-ASCII characters in strings
 		blockCharacter : '\xA6',   // Character to delineate 4-byte blocks in debug output (or '')
+		coerceStrings  : false,    // For string type, coerce input if non-string found.
 		debugCharacter : '\u2022', // Character to replace nulls in debug output
 		preprocessor   : (x) => x, // osc-message processor
 		strictAddress  : false,    // Use strict addresses (strict mode plus require leading slash)
@@ -270,7 +271,11 @@ class simpleOscLib {
 			
 				return this.#decodedBuffer(goodString, buffer_in.subarray(splitPoint), 'string')
 			},
-			toBuffer : (value ) => {
+			toBuffer : ( value_in ) => {
+				const value = this.options.coerceStrings === true ?
+					value_in.toString() :
+					value_in
+
 				if (typeof value !== 'string') {
 					throw new TypeError('expected string')
 				}

@@ -338,7 +338,11 @@ Format a buffer for console.log()
 <a name="module_simple-osc-lib..simpleOscLib+buildMessage"></a>
 
 #### simpleOscLib.buildMessage(oscMessageObject) ⇒ <code>Buffer</code>
-Build an OSC message buffer`address` is a required key, containing the destination address`args` is an array of objects of { type : 'type', value : value }
+Build an OSC message buffer
+
+`address` is a required key, containing the destination address
+
+`args` is an array of objects of { type : 'type', value : value }
 
 **Kind**: instance method of [<code>simpleOscLib</code>](#module_simple-osc-lib..simpleOscLib)  
 **Returns**: <code>Buffer</code> - 4 byte chunked buffer  
@@ -350,7 +354,12 @@ Build an OSC message buffer`address` is a required key, containing the destina
 <a name="module_simple-osc-lib..simpleOscLib+buildBundle"></a>
 
 #### simpleOscLib.buildBundle(oscBundleObject) ⇒ <code>Buffer</code>
-Build an OSC bundle buffer`timetag` is a required key, containing a timetag buffer`elements` can contain objects to be passed to oscBuildMessage or pre-prepared buffers padded to 32-bit blocks with NULLs
+Build an OSC bundle buffer
+
+`timetag` is a required key, containing a timetag buffer
+
+`elements` can contain objects to be passed to oscBuildMessage or 
+pre-prepared buffers padded to 32-bit blocks with NULLs
 
 **Kind**: instance method of [<code>simpleOscLib</code>](#module_simple-osc-lib..simpleOscLib)  
 **Returns**: <code>Buffer</code> - 4 byte chunked buffer  
@@ -401,7 +410,26 @@ Decode a single OSC message.
 <a name="module_simple-osc-lib..simpleOscLib+redirectMessage"></a>
 
 #### simpleOscLib.redirectMessage(buffer_in, newAddress, callBack) ⇒
-Readdress an existing message, including the old address as the first or last string argumentCallback detailsThe callback takes a function that receives the following parameters+ newAddressBuffer <Buffer> new destination+ oldAddressBuffer <Buffer> original address as a string buffer+ argumentList <Array> original argument list+ argumentBuffer <Buffer> existing argument buffer.This should return a valid osc buffer.  To simply redirect the existing to a new address you could do something like```javascriptfunction redirectCallback(newAddressBuffer, _oldAddressBuffer, argumentList, argumentBuffer) {    return Buffer.concat([        newAddressBuffer,        oscLibInstance.encodeToBuffer('s', `,${argumentList.join('')}`),        argumentBuffer    ])}```
+Readdress an existing message, including the old address as the first or last string argument
+
+Callback details
+
+The callback takes a function that receives the following parameters
++ newAddressBuffer <Buffer> new destination
++ oldAddressBuffer <Buffer> original address as a string buffer
++ argumentList <Array> original argument list
++ argumentBuffer <Buffer> existing argument buffer.
+
+This should return a valid osc buffer.  To simply redirect the existing to a new address you could do something like
+```javascript
+function redirectCallback(newAddressBuffer, _oldAddressBuffer, argumentList, argumentBuffer) {
+    return Buffer.concat([
+        newAddressBuffer,
+        oscLibInstance.encodeToBuffer('s', `,${argumentList.join('')}`),
+        argumentBuffer
+    ])
+}
+```
 
 **Kind**: instance method of [<code>simpleOscLib</code>](#module_simple-osc-lib..simpleOscLib)  
 **Returns**: Buffer  
@@ -415,7 +443,25 @@ Readdress an existing message, including the old address as the first or last st
 <a name="module_simple-osc-lib..simpleOscLib+messageBuilder"></a>
 
 #### simpleOscLib.messageBuilder(address) ⇒
-Build an osc message in a chainable way.Chainable methods available - for more complex messages, use buildMessage```javascriptmyMessage    .i(20)    .integer(20)    .f(1.0)    .float(1.0)    .s('hello')    .string('world')    .b(buffer)    .blob(buffer)```To get a transmittable buffer, call `myMessage.toBuffer()`To get a human readable version of the buffer, call `myMessage.toString()`
+Build an osc message in a chainable way.
+
+Chainable methods available - for more complex messages, use buildMessage
+
+```javascript
+myMessage
+    .i(20)
+    .integer(20)
+    .f(1.0)
+    .float(1.0)
+    .s('hello')
+    .string('world')
+    .b(buffer)
+    .blob(buffer)
+```
+
+To get a transmittable buffer, call `myMessage.toBuffer()`
+
+To get a human readable version of the buffer, call `myMessage.toString()`
 
 **Kind**: instance method of [<code>simpleOscLib</code>](#module_simple-osc-lib..simpleOscLib)  
 **Returns**: oscBuilder instance  
@@ -431,7 +477,10 @@ const myBuffer = oscLib.messageBuilder('/hello').integer(10).float(2.0).string('
 <a name="module_simple-osc-lib/x32"></a>
 
 ## simple-osc-lib/x32
-Extended processing for Behringer X32/M32 consoles.This provides some override and pre-processing toolsto make it easier to work with the style of OSC messagesthe Behringer uses.
+Extended processing for Behringer X32/M32 consoles.
+This provides some override and pre-processing tools
+to make it easier to work with the style of OSC messages
+the Behringer uses.
 
 
 * [simple-osc-lib/x32](#module_simple-osc-lib/x32)
@@ -474,7 +523,18 @@ This is the processor for X32 style messages
 
 **Example**  
 ```js
-const osc     = require('simple-osc-lib')const osc_x32 = require('simple-osc-lib/x32')const x32Pre = new osc_x32.x32PreProcessor('all')// or a list of types or wildcards.//  + dca*, bus*, mtx*, main*, mono*, show*, aux*, chan*//  + dcaLevel, dcaName, dcaMix, dcaMute etc.// see source for full listing.const oscRegular = new osc.simpleOscLib({    preprocessor : (msg) => x32Pre.readMessage(msg),})
+const osc     = require('simple-osc-lib')
+const osc_x32 = require('simple-osc-lib/x32')
+
+const x32Pre = new osc_x32.x32PreProcessor('all')
+// or a list of types or wildcards.
+//  + dca*, bus*, mtx*, main*, mono*, show*, aux*, chan*
+//  + dcaLevel, dcaName, dcaMix, dcaMute etc.
+// see source for full listing.
+
+const oscRegular = new osc.simpleOscLib({
+    preprocessor : (msg) => x32Pre.readMessage(msg),
+})
 ```
 <a name="module_simple-osc-lib/x32..dB2Float"></a>
 
@@ -549,9 +609,9 @@ const oscRegular = new osc.simpleOscLib({
 + __mtxLevel__ :: /mtx/[##]/mix/fader
 + __mtxMute__ :: /mtx/[##]/mix/on
 + __mtxName__ :: /mtx/[##]/config/name
-+ __showCueDirty__ :: /-show/showfile/cue/[#]{3}//
-+ __showSceneDirty__ :: /-show/showfile/scene/[#]{3}/name
-+ __showSnippetDirty__ :: /-show/showfile/snippet/[#]{3}/name
++ __showCueDirty__ :: /-show/showfile/cue/[###]//
++ __showSceneDirty__ :: /-show/showfile/scene/[###]/name
++ __showSnippetDirty__ :: /-show/showfile/snippet/[###]/name
 
 ### `node` OSC Messages by subtype
 

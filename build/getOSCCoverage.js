@@ -8,6 +8,7 @@ const coverageLines = [
 
 for ( const thisItem of Object.keys(x32.regular) ) {
 	const itemRegex = x32.regular[thisItem].regEx.toString()
+		.replaceAll('\\d{3}', '[###]')
 		.replaceAll('\\d{2}', '[##]')
 		.replaceAll('\\d', '[#]')
 		.replaceAll('\\/', '/')

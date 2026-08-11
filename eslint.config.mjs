@@ -6,6 +6,7 @@ import globals from 'globals'
 import js from '@eslint/js'
 import stylistic from '@stylistic/eslint-plugin'
 import tseslint from 'typescript-eslint'
+import tsdocEslint from 'eslint-plugin-tsdoc'
 
 export default defineConfig({
 	files : ['**/*.{js,cjs,mjs,jsx,ts,cts,mts,tsx}'],
@@ -29,8 +30,11 @@ export default defineConfig({
 	plugins : {
 		unicorn : eslintPluginUnicorn,
 		'@stylistic' : stylistic,
+		'tsdoc' : tsdocEslint,
 	},
 	rules : {
+		'tsdoc/syntax' : 'warn',
+
 		'no-unused-vars' : 'off',
 
 		'@typescript-eslint/no-unused-vars' : ['error'],
@@ -40,7 +44,7 @@ export default defineConfig({
 			before    : true,
 			overrides : {
 				arrow        : { before : true, after : true },
-				questionMark : { before : true, after : true },
+				// questionMark : { before : true, after : true },
 			},
 		}],
 

@@ -146,8 +146,6 @@ The preprocessor can be used as a callback for each message received.  See secti
 > "The code is more what you'd call 'guidelines' than actual rules."
 > _--– Barbossa, Pirates of the Caribbean_
 
-## Exported Functions and Data Structures
-
 {{>main}}
 
 ## X32 Pre-Processing
@@ -174,6 +172,8 @@ const oscRegular = new osc.simpleOscLib({
 ```
 
 {{>osc-coverage}}
+
+{{>x32}}
 
 ### Example Post-Process - Faders
 

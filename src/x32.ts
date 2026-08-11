@@ -7,43 +7,61 @@
  *     | |                                                 
  *     |_|   X32 Preprocessor */
 
-const data = require('./lib/x32_preprocessors.js')
+import type { OSCMessageInterface, OSCArg, OSCArgTypes } from './index'
+
+export type OSCArgTypeNest = OSCArgTypes | Record<string, OSCArgTypes>
+
+/**
+ * Additional items added to the OSCMessageInterface
+ * 
+ * @param wasProcessed - item was processed by rules
+ * @param props - information retrieved in processing
+ * @param origNodeArg - maybe the initial node part?  not sure.
+ */
+export interface X32MessageInterface extends OSCMessageInterface {
+	wasProcessed  : boolean
+	props         : Record<string, OSCArgTypeNest>
+	origNodeArg   : string
+}
+
+import * as data from './lib/x32_preprocessors.js'
 
 /**
  * Extended processing for Behringer X32/M32 consoles.
  * This provides some override and pre-processing tools
  * to make it easier to work with the style of OSC messages
  * the Behringer uses.
- * @module simple-osc-lib/x32
  */
 
 /**
  * Convert a string or number decibel representation to a floating point number
- * @param {String|Number} db_in string or float representation of decibel level +10->-90
- * @returns {Number} floating point representation of decibel level 0->1
+ * @param db_in - string or float representation of decibel level +10-\>-90
+ * @returns floating point representation of decibel level 0-\>1
  */
-const dB2Float = data.dB2Float
+export const dB2Float = data.dB2Float
 
 /**
- * Convert floating point 0->1 to decibel level
- * @param {Number} f 0->1 floating point level
- * @returns {String} text level [+/-##.# dB]
+ * Convert floating point 0-\>1 to decibel level
+ * @param f - 0-\>1 floating point level
+ * @returns text level [+/-##.# dB]
  */
-const float2dB = data.float2dB
+export const float2dB = data.float2dB
 
-
-class x32PreProcessor {
+/**
+ * Preprocess X32 data
+ * 
+ * @public
+ */
+export class x32PreProcessor {
 	#activeTypes = {
-		node    : new Set(),
-		regular : new Set(),
+		node    : new Set<string>(),
+		regular : new Set<string>(),
 	}
 
 	/**
-	 * @param {object}  options                    - x32 Preprocessor options.
-	 * @param {Boolean} options.activeNodeTypes    - Active node message preprocessors from lib/x32_preprocessors (or 'all')
-	 * @param {String}  options.activeRegularTypes - Active regular message preprocessors from lib/x32_preprocessors (or 'all')
+	 * @param activeTypeList - Active message preprocessors.  See test file.
 	 */
-	constructor(activeTypeList = null) {
+	constructor(activeTypeList : null | string | string[] = null) {
 		const parsableTypeList = []
 
 		if ( activeTypeList === null ) {
@@ -112,8 +130,8 @@ class x32PreProcessor {
 	/**
 	 * This is the processor for X32 style messages
 	 * 
-	 * @param {Object} oscMessage an OSC message object
-	 * @returns {Object} an OSC message object with additional data
+	 * @param oscMessage - an OSC message object
+	 * @returns an OSC message object with additional data
 	 * @example
 	 * const osc     = require('simple-osc-lib')
 	 * const osc_x32 = require('simple-osc-lib/x32')
@@ -123,30 +141,31 @@ class x32PreProcessor {
 	 * //  + dca*, bus*, mtx*, main*, mono*, show*, aux*, chan*
 	 * //  + dcaLevel, dcaName, dcaMix, dcaMute etc.
 	 * // see source for full listing.
-	 * 
+	 * ```
 	 * const oscRegular = new osc.simpleOscLib({
 	 *     preprocessor : (msg) => x32Pre.readMessage(msg),
 	 * })
+	 * ```
 	 */
-	readMessage( oscMessage ) {
+	readMessage( oscMessage : X32MessageInterface ) {
 		if ( typeof oscMessage !== 'object' || typeof oscMessage?.address !== 'string' || oscMessage?.address === '' ) { return oscMessage }
 
 		oscMessage.wasProcessed = false
 
 		if ( oscMessage.address === 'node' || oscMessage.address === '/node' ) {
-			return this.processNodeMessage(oscMessage.args[0].value)
+			return this.processNodeMessage(oscMessage.args[0]!.value as string)
 		}
 		return this.processRegularMessage(oscMessage)
 	}
 
-	processRegularMessage( oscMessage ) {
+	processRegularMessage( oscMessage : X32MessageInterface ) {
 		return this.#doArgs_regular(oscMessage)
 	}
 
-	processNodeMessage( strNodeMessage ) {
+	processNodeMessage( strNodeMessage : string ) {
 		const indexOfFirstSpace = strNodeMessage.indexOf(' ')
 		const argsMessagePart   = strNodeMessage.slice(indexOfFirstSpace+1).replace('\n', '')
-		const oscMessageObject = {
+		const oscMessageObject : X32MessageInterface = {
 			address      : strNodeMessage.slice(0, indexOfFirstSpace),
 			args         : [],
 			origNodeArg  : argsMessagePart,
@@ -187,11 +206,11 @@ class x32PreProcessor {
 	}
 
 
-	#doArgs_node(msgObj) {
+	#doArgs_node(msgObj : X32MessageInterface) {
 		for ( const thisTestName of this.#activeTypes.node ) {
-			if ( msgObj.address.match(data.node[thisTestName].regEx) ) {
+			if ( msgObj.address.match(data.node[thisTestName]!.regEx) ) {
 				msgObj.wasProcessed  = true
-				msgObj.props         = data.node[thisTestName].props(msgObj)
+				msgObj.props         = data.node[thisTestName]!.props(msgObj)
 				msgObj.props.subtype = thisTestName
 				break
 			}
@@ -199,11 +218,11 @@ class x32PreProcessor {
 		return msgObj
 	}
 
-	#doArgs_regular(msgObj) {
+	#doArgs_regular(msgObj : X32MessageInterface) {
 		for ( const thisTestName of this.#activeTypes.regular ) {
-			if ( msgObj.address.match(data.regular[thisTestName].regEx) ) {
+			if ( msgObj.address.match(data.regular[thisTestName]!.regEx) ) {
 				msgObj.wasProcessed  = true
-				msgObj.props         = data.regular[thisTestName].props(msgObj)
+				msgObj.props         = data.regular[thisTestName]!.props(msgObj)
 				msgObj.props.subtype = thisTestName
 				break
 			}
@@ -211,20 +230,16 @@ class x32PreProcessor {
 		return msgObj
 	}
 
-	#strToArg( argString ) {
+	#strToArg( argString : string ) : OSCArg {
+		// @ts-expect-error: Suppresses the error only on the next line
 		// eslint-disable-next-line eqeqeq
-		if ( parseInt(argString, 10) == argString && !argString.endsWith('.0')) { return { type : 'integer', value : parseInt(argString, 10) }}
+		if ( parseInt(argString, 10) == argString && !argString.endsWith('.0')) {
+			return { type : 'integer', value : parseInt(argString, 10) }
+		}
 		if ( argString.startsWith('%') ) {
-			// eslint-disable-next-line unicorn/no-useless-spread
 			return { type : 'bitmask', value : [...argString.slice(1)].map((x) => x === '1')}
 		}
 	
 		return { type : 'string', value : argString }
 	}
-}
-
-module.exports = {
-	dB2Float           : dB2Float,
-	float2dB           : float2dB,
-	x32PreProcessor    : x32PreProcessor,
 }

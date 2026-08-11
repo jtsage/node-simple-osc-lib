@@ -85,7 +85,9 @@ interface Operation {
 	toBuffer(value : OSCArgTypes) : Buffer;
 	toArray(buffer_in : Buffer) : BufferDecodePart;
 }
-export const uNULL       = '\u0000'
+const uNULL       = '\u0000'
+
+export { uNULL as null }
 
 export class OSCSyntaxError extends Error {
 	constructor(message : string, opts ?: ErrorOptions ) {
@@ -390,11 +392,10 @@ export class simpleOscLib {
 					}
 					return this.#decodedBuffer(rawString, Buffer.alloc(0), 'string')
 				}
-			
+
 				const goodString = rawString.slice(0, nullIndex)
 				const splitPoint = this.#fourBytePad_lastPosition(goodString)
-			
-				
+
 				if ( ! this.#isASCII(goodString) ) {
 					throw new OSCSyntaxError('strings must be ASCII only')
 				}

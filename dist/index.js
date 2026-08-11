@@ -7,10 +7,8 @@
  * |___/_|_| |_| |_| .__/|_|\___|      \___/|___/\___|      |_|_|_.__/
  *     | |
  *     |_|   Simple OSC Communication Library */
-/**
- * Simple OSC communication for nodeJS
- * @module simple-osc-lib
- */
+Object.defineProperty(exports, "__esModule", { value: true });
+const console = require("node:console");
 const uNULL = '\u0000';
 class OSCSyntaxError extends Error {
     constructor(message, opts) {
@@ -18,7 +16,7 @@ class OSCSyntaxError extends Error {
     }
 }
 class simpleOscLib {
-    options = null;
+    options;
     #defaultOptions = {
         asciiOnly: false, // Prevent non-ASCII characters in strings
         blockCharacter: '\xA6', // Character to delineate 4-byte blocks in debug output (or '')
@@ -31,10 +29,15 @@ class simpleOscLib {
     uNull = uNULL;
     #UNIX_EPOCH = 2208988800;
     #TWO_POW_32 = 4294967296;
-    #stringTypeToCharMap = new Set();
+    #stringTypeToCharMap = {};
     #typeExistAll = new Set();
     #typeExistChar = new Set();
     #typeExistString = new Set();
+    #encInteger = (value) => {
+        const buffer_out = Buffer.alloc(4);
+        buffer_out.writeInt32BE(value);
+        return buffer_out;
+    };
     #operations = {
         A: {
             name: 'address',
@@ -50,17 +53,17 @@ class simpleOscLib {
                 addressArray.type = 'address';
                 return addressArray;
             },
-            toBuffer: (address) => {
-                if (typeof address !== 'string' || address.length === 0) {
+            toBuffer: (value) => {
+                if (typeof value !== 'string' || value.length === 0) {
                     throw new OSCSyntaxError('address must be a string, and cannot be empty');
                 }
-                if (this.options.strictAddress && !address.startsWith('/')) {
+                if (this.options.strictAddress && !value.startsWith('/')) {
                     throw new OSCSyntaxError('address must start with a slash');
                 }
-                if (!this.#isAddress(address)) {
+                if (!this.#isAddress(value)) {
                     throw new OSCSyntaxError('invalid characters in address');
                 }
-                return this.#operations.s.toBuffer(address);
+                return this.#operations.s.toBuffer(value);
             },
         },
         b: {
@@ -319,7 +322,7 @@ class simpleOscLib {
         }
         return true;
     }
-    #isASCII(inputString, limit = null) {
+    #isASCII(inputString, limit = false) {
         if (limit !== true && !this.options.asciiOnly) {
             return true;
         }
@@ -376,7 +379,10 @@ class simpleOscLib {
             }
             const thisArgType = this.getTypeCharFromStringOrChar(thisArg.type);
             thisArgTypeList.push(thisArgType);
-            thisArgBufferList.push(this.encodeBufferChunk(thisArgType, thisArg.value));
+            const thisBuffer = this.encodeBufferChunk(thisArgType, thisArg.value);
+            if (typeof thisBuffer !== 'undefined') {
+                thisArgBufferList.push(thisBuffer);
+            }
         }
         if (nested) {
             thisArgTypeList.push(']');
@@ -445,7 +451,7 @@ class simpleOscLib {
             throw new RangeError('timetag array format incorrect');
         }
         const seconds = timetag[0] - this.#UNIX_EPOCH;
-        const fractional = parseFloat(timetag[1]) / this.#TWO_POW_32;
+        const fractional = parseFloat(timetag[1].toString()) / this.#TWO_POW_32;
         const returnDate = new Date();
         returnDate.setTime((seconds * 1000) + (fractional * 1000));
         return returnDate;
@@ -473,7 +479,11 @@ class simpleOscLib {
         if (type.length === 1) {
             return type;
         }
-        return this.#stringTypeToCharMap[type];
+        const thisType = this.#stringTypeToCharMap[type];
+        if (typeof thisType === 'undefined') {
+            throw new RangeError('type does not exist');
+        }
+        return thisType;
     }
     /**
      * Generate a timetag buffer from a timestamp
@@ -498,7 +508,7 @@ class simpleOscLib {
      * @returns {Buffer} 8 byte / 32 bit buffer
      */
     getTimeTagBufferFromDelta(seconds, now = null) {
-        const n = (now !== null ? now : new Date()) / 1000;
+        const n = (now !== null ? now : (new Date()).getTime()) / 1000;
         return this.encodeBufferChunk('t', this.getTimeTagArrayFromSeconds(n + seconds));
     }
     /**
@@ -508,7 +518,7 @@ class simpleOscLib {
      * @param {String} blockChar Character to delineate 4-byte blocks in buffer (or '')
      * @returns {String}
      */
-    printableBuffer(buffer_in, replacementCharacter = null, fourByteMarkerCharacter = null, skipSize = null) {
+    printableBuffer(buffer_in, replacementCharacter = null, fourByteMarkerCharacter = null, skipSize = false) {
         if (!Buffer.isBuffer(buffer_in)) {
             throw new TypeError('buffer expected');
         }
@@ -554,6 +564,9 @@ class simpleOscLib {
             throw new OSCSyntaxError('improper OSC message object');
         }
         const buffer_address = this.encodeBufferChunk('A', oscMessageObject.address);
+        if (typeof buffer_address === 'undefined') {
+            throw new OSCSyntaxError('unable to encode address');
+        }
         if (typeof oscMessageObject.args === 'undefined') {
             return buffer_address;
         }
@@ -562,6 +575,9 @@ class simpleOscLib {
         }
         const allArgs = this.#argArrayToBuffer(oscMessageObject.args);
         const typesBuffer = this.encodeBufferChunk('s', `,${allArgs.types.join('')}`);
+        if (typeof typesBuffer === 'undefined') {
+            throw new OSCSyntaxError('argument list could not be encoded to buffer');
+        }
         return Buffer.concat([buffer_address, typesBuffer, Buffer.concat(allArgs.buffers)]);
     }
     /**
@@ -585,17 +601,19 @@ class simpleOscLib {
         if (!Array.isArray(oscBundleObject.elements) || oscBundleObject.elements.length === 0) {
             throw new RangeError('unable to send empty bundles');
         }
+        const bundleTag = Buffer.alloc(8);
+        bundleTag.write('#bundle');
         const sendBuffer = [
-            this.encodeBufferChunk('s', '#bundle'),
+            bundleTag,
             oscBundleObject.timetag,
         ];
         for (const thisElement of oscBundleObject.elements) {
             if (Buffer.isBuffer(thisElement)) {
-                sendBuffer.push(this.encodeBufferChunk('i', thisElement.length), thisElement);
+                sendBuffer.push(this.#encInteger(thisElement.length), thisElement);
             }
             else {
                 const newBuffer = this.buildMessage(thisElement);
-                sendBuffer.push(this.encodeBufferChunk('i', newBuffer.length), newBuffer);
+                sendBuffer.push(this.#encInteger(newBuffer.length), newBuffer);
             }
         }
         return Buffer.concat(sendBuffer);
@@ -638,10 +656,16 @@ class simpleOscLib {
             elements: [],
         };
         const timeTag = this.decodeBufferChunk('t', buffer_in.subarray(8));
+        if (typeof timeTag === 'undefined') {
+            throw new TypeError('osc timetag not found');
+        }
         bundleObject.timetag = this.getDateFromTimeTagArray(timeTag.value);
         let buffer_remain = timeTag.buffer_remain;
         while (buffer_remain.length !== 0) {
             const nextMessageSize = this.decodeBufferChunk('i', buffer_remain);
+            if (typeof nextMessageSize === 'undefined') {
+                throw new TypeError('osc packet unexpected end of input');
+            }
             const nextMessage = nextMessageSize.buffer_remain.subarray(0, nextMessageSize.value);
             bundleObject.elements.push(this.readPacket(nextMessage));
             buffer_remain = buffer_remain.subarray(nextMessageSize.value + 4);
@@ -660,16 +684,22 @@ class simpleOscLib {
         if (!Buffer.isBuffer(buffer_in)) {
             throw new TypeError('buffer expected');
         }
-        if (this.options.strictMode && buffer_in.length % 4 !== 0) {
+        if (this.options.strictMode === true && buffer_in.length % 4 !== 0) {
             throw new OSCSyntaxError('buffer is not a 4-byte multiple');
         }
-        const oscMessage = { type: 'osc-message', address: null, args: [] };
+        const oscMessage = { type: 'osc-message', address: '/error', args: [] };
         const thisAddress_array = this.decodeBufferChunk('A', buffer_in);
+        if (typeof thisAddress_array === 'undefined') {
+            throw new OSCSyntaxError('unable to decode address from buffer');
+        }
         oscMessage.address = thisAddress_array.value;
         if (thisAddress_array.buffer_remain.length === 0) {
             return this.options.preprocessor(oscMessage);
         }
         const thisArgList_array = this.decodeBufferChunk('s', thisAddress_array.buffer_remain);
+        if (typeof thisArgList_array === 'undefined') {
+            throw new OSCSyntaxError('malformed or unreadable argument list');
+        }
         const arrayOpenMarks = this.#countOccurrences(thisArgList_array.value, '[');
         const arrayCloseMarks = this.#countOccurrences(thisArgList_array.value, ']');
         if (arrayCloseMarks !== arrayOpenMarks) {
@@ -693,14 +723,25 @@ class simpleOscLib {
             }
             if (thisItem === ']') {
                 const built = arrayStack.pop();
-                arrayStack[arrayStack.length - 1].push({
+                const stackItem = arrayStack[arrayStack.length - 1];
+                if (typeof stackItem === 'undefined') {
+                    throw new OSCSyntaxError('unexpected empty argument array');
+                }
+                stackItem.push({
                     type: 'array',
                     value: built,
                 });
                 continue;
             }
             const thisArg_array = this.decodeBufferChunk(thisItem, buffer_remain);
-            arrayStack[arrayStack.length - 1].push({
+            if (typeof thisArg_array === 'undefined') {
+                throw new OSCSyntaxError('unexpected argument decode error');
+            }
+            const stackItem = arrayStack[arrayStack.length - 1];
+            if (typeof stackItem === 'undefined') {
+                throw new OSCSyntaxError('unexpected empty argument array');
+            }
+            stackItem.push({
                 type: this.getTypeStringFromChar(thisItem),
                 value: thisArg_array.value,
             });
@@ -742,8 +783,15 @@ class simpleOscLib {
             throw new OSCSyntaxError('buffer is not a 4-byte multiple');
         }
         const newAddressBuffer = this.encodeBufferChunk('A', newAddress);
-        const originalOSC = { address: null, argArray: null, argBuffer: null };
+        const originalOSC = {
+            address: null,
+            argArray: null,
+            argBuffer: null
+        };
         const thisAddress_array = this.decodeBufferChunk('A', buffer_in);
+        if (typeof thisAddress_array === 'undefined') {
+            throw new OSCSyntaxError('could not decode address block');
+        }
         originalOSC.address = thisAddress_array.value;
         if (thisAddress_array.buffer_remain.length === 0) {
             // no arguments, add old address and dump
@@ -807,8 +855,8 @@ class simpleOscLib {
     }
 }
 class oscBuilder {
-    #oscLib = null;
-    #address = null;
+    #oscLib;
+    #address;
     #argStack = [];
     constructor(oscLib, address) {
         if (typeof address !== 'string' || address.length === 0) {

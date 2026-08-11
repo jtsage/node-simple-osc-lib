@@ -1,4 +1,4 @@
-const x32 = require('../lib/x32_preprocessors.js')
+const x32 = require('../dist/lib/x32_preprocessors.js')
 const fs = require('node:fs')
 const path = require('node:path')
 

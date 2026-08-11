@@ -31,6 +31,18 @@ export default defineConfig({
 		'@stylistic' : stylistic,
 	},
 	rules : {
+		'no-unused-vars' : 'off',
+
+		'@typescript-eslint/no-unused-vars' : ['error'],
+
+		'@stylistic/type-annotation-spacing' : ['error', {
+			after     : true,
+			before    : true,
+			overrides : {
+				arrow        : { before : true, after : true },
+				questionMark : { before : true, after : true },
+			},
+		}],
 
 		'@stylistic/comma-dangle' : [
 			'error',
@@ -61,14 +73,6 @@ export default defineConfig({
 			{
 				'ignoreComments' : true,
 				'skipBlankLines' : true,
-			},
-		],
-		'no-unused-vars' : [
-			'error',
-			{
-				'args'              : 'all',
-				'argsIgnorePattern' : '^_',
-				'varsIgnorePattern' : '^_|^client',
 			},
 		],
 		'sort-keys' : [

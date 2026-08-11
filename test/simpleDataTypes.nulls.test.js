@@ -7,7 +7,7 @@
  *     | |                                                 
  *     |_|   Test Suite - NON-DATA (null) types [T,F,N,I] */
 
-const osc = require('../index.js')
+const osc = require('../dist/index.js')
 
 const getSimpleExpected = (type, value, emptyBuffer = true) => {
 	return {

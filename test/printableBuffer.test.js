@@ -53,7 +53,7 @@ const testMessages = [
 	},
 ]
 
-const osc = require('../index.js')
+const osc = require('../dist/index.js')
 const oscRegular = new osc.simpleOscLib()
 
 describe('printableBuffer', () => {

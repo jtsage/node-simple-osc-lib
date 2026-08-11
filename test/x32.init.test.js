@@ -14,7 +14,7 @@ if ( require.main === module ) {
 	process.exit(1)
 }
 
-const osc_x32 = require('../x32.js')
+const osc_x32 = require('../dist/x32.js')
 
 const totalNodeTypes    = 20
 const totalRegularTypes = 26

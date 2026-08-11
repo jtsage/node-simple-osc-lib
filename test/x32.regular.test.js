@@ -14,10 +14,10 @@ if ( require.main === module ) {
 	process.exit(1)
 }
 
-const x32 = require('../lib/x32_preprocessors.js')
+const x32 = require('../dist/lib/x32_preprocessors.js')
 
-const osc     = require('../index.js')
-const osc_x32 = require('../x32.js')
+const osc     = require('../dist/index.js')
+const osc_x32 = require('../dist/x32.js')
 
 const x32Pre = new osc_x32.x32PreProcessor('all')
 

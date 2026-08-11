@@ -13,7 +13,7 @@ if ( require.main === module ) {
 	process.stdout.write(`part of the jest test suite, try "npm test ${scriptName}" instead.\n`)
 	process.exit(1)
 }
-const osc = require('../index.js')
+const osc = require('../dist/index.js')
 
 describe('library initialization', () => {
 	test('no options', () => {

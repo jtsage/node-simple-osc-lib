@@ -14,7 +14,7 @@ if ( require.main === module ) {
 	process.exit(1)
 }
 
-const osc  = require('../index.js')
+const osc  = require('../dist/index.js')
 
 const oscRegular = new osc.simpleOscLib()
 

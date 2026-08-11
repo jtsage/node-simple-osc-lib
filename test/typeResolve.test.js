@@ -6,7 +6,7 @@
  * |___/_|_| |_| |_| .__/|_|\___|      \___/|___/\___|      |_|_|_.__/ 
  *     | |                                                 
  *     |_|   Test Suite - TYPE resolution */
-
+//@ts-check
 if ( require.main === module ) {
 	const path = require('node:path')
 	const scriptName = path.basename(__filename).replace('.test.js', '')

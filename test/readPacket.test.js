@@ -81,8 +81,9 @@ describe('known packets', () => {
 	})
 })
 
-test('pass on empty packet', () => {
-	expect(oscRegular.readPacket(Buffer.alloc(0))).toEqual(null)
+test('fail on empty packet', () => {
+	const input = Buffer.alloc(0)
+	expect(() => oscRegular.readMessage(input)).toThrow(osc.OSCSyntaxError)
 })
 
 test('pass on no arguments', () => {

@@ -12,16 +12,46 @@
  * @module simple-osc-lib
  */
 
+type OSCArgs = {type : string, value : any}[]
+
+type OSCMessage = {
+	address : string;
+	args : OSCArgs;
+}
+
+type OSCBundle = {
+	type : string;
+	timetag : Date | null;
+	elements : OSCMessage[];
+}
+
+
+type BufferArgList = {
+	types : string[];
+	buffers : Array<Buffer | undefined>;
+}
+
+type BufferDecodePart = {
+	buffer_remain: Buffer<ArrayBufferLike>;
+ 	type: string;
+	value: any;
+}
+
+interface Operation {
+	name : string;
+	toBuffer(value : any) : Buffer | undefined;
+	toArray(buffer_in : Buffer) : BufferDecodePart;
+}
 const uNULL       = '\u0000'
 
 class OSCSyntaxError extends Error {
-	constructor(message, opts) {
+	constructor(message : string, opts ?: ErrorOptions ) {
 		super(message, opts)
 	}
 }
 
 class simpleOscLib {
-	options         = null
+	options : Record<string, any>
 	#defaultOptions = {
 		asciiOnly      : false,    // Prevent non-ASCII characters in strings
 		blockCharacter : '\xA6',   // Character to delineate 4-byte blocks in debug output (or '')
@@ -36,16 +66,20 @@ class simpleOscLib {
 	#UNIX_EPOCH = 2208988800
 	#TWO_POW_32 = 4294967296
 
-	#stringTypeToCharMap = new Set()
-	#typeExistAll        = new Set()
-	#typeExistChar       = new Set()
-	#typeExistString     = new Set()
+	#stringTypeToCharMap : Record<string, string> = {}
+	#typeExistAll        = new Set<string>()
+	#typeExistChar       = new Set<string>()
+	#typeExistString     = new Set<string>()
 
-	#operations = {
+	#operations : Record<string, Operation> = {
 		A : {
 			name : 'address',
-			toArray : ( buffer_in ) => {
-				const addressArray = this.#operations.s.toArray(buffer_in)
+			toArray : ( buffer_in : Buffer ) : BufferDecodePart => {
+				const addressArray = this.#operations.s?.toArray(buffer_in)
+				if ( typeof addressArray === "undefined" ) {
+					throw new OSCSyntaxError('address decode failed')
+				}
+
 				const stringAddress = addressArray.value
 
 				if ( typeof stringAddress !== 'string' || stringAddress.length === 0 ) {
@@ -57,22 +91,22 @@ class simpleOscLib {
 				addressArray.type = 'address'
 				return addressArray
 			},
-			toBuffer : ( address ) => {
-				if ( typeof address !== 'string' || address.length === 0 ) {
+			toBuffer : ( value : string ) => {
+				if ( typeof value !== 'string' || value.length === 0 ) {
 					throw new OSCSyntaxError('address must be a string, and cannot be empty')
 				}
-				if ( this.options.strictAddress && !address.startsWith('/') ) {
+				if ( this.options.strictAddress && !value.startsWith('/') ) {
 					throw new OSCSyntaxError('address must start with a slash')
 				}
-				if ( ! this.#isAddress(address) ) {
+				if ( ! this.#isAddress(value) ) {
 					throw new OSCSyntaxError('invalid characters in address')
 				}
-				return this.#operations.s.toBuffer(address)
+				return this.#operations.s?.toBuffer(value)
 			},
 		},
 		b : {
 			name : 'blob',
-			toArray : ( buffer_in ) => {
+			toArray : ( buffer_in : Buffer ) : BufferDecodePart => {
 				if ( buffer_in.length < 8 ) {
 					throw new RangeError('buffer too small for blob type')
 				}
@@ -84,7 +118,7 @@ class simpleOscLib {
 				const chunkSize  = 4 + dataLength + ( 4 - ( dataLength % 4 ) )
 				return this.#decodedBuffer(origBuffer, buffer_in.subarray(chunkSize), 'blob')
 			},
-			toBuffer : (buffer_in) => {
+			toBuffer : ( buffer_in : Buffer ) => {
 				if ( ! Buffer.isBuffer(buffer_in) ) {
 					throw new TypeError('expected buffer')
 				}
@@ -100,7 +134,7 @@ class simpleOscLib {
 		},
 		c : {
 			name    : 'char',
-			toArray : (buffer_in) => {
+			toArray : ( buffer_in : Buffer ) : BufferDecodePart => {
 				if ( buffer_in.length < 4 ) {
 					throw new RangeError('buffer too small for char type')
 				}
@@ -111,7 +145,7 @@ class simpleOscLib {
 				return this.#decodedBuffer(String.fromCharCode(thisCharCode), buffer_in.subarray(4), 'char')
 
 			},
-			toBuffer : (value) => {
+			toBuffer : ( value : string ) => {
 				if (typeof value !== 'string' || value.length > 1 || ! this.#isASCII(value, true) ) {
 					throw new TypeError('expected single ASCII character')
 				}
@@ -123,14 +157,14 @@ class simpleOscLib {
 		},
 		d : {
 			name : 'double',
-			toArray : ( buffer_in ) => {
+			toArray : ( buffer_in : Buffer ) : BufferDecodePart => {
 				if ( buffer_in.length < 8 ) {
 					throw new RangeError('buffer too small for float type')
 				}
 				const thisNumber = buffer_in.readDoubleBE()
 				return this.#decodedBuffer(thisNumber, buffer_in.subarray(8), 'double')
 			},
-			toBuffer : (value) => {
+			toBuffer : ( value : number) => {
 				if (typeof value !== 'number' ) {
 					throw new TypeError('expected number')
 				}
@@ -141,14 +175,14 @@ class simpleOscLib {
 		},
 		f : {
 			name : 'float',
-			toArray : ( buffer_in ) => {
+			toArray : ( buffer_in : Buffer ) : BufferDecodePart => {
 				if ( buffer_in.length < 4 ) {
 					throw new RangeError('buffer too small for float type')
 				}
 				const thisNumber = buffer_in.readFloatBE()
 				return this.#decodedBuffer(thisNumber, buffer_in.subarray(4), 'float')
 			},
-			toBuffer : ( value ) => {
+			toBuffer : ( value : number ) => {
 				if (typeof value !== 'number' ) {
 					throw new TypeError('expected number')
 				}
@@ -159,19 +193,19 @@ class simpleOscLib {
 		},
 		F : {
 			name     : 'false',
-			toArray  : ( buffer_in ) => this.#decodedBuffer(null, buffer_in, 'false'),
+			toArray  : ( buffer_in : Buffer) : BufferDecodePart => this.#decodedBuffer(null, buffer_in, 'false'),
 			toBuffer : () => Buffer.alloc(0),
 		},
 		h : {
 			name : 'bigint',
-			toArray : ( buffer_in ) => {
+			toArray : ( buffer_in : Buffer ) : BufferDecodePart => {
 				if ( buffer_in.length < 8 ) {
 					throw new RangeError('buffer too small for bigint type')
 				}
 				const thisNumber = BigInt(buffer_in.readBigInt64BE())
 				return this.#decodedBuffer(thisNumber, buffer_in.subarray(8), 'bigint')
 			},
-			toBuffer : (value) => {
+			toBuffer : (value : bigint) => {
 				if (typeof value !== 'bigint' ) {
 					throw new TypeError('expected bigint')
 				}
@@ -182,14 +216,14 @@ class simpleOscLib {
 		},
 		i : {
 			name : 'integer',
-			toArray : ( buffer_in ) => {
+			toArray : ( buffer_in : Buffer ) : BufferDecodePart => {
 				if ( buffer_in.length < 4 ) {
 					throw new RangeError('buffer too small for integer type')
 				}
 				const thisNumber = buffer_in.readInt32BE()
 				return this.#decodedBuffer(thisNumber, buffer_in.subarray(4), 'integer')
 			},
-			toBuffer : (value) => {
+			toBuffer : (value : number) => {
 				if (typeof value !== 'number' || ! Number.isInteger(value) ) {
 					throw new TypeError('expected integer')
 				}
@@ -200,17 +234,17 @@ class simpleOscLib {
 		},
 		I : {
 			name     : 'bang',
-			toArray  : ( buffer_in ) => this.#decodedBuffer(null, buffer_in, 'bang'),
+			toArray  : ( buffer_in : Buffer ) : BufferDecodePart => this.#decodedBuffer(null, buffer_in, 'bang'),
 			toBuffer : () => Buffer.alloc(0),
 		},
 		N : {
 			name    : 'null',
-			toArray : ( buffer_in ) => this.#decodedBuffer(null, buffer_in, 'null'),
+			toArray : ( buffer_in : Buffer ) : BufferDecodePart => this.#decodedBuffer(null, buffer_in, 'null'),
 			toBuffer : () => Buffer.alloc(0),
 		},
 		r : {
 			name    : 'color',
-			toArray : (buffer_in) => {
+			toArray : (buffer_in : Buffer) : BufferDecodePart => {
 				if ( buffer_in.length < 4 ) {
 					throw new RangeError('buffer too small for color type')
 				}
@@ -223,7 +257,7 @@ class simpleOscLib {
 
 				return this.#decodedBuffer(colorArray, buffer_in.subarray(4), 'color')
 			},
-			toBuffer : (value) => {
+			toBuffer : (value : [number,number,number,number]) => {
 				if ( !Array.isArray(value) || value.length !== 4 ) {
 					throw new TypeError('expected 4 element numeric array')
 				}
@@ -241,7 +275,7 @@ class simpleOscLib {
 		},
 		s : {
 			name    : 'string',
-			toArray : ( buffer_in ) => {
+			toArray : ( buffer_in : Buffer ) : BufferDecodePart => {
 				const rawString = buffer_in.toString('utf8')
 				const nullIndex = rawString.indexOf('\u0000')
 			
@@ -271,7 +305,7 @@ class simpleOscLib {
 			
 				return this.#decodedBuffer(goodString, buffer_in.subarray(splitPoint), 'string')
 			},
-			toBuffer : ( value_in ) => {
+			toBuffer : ( value_in : string ) => {
 				const value = this.options.coerceStrings === true ?
 					value_in.toString() :
 					value_in
@@ -285,12 +319,12 @@ class simpleOscLib {
 		},
 		S : {
 			name : 'STRING',
-			toArray : ( buffer_in ) => this.#operations.s.toArray( buffer_in ),
-			toBuffer : ( value ) => this.#operations.s.toBuffer( value ),
+			toArray : ( buffer_in : Buffer ) : BufferDecodePart => this.#operations.s.toArray( buffer_in ),
+			toBuffer : ( value : string ) => this.#operations.s.toBuffer( value ),
 		},
 		t : {
 			name    : 'timetag',
-			toArray : ( buffer_in ) => {
+			toArray : ( buffer_in : Buffer ) : BufferDecodePart => {
 				if ( buffer_in.length < 8 ) {
 					throw new RangeError('buffer too small for timetag type')
 				}
@@ -298,7 +332,7 @@ class simpleOscLib {
 				const number2 = buffer_in.readUInt32BE(4)
 				return this.#decodedBuffer([number1, number2], buffer_in.subarray(8), 'timetag')
 			},
-			toBuffer : (value) => {
+			toBuffer : ( value : any ) => {
 				const timeTagArray = this.getTimeTagArrayFromUnknownType(value)
 				const buffer_out   = Buffer.alloc(8)
 
@@ -310,7 +344,7 @@ class simpleOscLib {
 		},
 		T : {
 			name     : 'true',
-			toArray  : ( buffer_in ) => this.#decodedBuffer(null, buffer_in, 'true'),
+			toArray  : ( buffer_in : Buffer ) : BufferDecodePart => this.#decodedBuffer(null, buffer_in, 'true'),
 			toBuffer : () => Buffer.alloc(0),
 		},
 	}
@@ -324,7 +358,7 @@ class simpleOscLib {
 	 * @param {Boolean} options.strictAddress  - Use strict address mode (all string rules, must begin with slash).
 	 * @param {Boolean} options.strictMode     - Use strict mode.
 	 */
-	constructor ( options ) {
+	constructor ( options : Record<string, any> ) {
 		this.options = { ...this.#defaultOptions, ...options }
 
 		if ( typeof this.options.preprocessor !== 'function' ) {
@@ -333,7 +367,7 @@ class simpleOscLib {
 
 		this.#typeExistChar = new Set(Object.keys(this.#operations))
 		for ( const thisChar of this.#typeExistChar ) {
-			this.#stringTypeToCharMap[this.#operations[thisChar].name] = thisChar
+			this.#stringTypeToCharMap[this.#operations[thisChar]!.name] = thisChar
 		}
 		this.#typeExistString = new Set(Object.keys(this.#stringTypeToCharMap))
 		this.#typeExistAll    = new Set([...this.#typeExistChar, ...this.#typeExistString])
@@ -341,14 +375,14 @@ class simpleOscLib {
 
 	
 
-	#isAddress( inputString ) {
+	#isAddress( inputString : string ) {
 		if ( ! (/^[\w!"$%&'()+-./:;<=>@^`|~]*$/).test(inputString) ) {
 			return false
 		}
 		return true
 	}
 
-	#isASCII( inputString, limit = null ) {
+	#isASCII( inputString : string, limit = null ) {
 		if ( limit !== true && ! this.options.asciiOnly ) { return true }
 		// eslint-disable-next-line no-control-regex
 		if ( ! (/^[\x00-\x7F]*$/).test(inputString) ) {
@@ -357,24 +391,24 @@ class simpleOscLib {
 		return true
 	}
 
-	#countOccurrences( haystack, needle ) {
+	#countOccurrences( haystack : string, needle : string ) {
 		return haystack.split(needle).length - 1
 	}
 
-	#isBundle( buffer_in ) {
+	#isBundle( buffer_in : Buffer ) {
 		return buffer_in.subarray(0, 7).toString('utf8') === '#bundle'
 	}
 
-	#fourBytePad_addLength( inputString ) {
+	#fourBytePad_addLength( inputString : string ) {
 		const buffLength = Buffer.byteLength(inputString)
 		return 4 - ( buffLength % 4 )
 	}
 
-	#fourBytePad_lastPosition( inputString ) {
+	#fourBytePad_lastPosition( inputString : string ) {
 		return this.#fourBytePad_addLength(inputString) + Buffer.byteLength(inputString)
 	}
 
-	#fourBytePad_string( inputString ) {
+	#fourBytePad_string( inputString : string ) {
 		let padString = inputString
 		const padLength = this.#fourBytePad_addLength(inputString)
 		for ( let i = 0; i < padLength; i++ ) {
@@ -383,7 +417,7 @@ class simpleOscLib {
 		return padString
 	}
 
-	#decodedBuffer( value, buffer_remain, type ) {
+	#decodedBuffer( value : any, buffer_remain : Buffer, type : string ) {
 		return {
 			buffer_remain : buffer_remain,
 			type          : type,
@@ -391,7 +425,7 @@ class simpleOscLib {
 		}
 	}
 
-	#argArrayToBuffer( args, nested = false ) {
+	#argArrayToBuffer( args : OSCArgs, nested : boolean = false ) : BufferArgList {
 		const thisArgTypeList   = []
 		const thisArgBufferList = []
 
@@ -430,9 +464,9 @@ class simpleOscLib {
 	 * @param {*} value Value for data (must be null for null types)
 	 * @returns {Buffer} buffer padded to 32-bit blocks with NULLs
 	 */
-	encodeBufferChunk( type, value ) {
+	encodeBufferChunk( type : string, value : any ) {
 		const thisType = this.getTypeCharFromStringOrChar(type)
-		return this.#operations[thisType].toBuffer(value)
+		return this.#operations[thisType]?.toBuffer(value)
 	}
 
 	/**
@@ -441,7 +475,7 @@ class simpleOscLib {
 	 * @param {Buffer} buffer_in buffer padded to 32-bit blocks with NULLs
 	 * @returns {Object} Contains the type, value, and unused portion of the buffer
 	 */
-	decodeBufferChunk( type, buffer_in ) {
+	decodeBufferChunk( type : string, buffer_in : Buffer ) {
 		if ( ! Buffer.isBuffer(buffer_in) ) {
 			throw new TypeError('buffer expected')
 		}
@@ -449,11 +483,11 @@ class simpleOscLib {
 			throw new RangeError('buffer is not a 4-byte multiple')
 		}
 		const thisType = this.getTypeCharFromStringOrChar(type)
-		return this.#operations[thisType].toArray(buffer_in)
+		return this.#operations[thisType]?.toArray(buffer_in)
 	}
 
 
-	getTimeTagArrayFromUnknownType( value ) {
+	getTimeTagArrayFromUnknownType( value : any ) {
 		if ( Array.isArray(value) && value.length === 2 && typeof value[0] === 'number' && typeof value[1] === 'number') {
 			// already prepared
 			return value
@@ -467,7 +501,7 @@ class simpleOscLib {
 		throw new TypeError('invalid timetag type')
 	}
 
-	getTimeTagArrayFromSeconds( seconds ) {
+	getTimeTagArrayFromSeconds( seconds : number ) {
 		const unixSeconds = Math.floor(seconds)
 		const fracSeconds = seconds - unixSeconds
 	
@@ -481,12 +515,12 @@ class simpleOscLib {
 	 * @param {Array} timetag 2 element array for a timetag [unix seconds, fractional seconds]
 	 * @returns {Date}
 	 */
-	getDateFromTimeTagArray( timetag ) {
+	getDateFromTimeTagArray( timetag : [number,number] ) {
 		if ( !Array.isArray(timetag) || timetag.length !== 2 || typeof timetag[0] !== 'number' || typeof timetag[1] !== 'number') {
 			throw new RangeError('timetag array format incorrect')
 		}
 		const seconds    = timetag[0] - this.#UNIX_EPOCH
-		const fractional = parseFloat(timetag[1]) / this.#TWO_POW_32
+		const fractional = parseFloat(timetag[1].toString()) / this.#TWO_POW_32
 		const returnDate = new Date()
 	
 		returnDate.setTime((seconds * 1000) + (fractional * 1000))
@@ -500,8 +534,8 @@ class simpleOscLib {
 	 * @param {String} type single character type
 	 * @returns {String}
 	 */
-	getTypeStringFromChar( type ) {
-		return this.#typeExistChar.has(type) ? this.#operations[type].name : 'unknown'
+	getTypeStringFromChar( type : string ) {
+		return this.#typeExistChar.has(type) ? this.#operations[type]?.name : 'unknown'
 	}
 
 	/**
@@ -509,7 +543,7 @@ class simpleOscLib {
 	 * @param {String} type character type string or single character
 	 * @returns {String}
 	 */
-	getTypeCharFromStringOrChar( type ) {
+	getTypeCharFromStringOrChar( type : string ) : string {
 		if ( typeof type !== 'string' || type === '' ) {
 			throw new TypeError('string or char expected')
 		}
@@ -519,7 +553,11 @@ class simpleOscLib {
 		if ( type.length === 1 ) {
 			return type
 		}
-		return this.#stringTypeToCharMap[type]
+		const thisType = this.#stringTypeToCharMap[type]
+		if ( typeof thisType === 'undefined' ) {
+			throw new RangeError('type does not exist')
+		}
+		return thisType
 	}
 
 	/**
@@ -527,7 +565,7 @@ class simpleOscLib {
 	 * @param {Number} number timestamp (from epoch)
 	 * @returns {Buffer} 8 byte / 32 bit buffer
 	 */
-	getTimeTagBufferFromTimestamp( number ) {
+	getTimeTagBufferFromTimestamp( number : number ) {
 		return this.encodeBufferChunk('t', this.getTimeTagArrayFromSeconds(number))
 	}
 
@@ -536,7 +574,7 @@ class simpleOscLib {
 	 * @param {Date} date javascript date instance
 	 * @returns {Buffer} 8 byte / 32 bit buffer
 	 */
-	getTimeTagBufferFromDate( date ) {
+	getTimeTagBufferFromDate( date : Date ) {
 		return this.encodeBufferChunk('t', this.getTimeTagArrayFromUnknownType(date))
 	}
 
@@ -546,8 +584,8 @@ class simpleOscLib {
 	 * @param {Number|null} now point to calculate from (in ms!!)
 	 * @returns {Buffer} 8 byte / 32 bit buffer
 	 */
-	getTimeTagBufferFromDelta(seconds, now = null) {
-		const n = (now !== null ? now : new Date()) / 1000
+	getTimeTagBufferFromDelta(seconds : number, now : number | null = null) {
+		const n = (now !== null ? now : (new Date()).getTime()) / 1000
 		return this.encodeBufferChunk('t', this.getTimeTagArrayFromSeconds(n + seconds))
 	}
 
@@ -683,7 +721,7 @@ class simpleOscLib {
 	 * @param {Buffer} buffer_in buffer padded to 32-bit blocks with NULLs
 	 * @returns {Object} osc-bundle object
 	 */
-	readBundle( buffer_in ) {
+	readBundle( buffer_in : Buffer ) {
 		if ( ! Buffer.isBuffer(buffer_in) ) {
 			throw new TypeError('buffer expected')
 		}
@@ -692,7 +730,7 @@ class simpleOscLib {
 			throw new TypeError('osc-bundles must begin with #bundle')
 		}
 
-		const bundleObject = {
+		const bundleObject: OSCBundle = {
 			type : 'osc-bundle',
 			timetag : null,
 			elements : [],
@@ -724,12 +762,12 @@ class simpleOscLib {
 	 * @param {Object} options.messageCallback callback to run on each message
 	 * @returns {Object} osc-message object
 	 */
-	readMessage ( buffer_in ) {
+	readMessage ( buffer_in : Buffer ) {
 		if ( ! Buffer.isBuffer(buffer_in) ) {
 			throw new TypeError('buffer expected')
 		}
 
-		if ( this.options.strictMode && buffer_in.length % 4 !== 0 ) {
+		if ( this.options.strictMode === true && buffer_in.length % 4 !== 0 ) {
 			throw new OSCSyntaxError('buffer is not a 4-byte multiple')
 		}
 

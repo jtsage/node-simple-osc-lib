@@ -1,5 +1,5 @@
 import js from '@eslint/js'
-import babelParser from '@babel/eslint-parser'
+// import babelParser from '@babel/eslint-parser'
 import eslintPluginUnicorn from 'eslint-plugin-unicorn'
 import globals from 'globals'
 
@@ -16,7 +16,7 @@ export default [
 				...globals.es2021,
 				...globals.jest,
 			},
-			parser      : babelParser,
+			// parser      : babelParser,
 			parserOptions : {
 				requireConfigFile : false,
 			},
@@ -26,6 +26,8 @@ export default [
 			unicorn : eslintPluginUnicorn,
 		},
 		rules : {
+
+
 			'no-shadow'    : [ 'error', { 'builtinGlobals': true }],
 			'comma-dangle' : [
 				'error',
@@ -119,7 +121,6 @@ export default [
 			'unicorn/new-for-builtins'                 : 'error',
 			'unicorn/no-abusive-eslint-disable'        : 'error',
 			'unicorn/no-array-callback-reference'      : 'error',
-			'unicorn/no-array-for-each'                : 'error',
 			'unicorn/no-array-method-this-argument'    : 'error',
 			'unicorn/no-array-push-push'               : 'error',
 			'unicorn/no-for-loop'                      : 'error',

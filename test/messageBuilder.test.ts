@@ -7,14 +7,7 @@
  *     | |                                                 
  *     |_|   Test Suite - messageBuilder */
 
-if ( require.main === module ) {
-	const path = require('node:path')
-	const scriptName = path.basename(__filename).replace('.test.js', '')
-	process.stdout.write(`part of the jest test suite, try "npm test ${scriptName}" instead.\n`)
-	process.exit(1)
-}
-
-const osc  = require('../dist/index.js')
+import * as osc from '../src/index'
 
 const oscRegular = new osc.simpleOscLib()
 
@@ -27,6 +20,7 @@ const valueNameMap = {
 
 describe('message builder', () => {
 	test('build init fail (no address)', () => {
+		// @ts-expect-error testing failure.
 		expect(() => oscRegular.messageBuilder()).toThrow(TypeError)
 	})
 
@@ -36,13 +30,16 @@ describe('message builder', () => {
 		describe.each(Object.keys(valueNameMap))('Test input of type %s,', (inputType) => {
 			if ( buildType === inputType || (buildType === 'float' && inputType === 'integer') ) {
 				test('type is valid', () => {
+					// @ts-expect-error testing fun.
 					expect(() => testBuilder[buildType](valueNameMap[inputType])).not.toThrow()
 				})
 				test('type is valid (shortcut)', () => {
+					// @ts-expect-error testing fun.
 					expect(() => testBuilder[buildType[0]](valueNameMap[inputType])).not.toThrow()
 				})
 			} else {
 				test('type is invalid', () => {
+					// @ts-expect-error testing fun.
 					expect(() => testBuilder[buildType](valueNameMap[inputType])).toThrow(TypeError)
 				})
 			}

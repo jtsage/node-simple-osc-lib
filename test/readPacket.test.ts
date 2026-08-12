@@ -7,13 +7,7 @@
  *     | |                                                 
  *     |_|   Test Suite - readPacket */
 
-if ( require.main === module ) {
-	const path = require('node:path')
-	const scriptName = path.basename(__filename).replace('.test.js', '')
-	process.stdout.write(`part of the jest test suite, try "npm test ${scriptName}" instead.\n`)
-	process.exit(1)
-}
-const osc = require('../dist/index.js')
+import * as osc from '../src/index'
 
 const oscRegular = new osc.simpleOscLib()
 const oscStrict  = new osc.simpleOscLib({strictMode : true, strictAddress : true, asciiOnly : true})
@@ -63,12 +57,15 @@ const knownPackets = [
 
 describe('non-buffer fails', () => {
 	test('readPacket', () => {
+		// @ts-expect-error testing failure.
 		expect(() => oscRegular.readPacket('hi')).toThrow(TypeError)
 	})
 	test('readBundle', () => {
+		// @ts-expect-error testing failure.
 		expect(() => oscRegular.readBundle('hi')).toThrow(TypeError)
 	})
 	test('readMessage', () => {
+		// @ts-expect-error testing failure.
 		expect(() => oscRegular.readMessage('hi')).toThrow(TypeError)
 	})
 })
@@ -76,7 +73,9 @@ describe('non-buffer fails', () => {
 describe('known packets', () => {
 	test.each(knownPackets)('message from $address', ({address, args, buffer}) => {
 		const decoded = oscRegular.readPacket(buffer)
+		// @ts-expect-error expected error
 		expect(decoded.address).toEqual(address)
+		// @ts-expect-error expected error
 		expect(decoded.args).toEqual(args)
 	})
 })
@@ -132,10 +131,16 @@ test('fail on missing comma (strict)', () => {
 test('read correct array', () => {
 	const input = Buffer.from(`/hello${osc.null}${osc.null},[[I]]ss${osc.null}${osc.null}${osc.null}${osc.null}hi${osc.null}${osc.null}there${osc.null}${osc.null}${osc.null}`)
 	const decoded = oscRegular.readPacket(input)
+	// @ts-expect-error expected error
 	expect(decoded.address).toEqual('/hello')
+	// @ts-expect-error expected error
 	expect(decoded.args[0].type).toEqual('array')
+	// @ts-expect-error expected error
 	expect(decoded.args[0].value[0].type).toEqual('array')
+	// @ts-expect-error expected error
 	expect(decoded.args[0].value[0].value[0].type).toEqual('bang')
+	// @ts-expect-error expected error
 	expect(decoded.args[1].value).toEqual('hi')
+	// @ts-expect-error expected error
 	expect(decoded.args[2].value).toEqual('there')
 })

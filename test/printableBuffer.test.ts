@@ -7,13 +7,6 @@
  *     | |                                                 
  *     |_|   Test Suite - printBuffer Function */
 
-if ( require.main === module ) {
-	const path = require('node:path')
-	const scriptName = path.basename(__filename).replace('.test.js', '')
-	process.stdout.write(`part of the jest test suite, try "npm test ${scriptName}" instead.\n`)
-	process.exit(1)
-}
-
 const testMessages = [
 	{
 		message : {
@@ -53,7 +46,7 @@ const testMessages = [
 	},
 ]
 
-const osc = require('../dist/index.js')
+import * as osc from '../src/index'
 const oscRegular = new osc.simpleOscLib()
 
 describe('printableBuffer', () => {
@@ -73,6 +66,7 @@ describe('printableBuffer', () => {
 		})
 	})
 	test('invalid input', () => {
+		// @ts-expect-error testing failure.
 		expect(() => oscRegular.printableBuffer('hello')).toThrow(TypeError)
 	})
 })

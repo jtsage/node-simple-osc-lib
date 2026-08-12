@@ -61,62 +61,62 @@ export class x32PreProcessor {
 	/**
 	 * @param activeTypeList - Active message preprocessors.  See test file.
 	 */
-	constructor(activeTypeList : null | string | string[] = null) {
+	constructor( activeTypeList : null | string | string[] = null ) {
 		const parsableTypeList = []
 
 		if ( activeTypeList === null ) {
-			parsableTypeList.push('*')
+			parsableTypeList.push( '*' )
 		} else if ( typeof activeTypeList === 'string' ) {
-			if ( /^all$/i.test(activeTypeList) ) {
-				parsableTypeList.push('*')
+			if ( /^all$/i.test( activeTypeList ) ) {
+				parsableTypeList.push( '*' )
 			} else {
-				parsableTypeList.push(activeTypeList)
+				parsableTypeList.push( activeTypeList )
 			}
-		} else if ( !Array.isArray(activeTypeList) ) {
-			throw new TypeError('list or string expected')
+		} else if ( !Array.isArray( activeTypeList ) ) {
+			throw new TypeError( 'list or string expected' )
 		} else {
-			parsableTypeList.push(...activeTypeList)
+			parsableTypeList.push( ...activeTypeList )
 		}
 
-		const parsableTypeSet = new Set(parsableTypeList)
+		const parsableTypeSet = new Set( parsableTypeList )
 
-		const knownNode    = new Set(Object.keys(data.node))
-		const knownRegular = new Set(Object.keys(data.regular))
+		const knownNode    = new Set( Object.keys( data.node ) )
+		const knownRegular = new Set( Object.keys( data.regular ) )
 
-		if ( parsableTypeSet.has('*') ) {
+		if ( parsableTypeSet.has( '*' ) ) {
 			this.#activeTypes.node    = knownNode
 			this.#activeTypes.regular = knownRegular
 		} else {
 
 			for ( const thisParsedType of parsableTypeSet ) {
 				let foundOne = false
-				if ( thisParsedType.match(/\*$/) ) {
-					const thisSearchTerm = thisParsedType.replaceAll('*', '')
+				if ( thisParsedType.match( /\*$/ ) ) {
+					const thisSearchTerm = thisParsedType.replaceAll( '*', '' )
 					for ( const nodeKey of knownNode ) {
-						if ( nodeKey.startsWith(thisSearchTerm) ) {
+						if ( nodeKey.startsWith( thisSearchTerm ) ) {
 							foundOne = true
-							this.#activeTypes.node.add(nodeKey)
+							this.#activeTypes.node.add( nodeKey )
 						}
 					}
 					for ( const regKey of knownRegular ) {
-						if ( regKey.startsWith(thisSearchTerm) ) {
+						if ( regKey.startsWith( thisSearchTerm ) ) {
 							foundOne = true
-							this.#activeTypes.regular.add(regKey)
+							this.#activeTypes.regular.add( regKey )
 						}
 					}
 				} else {
 					
-					if ( knownNode.has(thisParsedType) ) {
+					if ( knownNode.has( thisParsedType ) ) {
 						foundOne = true
-						this.#activeTypes.node.add(thisParsedType)
+						this.#activeTypes.node.add( thisParsedType )
 					}
-					if ( knownRegular.has(thisParsedType) ) {
+					if ( knownRegular.has( thisParsedType ) ) {
 						foundOne = true
-						this.#activeTypes.regular.add(thisParsedType)
+						this.#activeTypes.regular.add( thisParsedType )
 					}
 				}
 				if ( !foundOne ) {
-					throw new TypeError(`invalid message type processor '${thisParsedType}'`)
+					throw new TypeError( `invalid message type processor '${thisParsedType}'` )
 				}
 				
 			}
@@ -148,25 +148,27 @@ export class x32PreProcessor {
 	 * ```
 	 */
 	readMessage( oscMessage : X32MessageInterface ) {
-		if ( typeof oscMessage !== 'object' || typeof oscMessage?.address !== 'string' || oscMessage?.address === '' ) { return oscMessage }
+		if ( typeof oscMessage !== 'object' || typeof oscMessage?.address !== 'string' || oscMessage?.address === '' ) {
+			return oscMessage
+		}
 
 		oscMessage.wasProcessed = false
 
 		if ( oscMessage.address === 'node' || oscMessage.address === '/node' ) {
-			return this.processNodeMessage(oscMessage.args[0]!.value as string)
+			return this.processNodeMessage( oscMessage.args[0]!.value as string )
 		}
-		return this.processRegularMessage(oscMessage)
+		return this.processRegularMessage( oscMessage )
 	}
 
 	processRegularMessage( oscMessage : X32MessageInterface ) {
-		return this.#doArgs_regular(oscMessage)
+		return this.#doArgs_regular( oscMessage )
 	}
 
 	processNodeMessage( strNodeMessage : string ) {
-		const indexOfFirstSpace = strNodeMessage.indexOf(' ')
-		const argsMessagePart   = strNodeMessage.slice(indexOfFirstSpace+1).replace('\n', '')
+		const indexOfFirstSpace = strNodeMessage.indexOf( ' ' )
+		const argsMessagePart   = strNodeMessage.slice( indexOfFirstSpace+1 ).replace( '\n', '' )
 		const oscMessageObject : X32MessageInterface = {
-			address      : strNodeMessage.slice(0, indexOfFirstSpace),
+			address      : strNodeMessage.slice( 0, indexOfFirstSpace ),
 			args         : [],
 			origNodeArg  : argsMessagePart,
 			props        : {},
@@ -176,21 +178,21 @@ export class x32PreProcessor {
 
 		let quoteOpen = false
 		let currentArgValue = ''
-		for ( const thisChar of argsMessagePart) {
+		for ( const thisChar of argsMessagePart ) {
 			if ( thisChar === ' ' && quoteOpen ) {
 				// space, open quotes, add to variable value
 				currentArgValue += thisChar
 			} else if ( thisChar === ' ' && !quoteOpen ) {
 				// space, closed quotes, commit variable
 				if ( currentArgValue !== '' ) {
-					oscMessageObject.args.push(this.#strToArg(currentArgValue))
+					oscMessageObject.args.push( this.#strToArg( currentArgValue ) )
 				}
 				currentArgValue = ''
 			} else if ( thisChar === '"' ) {
 				// quote, flip open status
 				if ( quoteOpen && currentArgValue === '' ) {
 					// catch empty strings
-					oscMessageObject.args.push(this.#strToArg(currentArgValue))
+					oscMessageObject.args.push( this.#strToArg( currentArgValue ) )
 				}
 				quoteOpen = !quoteOpen
 			} else {
@@ -199,18 +201,18 @@ export class x32PreProcessor {
 			}
 		}
 		if ( currentArgValue !== '' ) {
-			oscMessageObject.args.push(this.#strToArg(currentArgValue))
+			oscMessageObject.args.push( this.#strToArg( currentArgValue ) )
 		}
 
-		return this.#doArgs_node(oscMessageObject)
+		return this.#doArgs_node( oscMessageObject )
 	}
 
 
-	#doArgs_node(msgObj : X32MessageInterface) {
+	#doArgs_node( msgObj : X32MessageInterface ) {
 		for ( const thisTestName of this.#activeTypes.node ) {
-			if ( msgObj.address.match(data.node[thisTestName]!.regEx) ) {
+			if ( msgObj.address.match( data.node[thisTestName]!.regEx ) ) {
 				msgObj.wasProcessed  = true
-				msgObj.props         = data.node[thisTestName]!.props(msgObj)
+				msgObj.props         = data.node[thisTestName]!.props( msgObj )
 				msgObj.props.subtype = thisTestName
 				break
 			}
@@ -218,11 +220,11 @@ export class x32PreProcessor {
 		return msgObj
 	}
 
-	#doArgs_regular(msgObj : X32MessageInterface) {
+	#doArgs_regular( msgObj : X32MessageInterface ) {
 		for ( const thisTestName of this.#activeTypes.regular ) {
-			if ( msgObj.address.match(data.regular[thisTestName]!.regEx) ) {
+			if ( msgObj.address.match( data.regular[thisTestName]!.regEx ) ) {
 				msgObj.wasProcessed  = true
-				msgObj.props         = data.regular[thisTestName]!.props(msgObj)
+				msgObj.props         = data.regular[thisTestName]!.props( msgObj )
 				msgObj.props.subtype = thisTestName
 				break
 			}
@@ -233,11 +235,11 @@ export class x32PreProcessor {
 	#strToArg( argString : string ) : OSCArg {
 		// @ts-expect-error: Suppresses the error only on the next line
 		// eslint-disable-next-line eqeqeq
-		if ( parseInt(argString, 10) == argString && !argString.endsWith('.0')) {
-			return { type : 'integer', value : parseInt(argString, 10) }
+		if ( parseInt( argString, 10 ) == argString && !argString.endsWith( '.0' ) ) {
+			return { type : 'integer', value : parseInt( argString, 10 ) }
 		}
-		if ( argString.startsWith('%') ) {
-			return { type : 'bitmask', value : [...argString.slice(1)].map((x) => x === '1')}
+		if ( argString.startsWith( '%' ) ) {
+			return { type : 'bitmask', value : [...argString.slice( 1 )].map( ( x ) => x === '1' )}
 		}
 	
 		return { type : 'string', value : argString }

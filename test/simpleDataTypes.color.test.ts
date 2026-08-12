@@ -6,17 +6,12 @@
  * |___/_|_| |_| |_| .__/|_|\___|      \___/|___/\___|      |_|_|_.__/ 
  *     | |                                                 
  *     |_|   Test Suite - COLOR type */
+/// <reference types="node" />
+/// <reference types="jest" />
 
-if ( require.main === module ) {
-	const path = require('node:path')
-	const scriptName = path.basename(__filename).replace('.test.js', '')
-	process.stdout.write(`part of the jest test suite, try "npm test ${scriptName}" instead.\n`)
-	process.exit(1)
-}
+import * as osc from '../src/index'
 
-const osc = require('../dist/index.js')
-
-const getSimpleExpected = (type, value, emptyBuffer = true) => {
+const getSimpleExpected = (type : string, value : osc.OSCArgTypes, emptyBuffer = true) => {
 	return {
 		buffer_remain : emptyBuffer ? Buffer.alloc(0) : expect.any(Buffer),
 		type          : type,
@@ -24,7 +19,7 @@ const getSimpleExpected = (type, value, emptyBuffer = true) => {
 	}
 }
 
-const makeColorBuffer = (r, g, b, a) => {
+const makeColorBuffer = (r : number, g : number, b : number, a : number) => {
 	const buffer = Buffer.alloc(4)
 	buffer.writeUInt8(r, 0)
 	buffer.writeUInt8(g, 1)
@@ -49,8 +44,9 @@ describe('type :: COLOR', () => {
 			{ humanName : 'non numeric array', value : ['a', 'b', 'c', 'd']},
 			{ humanName : 'out-of-bounds array', value : [365, 0, 0, 0]},
 			{ humanName : 'null', value : null},
-		// eslint-disable-next-line no-unused-vars
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		])('Test with $value ($humanName)', ({humanName, value}) => {
+			// @ts-expect-error checking errors.
 			expect(() => oscRegular.encodeBufferChunk('r', value)).toThrow(TypeError)
 		})
 
@@ -69,6 +65,7 @@ describe('type :: COLOR', () => {
 		})
 		test('non-buffer', () => {
 			const input    = 'hello'
+			// @ts-expect-error checking errors.
 			expect(() => oscRegular.decodeBufferChunk('r', input)).toThrow(TypeError)
 		})
 		test('insufficiently padded buffer', () => {

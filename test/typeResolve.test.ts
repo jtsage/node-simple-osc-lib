@@ -6,15 +6,12 @@
  * |___/_|_| |_| |_| .__/|_|\___|      \___/|___/\___|      |_|_|_.__/ 
  *     | |                                                 
  *     |_|   Test Suite - TYPE resolution */
-//@ts-check
-if ( require.main === module ) {
-	const path = require('node:path')
-	const scriptName = path.basename(__filename).replace('.test.js', '')
-	process.stdout.write(`part of the jest test suite, try "npm test ${scriptName}" instead.\n`)
-	process.exit(1)
-}
+/// <reference types="node" />
+/// <reference types="jest" />
 
-const allTypesByString = {
+import * as osc from '../src/index'
+
+const allTypesByString : Record<string, string> = {
 	bang    : 'I',
 	bigint  : 'h',
 	blob    : 'b',
@@ -31,13 +28,12 @@ const allTypesByString = {
 	true    : 'T',
 }
 
-const osc = require('../dist/index.js')
 const oscRegular = new osc.simpleOscLib()
 
 describe('TYPE resolution', () => {
 	const listOfKeys = new Set(Object.values(allTypesByString))
 	const listOfStrings = new Set(Object.keys(allTypesByString))
-	const allTypesByKey = {}
+	const allTypesByKey : Record<string, string> = {}
 
 	for ( const thisString of listOfStrings ) {
 		allTypesByKey[allTypesByString[thisString]] = thisString
@@ -66,6 +62,7 @@ describe('TYPE resolution', () => {
 		expect(() => oscRegular.getTypeCharFromStringOrChar('')).toThrow(TypeError)
 	})
 	test('non string', () => {
+		// @ts-expect-error checking errors.
 		expect(() => oscRegular.getTypeCharFromStringOrChar(16)).toThrow(TypeError)
 	})
 })

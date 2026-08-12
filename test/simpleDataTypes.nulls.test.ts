@@ -6,10 +6,12 @@
  * |___/_|_| |_| |_| .__/|_|\___|      \___/|___/\___|      |_|_|_.__/ 
  *     | |                                                 
  *     |_|   Test Suite - NON-DATA (null) types [T,F,N,I] */
+/// <reference types="node" />
+/// <reference types="jest" />
 
-const osc = require('../dist/index.js')
+import * as osc from '../src/index'
 
-const getSimpleExpected = (type, value, emptyBuffer = true) => {
+const getSimpleExpected = (type : string, value : osc.OSCArgTypes, emptyBuffer = true) => {
 	return {
 		buffer_remain : emptyBuffer ? Buffer.alloc(0) : expect.any(Buffer),
 		type          : type,

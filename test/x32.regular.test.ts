@@ -6,34 +6,28 @@
  * |___/_|_| |_| |_| .__/|_|\___|      \___/|___/\___|      |_|_|_.__/ 
  *     | |                                                 
  *     |_|   Test Suite - X32 regular style OSC Messages */
+/// <reference types="node" />
+/// <reference types="jest" />
 
-if ( require.main === module ) {
-	const path = require('node:path')
-	const scriptName = path.basename(__filename).replace('.test.js', '')
-	process.stdout.write(`part of the jest test suite, try "npm test ${scriptName}" instead.\n`)
-	process.exit(1)
-}
-
-const x32 = require('../dist/lib/x32_preprocessors.js')
-
-const osc     = require('../dist/index.js')
-const osc_x32 = require('../dist/x32.js')
+import * as osc from '../src/index'
+import * as osc_x32 from '../src/x32'
+import * as x32 from '../src/lib/x32_preprocessors'
 
 const x32Pre = new osc_x32.x32PreProcessor('all')
 
 const oscX32 = new osc.simpleOscLib({
 	strictMode   : true,
-	preprocessor : (msg) => x32Pre.readMessage(msg),
+	preprocessor : (msg) => x32Pre.readMessage(msg as osc_x32.X32MessageInterface),
 })
 
 
-const normalizedName = (faderName, stringIndex) => ({
+const normalizedName = (faderName : string, stringIndex : string) => ({
 	index  : parseInt(stringIndex),
 	name   : faderName,
 	zIndex : stringIndex,
 })
 
-const normalizeMute = (mute, fader) => ({
+const normalizeMute = (mute : boolean, fader : string) => ({
 	index   : parseInt(fader),
 	isOn    : {
 		bool : mute,
@@ -43,7 +37,7 @@ const normalizeMute = (mute, fader) => ({
 	zIndex  : fader,
 })
 
-const normalizeLevel = (level, fader) => ({
+const normalizeLevel = (level : number, fader : string) => ({
 	index   : parseInt(fader),
 	level   : {
 		float : expect.closeTo(level),
@@ -69,7 +63,6 @@ const knownMessages = [
 		result   : {'index' : 0, 'name' : 'CUES'},
 		testName : 'showMode',
 	},
-
 
 	{
 		message  : {
@@ -281,8 +274,13 @@ describe('read standard x32 messages', () => {
 		test('props result as expected', () => {
 			expect(x32.regular[testName].props(message)).toEqual(result)
 		})
-		const builtMessage  = oscX32.buildMessage(message)
-		const returnMessage = oscX32.readMessage(builtMessage)
+		let builtMessage : Buffer
+		let returnMessage : osc_x32.X32MessageInterface
+		test('build and return message', () => {
+			// const oscMessage = new osc.OSCMessage(message.address, message.args)
+			builtMessage  = oscX32.buildMessage(message as osc.OSCMessage)
+			returnMessage = oscX32.readMessage(builtMessage) as osc_x32.X32MessageInterface
+		})
 
 		test('roundtrip processed', () => {
 			expect(returnMessage.wasProcessed).toEqual(true)
@@ -301,7 +299,7 @@ test('roundtrip unprocessed standard x32 message', () => {
 	}
 
 	const builtMessage  = oscX32.buildMessage(thisMessage)
-	const returnMessage = oscX32.readMessage(builtMessage)
+	const returnMessage = oscX32.readMessage(builtMessage) as osc_x32.X32MessageInterface
 
 	expect(returnMessage.wasProcessed).toEqual(false)
 	expect(returnMessage.props).not.toBeDefined()
@@ -309,14 +307,18 @@ test('roundtrip unprocessed standard x32 message', () => {
 })
 
 test('skip malformed ocs message (null)', () => {
+	// @ts-expect-error checking errors.
 	expect(x32Pre.readMessage(null)).toEqual(null)
 })
 test('skip malformed ocs message (string)', () => {
+	// @ts-expect-error checking errors.
 	expect(x32Pre.readMessage('hi')).toEqual('hi')
 })
 test('skip malformed ocs message (no address)', () => {
+	// @ts-expect-error checking errors.
 	expect(x32Pre.readMessage({ hi : 'bye' })).toEqual({ hi : 'bye' })
 })
 test('skip malformed ocs message (empty address)', () => {
+	// @ts-expect-error checking errors.
 	expect(x32Pre.readMessage({ address : '' })).toEqual({ address : '' })
 })

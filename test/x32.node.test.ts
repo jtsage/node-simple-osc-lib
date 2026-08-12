@@ -6,32 +6,26 @@
  * |___/_|_| |_| |_| .__/|_|\___|      \___/|___/\___|      |_|_|_.__/ 
  *     | |                                                 
  *     |_|   Test Suite - X32 node style OSC Messages */
+/// <reference types="node" />
+/// <reference types="jest" />
 
-if ( require.main === module ) {
-	const path = require('node:path')
-	const scriptName = path.basename(__filename).replace('.test.js', '')
-	process.stdout.write(`part of the jest test suite, try "npm test ${scriptName}" instead.\n`)
-	process.exit(1)
-}
-
-const x32 = require('../dist/lib/x32_preprocessors.js')
-
-const osc     = require('../dist/index.js')
-const osc_x32 = require('../dist/x32.js')
+import * as osc from '../src/index'
+import * as osc_x32 from '../src/x32'
+import * as x32 from '../src/lib/x32_preprocessors'
 
 const x32Pre = new osc_x32.x32PreProcessor('all')
 
 const oscX32 = new osc.simpleOscLib({
 	strictMode   : true,
-	preprocessor : (msg) => x32Pre.readMessage(msg),
+	preprocessor : (msg) => x32Pre.readMessage(msg as osc_x32.X32MessageInterface),
 })
 
-const normalizedName = (faderName, stringIndex) => ({
+const normalizedName = (faderName : string, stringIndex : string) => ({
 	index  : parseInt(stringIndex),
 	name   : faderName,
 	zIndex : stringIndex,
 })
-const normalizedMix = (isOn, level, stringIndex) => ({
+const normalizedMix = (isOn : boolean, level : string, stringIndex : string) => ({
 	index : parseInt(stringIndex),
 	isOn  : {
 		text : isOn ? 'ON': 'OFF',
@@ -210,7 +204,7 @@ describe.each(knownNodeMessages)('Test node message ($arg) ($testName)', ({arg, 
 	})
 
 	const builtMessage  = oscX32.buildMessage({ address : 'node', args : [{ type : 'string', value : arg }]})
-	const returnMessage = oscX32.readMessage(builtMessage)
+	const returnMessage = oscX32.readMessage(builtMessage) as osc_x32.X32MessageInterface
 
 	test('roundtrip processed', () => {
 		expect(returnMessage.wasProcessed).toEqual(true)
@@ -219,17 +213,3 @@ describe.each(knownNodeMessages)('Test node message ($arg) ($testName)', ({arg, 
 		expect(returnMessage.props).toEqual({...result, subtype : testName})
 	})
 })
-
-// test('roundtrip unprocessed standard x32 message', () => {
-// 	const thisMessage = {
-// 		address : '/-show/prepos',
-// 		args    : [{ type : 'integer', value : 2}],
-// 	}
-
-// 	const builtMessage  = oscX32.buildMessage(thisMessage)
-// 	const returnMessage = oscX32.readMessage(builtMessage)
-
-// 	expect(returnMessage.wasProcessed).toEqual(false)
-// 	expect(returnMessage.props).not.toBeDefined()
-
-// })

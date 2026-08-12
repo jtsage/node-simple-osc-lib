@@ -6,7 +6,6 @@
  * |___/_|_| |_| |_| .__/|_|\___|      \___/|___/\___|      |_|_|_.__/ 
  *     | |                                                 
  *     |_|   Test Suite - BIG INTEGER type */
-
 /// <reference types="node" />
 /// <reference types="jest" />
 

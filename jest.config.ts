@@ -1,10 +1,10 @@
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const { createDefaultPreset } = require('ts-jest')
+/* @jest-config-loader ts-node */
+
+import { createDefaultPreset } from 'ts-jest'
 
 const tsJestTransformCfg = createDefaultPreset().transform
 
-// /** @type {import("jest").Config} **/
-module.exports = {
+export default {
 	coverageReporters : [
 		'json-summary',
 		'text',

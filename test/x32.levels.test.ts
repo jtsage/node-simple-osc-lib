@@ -6,17 +6,12 @@
  * |___/_|_| |_| |_| .__/|_|\___|      \___/|___/\___|      |_|_|_.__/ 
  *     | |                                                 
  *     |_|   Test Suite - X32 Fader Level Conversion */
+/// <reference types="node" />
+/// <reference types="jest" />
 
-if ( require.main === module ) {
-	const path = require('node:path')
-	const scriptName = path.basename(__filename).replace('.test.js', '')
-	process.stdout.write(`part of the jest test suite, try "npm test ${scriptName}" instead.\n`)
-	process.exit(1)
-}
+import * as osc_x32 from '../src/x32'
 
-const osc_x32 = require('../dist/x32.js')
-
-const knownLevels = [
+const knownLevels : [number, string][] = [
 	[0.0000, '-oo dB'],
 	[0.0010, '-89.5 dB'],
 	[0.0196, '-80.6 dB'],
@@ -61,20 +56,24 @@ describe('level conversion operates as expected', () => {
 	])('Test input type', (a, b, c) => {
 		if ( ! b ) {
 			test(`float2db with ${typeof a} (${JSON.stringify(a)}) throws`, () => {
+				// @ts-expect-error checking errors.
 				expect(() => osc_x32.float2dB(a)).toThrow(TypeError)
 			})
 		} else {
 			test(`float2db with ${typeof a} does not throw`, () => {
+				// @ts-expect-error checking errors.
 				expect(() => osc_x32.float2dB(a)).not.toThrow()
 			})
 		}
 
 		if ( ! c ) {
 			test(`dB2Float with ${typeof a} (${JSON.stringify(a)}) throws`, () => {
+				// @ts-expect-error checking errors.
 				expect(() => osc_x32.dB2Float(a)).toThrow(TypeError)
 			})
 		} else {
 			test(`dB2Float with ${typeof a} does not throw`, () => {
+				// @ts-expect-error checking errors.
 				expect(() => osc_x32.dB2Float(a)).not.toThrow()
 			})
 		}

@@ -6,15 +6,10 @@
  * |___/_|_| |_| |_| .__/|_|\___|      \___/|___/\___|      |_|_|_.__/ 
  *     | |                                                 
  *     |_|   Test Suite - X32 Preprocessor Initialization */
+/// <reference types="node" />
+/// <reference types="jest" />
 
-if ( require.main === module ) {
-	const path = require('node:path')
-	const scriptName = path.basename(__filename).replace('.test.js', '')
-	process.stdout.write(`part of the jest test suite, try "npm test ${scriptName}" instead.\n`)
-	process.exit(1)
-}
-
-const osc_x32 = require('../dist/x32.js')
+import * as osc_x32 from '../src/x32'
 
 const totalNodeTypes    = 20
 const totalRegularTypes = 26
@@ -74,15 +69,17 @@ const testConstructors = [
 describe.each(testConstructors)('init X32 preprocessor with "$input"', ({fail, input, output}) => {
 	if ( fail ) {
 		test('throw exception', () => {
+			// @ts-expect-error checking errors.
 			expect(() => new osc_x32.x32PreProcessor(input)).toThrow(TypeError)
 		})
 	} else {
+		// @ts-expect-error checking errors.
 		const preProc = new osc_x32.x32PreProcessor(input)
-		test(`expect ${output.node} node types`, () => {
-			expect(preProc.getActiveTypes().node.size).toEqual(output.node)
+		test(`expect ${output?.node} node types`, () => {
+			expect(preProc.getActiveTypes().node.size).toEqual(output!.node)
 		})
-		test(`expect ${output.regular} regular types`, () => {
-			expect(preProc.getActiveTypes().regular.size).toEqual(output.regular)
+		test(`expect ${output?.regular} regular types`, () => {
+			expect(preProc.getActiveTypes().regular.size).toEqual(output!.regular)
 		})
 	}
 })

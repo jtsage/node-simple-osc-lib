@@ -6,17 +6,12 @@
  * |___/_|_| |_| |_| .__/|_|\___|      \___/|___/\___|      |_|_|_.__/ 
  *     | |                                                 
  *     |_|   Test Suite - COLOR type */
+/// <reference types="node" />
+/// <reference types="jest" />
 
-if ( require.main === module ) {
-	const path = require('node:path')
-	const scriptName = path.basename(__filename).replace('.test.js', '')
-	process.stdout.write(`part of the jest test suite, try "npm test ${scriptName}" instead.\n`)
-	process.exit(1)
-}
+import * as osc from '../src/index'
 
-const osc = require('../dist/index.js')
-
-const getSimpleExpected = (type, value, emptyBuffer = true) => {
+const getSimpleExpected = (type : string, value : osc.OSCArgTypes, emptyBuffer = true) => {
 	return {
 		buffer_remain : emptyBuffer ? Buffer.alloc(0) : expect.any(Buffer),
 		type          : type,
@@ -38,8 +33,9 @@ describe('type :: BLOB', () => {
 			{ humanName : 'object', value : {}},
 			{ humanName : 'array', value : ['a', 'b']},
 			{ humanName : 'null', value : null},
-		// eslint-disable-next-line no-unused-vars
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		])('Test with $value ($humanName)', ({humanName, value}) => {
+			// @ts-expect-error checking errors.
 			expect(() => oscRegular.encodeBufferChunk('b', value)).toThrow(TypeError)
 		})
 
@@ -63,6 +59,7 @@ describe('type :: BLOB', () => {
 		})
 		test('non-buffer', () => {
 			const input    = 'hello'
+			// @ts-expect-error checking errors.
 			expect(() => oscRegular.decodeBufferChunk('b', input)).toThrow(TypeError)
 		})
 		test('insufficiently padded buffer', () => {
@@ -103,36 +100,34 @@ describe('type :: BLOB', () => {
 			expect(result).toEqual(expected)
 			expect(result.buffer_remain.length).toEqual(4)
 		})
+
+		test('decode non-padded buffer (non-strict)', () => {
+			const malformedBuffer = Buffer.alloc(9)
+			malformedBuffer.writeUInt32BE(5)
+			malformedBuffer.write('hello', 4)
+
+			const expected = getSimpleExpected('blob', Buffer.from('hello'))
+			
+			expect(oscRegular.decodeBufferChunk('b', malformedBuffer)).toEqual(expected)
+		})
+
+		test('fail decode non-padded buffer (strict)', () => {
+			const malformedBuffer = Buffer.alloc(9)
+			malformedBuffer.writeUInt32BE(5)
+			malformedBuffer.write('hello', 4)
+			
+			expect(() => oscStrict.decodeBufferChunk('b', malformedBuffer)).toThrow(RangeError)
+		})
+
+		test('round robin', () => {
+			const inputString  = 'hello'
+			const inputBuffer  = Buffer.from(inputString)
+			const encodedBlock = oscRegular.encodeBufferChunk('b', inputBuffer)
+			const decodedBlock = oscRegular.decodeBufferChunk('b', encodedBlock)
+
+			const expected = getSimpleExpected('blob', inputBuffer)
+			
+			expect(decodedBlock).toEqual(expected)
+		})
 	})
 })
-
-// describe('blobs', () => {
-// 	test('decode non-padded buffer (non-strict)', () => {
-// 		const malformedBuffer = Buffer.alloc(9)
-// 		malformedBuffer.writeUInt32BE(5)
-// 		malformedBuffer.write('hello', 4)
-
-// 		const expected = getSimpleExpected('blob', Buffer.from('hello'))
-		
-// 		expect(oscRegular.decodeBufferChunk('b', malformedBuffer)).toEqual(expected)
-// 	})
-
-// 	test('fail decode non-padded buffer (strict)', () => {
-// 		const malformedBuffer = Buffer.alloc(9)
-// 		malformedBuffer.writeUInt32BE(5)
-// 		malformedBuffer.write('hello', 4)
-		
-// 		expect(() => oscStrict.decodeBufferChunk('b', malformedBuffer)).toThrow(osc.OSCSyntaxError)
-// 	})
-
-// 	test('round robin', () => {
-// 		const inputString  = 'hello'
-// 		const inputBuffer  = Buffer.from(inputString)
-// 		const encodedBlock = oscRegular.encodeBufferChunk('b', inputBuffer)
-// 		const decodedBlock = oscRegular.decodeBufferChunk('b', encodedBlock)
-
-// 		const expected = getSimpleExpected('blob', inputBuffer)
-		
-// 		expect(decodedBlock).toEqual(expected)
-// 	})
-// })

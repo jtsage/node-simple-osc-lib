@@ -24,7 +24,7 @@ export interface X32MessageInterface extends OSCMessageInterface {
 	origNodeArg   : string
 }
 
-import * as data from './lib/x32_preprocessors.js'
+import * as data from './lib/x32_preprocessors'
 
 /**
  * Extended processing for Behringer X32/M32 consoles.

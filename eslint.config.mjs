@@ -10,6 +10,7 @@ import tsdocEslint from 'eslint-plugin-tsdoc'
 
 export default defineConfig({
 	files : ['**/*.{js,cjs,mjs,jsx,ts,cts,mts,tsx}'],
+	ignores : ['dist/', 'coverage/'],
 
 	extends : [js.configs.recommended, tseslint.configs.recommended],
 
@@ -37,7 +38,9 @@ export default defineConfig({
 
 		'no-unused-vars' : 'off',
 
-		'@typescript-eslint/no-unused-vars' : ['error'],
+		'@typescript-eslint/no-unused-vars' : ['error', {
+			'argsIgnorePattern' : '^_',
+		}],
 
 		'@stylistic/type-annotation-spacing' : ['error', {
 			'after'     : true,

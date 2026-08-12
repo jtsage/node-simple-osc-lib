@@ -6,17 +6,12 @@
  * |___/_|_| |_| |_| .__/|_|\___|      \___/|___/\___|      |_|_|_.__/ 
  *     | |                                                 
  *     |_|   Test Suite - TIMETAG type */
+/// <reference types="node" />
+/// <reference types="jest" />
 
-if ( require.main === module ) {
-	const path = require('node:path')
-	const scriptName = path.basename(__filename).replace('.test.js', '')
-	process.stdout.write(`part of the jest test suite, try "npm test ${scriptName}" instead.\n`)
-	process.exit(1)
-}
+import * as osc from '../src/index'
 
-const osc = require('../dist/index.js')
-
-const getSimpleExpected = (type, value, emptyBuffer = true) => {
+const getSimpleExpected = (type : string, value : osc.OSCArgTypes, emptyBuffer = true) => {
 	return {
 		buffer_remain : emptyBuffer ? Buffer.alloc(0) : expect.any(Buffer),
 		type          : type,
@@ -43,8 +38,9 @@ describe('type :: TIMETAG', () => {
 			{ humanName : '!== 2 item array', value : [111]},
 			{ humanName : 'non numeric 2 item array', value : [111, 'aaa']},
 			{ humanName : 'null', value : null},
-		// eslint-disable-next-line no-unused-vars
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		])('Test with $value ($humanName)', ({humanName, value}) => {
+			// @ts-expect-error testing errors.
 			expect(() => oscRegular.getDateFromTimeTagArray(value)).toThrow(RangeError)
 		})
 		test('get date 2000-04-25T01:30:30.125Z from [3165615030, 536870912]', () => {
@@ -70,7 +66,7 @@ describe('type :: TIMETAG', () => {
 		test('getTimeTagBufferFromDelta', () => {
 			expect(oscRegular.getTimeTagBufferFromDelta(
 				125 / 1000,
-				new Date(Date.UTC(2000, 3, 25, 1, 30, 30, 0))
+				(new Date(Date.UTC(2000, 3, 25, 1, 30, 30, 0))).getTime()
 			)).toEqual(getTimeTagBuffer())
 		})
 		test('getTimeTagBufferFromDelta (random)', () => {
@@ -90,8 +86,9 @@ describe('type :: TIMETAG', () => {
 			{ humanName : '!== 2 item array', value : [111]},
 			{ humanName : 'non numeric 2 item array', value : [111, 'aaa']},
 			{ humanName : 'null', value : null},
-		// eslint-disable-next-line no-unused-vars
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		])('Test with $value ($humanName)', ({humanName, value}) => {
+			// @ts-expect-error testing errors.
 			expect(() => oscRegular.encodeBufferChunk('t', value)).toThrow(TypeError)
 		})
 
@@ -100,6 +97,7 @@ describe('type :: TIMETAG', () => {
 			[956640630.125, 8],
 			[[3165615030, 536870912], 8],
 		])('Test expected length %s -> %i', (a, b) => {
+			// @ts-expect-error testing errors.
 			expect(oscRegular.encodeBufferChunk('t', a).length).toEqual(b)
 		})
 	})
@@ -110,6 +108,7 @@ describe('type :: TIMETAG', () => {
 		})
 		test('non-buffer', () => {
 			const input    = 'hello'
+			// @ts-expect-error testing errors.
 			expect(() => oscRegular.decodeBufferChunk('t', input)).toThrow(TypeError)
 		})
 		test('insufficiently padded buffer', () => {

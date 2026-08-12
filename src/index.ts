@@ -41,9 +41,10 @@ export class OSCMessage implements OSCMessageInterface {
 	args    : OSCArg[] = []
 	type  ? : string
 
-	constructor(address : string, type : string = 'osc-message') {
+	constructor(address : string, args : OSCArg[] = [], type : string = 'osc-message') {
 		this.address = address
 		this.type = type
+		this.args = args
 	}
 }
 
@@ -332,7 +333,7 @@ export class simpleOscLib {
 			},
 			toBuffer : (value : number) => {
 				if (typeof value !== 'number' || ! Number.isInteger(value) ) {
-					throw new TypeError('expected integer')
+					throw new TypeError(`expected integer : ${value}`)
 				}
 				const buffer_out = Buffer.alloc(4)
 				buffer_out.writeInt32BE(value)
@@ -566,10 +567,10 @@ export class simpleOscLib {
 	/**
 	 * Encode an OSC Data chunk - low level function
 	 * @param type - OSC Data type string/char
-	 * @param value - Value for data (must be null for null types)
+	 * @param value - Value for data (assumed null for null types)
 	 * @returns buffer padded to 32-bit blocks with NULLs
 	 */
-	encodeBufferChunk( type : string, value : OSCArgTypes ) : Buffer {
+	encodeBufferChunk( type : string, value : OSCArgTypes = null ) : Buffer {
 		const thisType = this.getTypeCharFromStringOrChar(type)
 		return this.#operations[thisType]!.toBuffer(value)
 	}
@@ -660,7 +661,7 @@ export class simpleOscLib {
 		}
 		const thisType = this.#stringTypeToCharMap[type]
 		if ( typeof thisType === 'undefined' ) {
-			throw new RangeError('type does not exist')
+			throw new RangeError('type map mismatch - type exists but without a name')
 		}
 		return thisType
 	}
@@ -754,7 +755,9 @@ export class simpleOscLib {
 		if ( typeof inputObject.address === 'undefined' ) {
 			throw new OSCSyntaxError('improper OSC message object')
 		}
+
 		const buffer_address = this.encodeBufferChunk('A', inputObject.address)
+
 		if ( typeof buffer_address === 'undefined' ) {
 			throw new OSCSyntaxError('unable to encode address')
 		}
@@ -1115,8 +1118,7 @@ class oscBuilder {
 	}
 
 	toBuffer() {
-		const message = new OSCMessage(this.#address)
-		message.args = this.#argStack
+		const message = new OSCMessage(this.#address, this.#argStack)
 		return this.#oscLib.buildMessage(message)
 	}
 

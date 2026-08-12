@@ -7,13 +7,7 @@
  *     | |                                                 
  *     |_|   Test Suite - buildMessage */
 
-if ( require.main === module ) {
-	const path = require('node:path')
-	const scriptName = path.basename(__filename).replace('.test.js', '')
-	process.stdout.write(`part of the jest test suite, try "npm test ${scriptName}" instead.\n`)
-	process.exit(1)
-}
-const osc = require('../dist/index.js')
+import * as osc from '../src/index'
 
 const oscRegular = new osc.simpleOscLib()
 const oscStrict  = new osc.simpleOscLib({strictMode : true, strictAddress : true, asciiOnly : true})
@@ -32,7 +26,7 @@ describe('buildMessage Output', () => {
 			],
 		}
 		const expected = Buffer.from(`/hello${osc.null}${osc.null},[[I]]ss${osc.null}${osc.null}${osc.null}${osc.null}hi${osc.null}${osc.null}there${osc.null}${osc.null}${osc.null}`)
-		expect(oscRegular.buildMessage(oscMessage)).toEqual(expected)
+		expect(oscRegular.buildMessage(oscMessage as osc.OSCMessage)).toEqual(expected)
 	})
 	test('two strings with nested garbage (fail)', () => {
 		const oscMessage = {
@@ -43,7 +37,7 @@ describe('buildMessage Output', () => {
 				{ type : 'string', value : 'there' },
 			],
 		}
-		expect(() => oscRegular.buildMessage(oscMessage)).toThrow(osc.OSCSyntaxError)
+		expect(() => oscRegular.buildMessage(oscMessage as osc.OSCMessage)).toThrow(osc.OSCSyntaxError)
 	})
 	test('strict mode fails with non slash address', () => {
 		const oscMessage = {
@@ -53,7 +47,7 @@ describe('buildMessage Output', () => {
 				{ type : 'string', value : 'there' },
 			],
 		}
-		expect(() => oscStrict.buildMessage(oscMessage)).toThrow(osc.OSCSyntaxError)
+		expect(() => oscStrict.buildMessage(oscMessage as osc.OSCMessage)).toThrow(osc.OSCSyntaxError)
 	})
 	test('address is required (empty)', () => {
 		const oscMessage = {
@@ -63,7 +57,7 @@ describe('buildMessage Output', () => {
 				{ type : 'string', value : 'there' },
 			],
 		}
-		expect(() => oscRegular.buildMessage(oscMessage)).toThrow(osc.OSCSyntaxError)
+		expect(() => oscRegular.buildMessage(oscMessage as osc.OSCMessage)).toThrow(osc.OSCSyntaxError)
 	})
 	test('address is ascii-only', () => {
 		const oscMessage = {
@@ -73,7 +67,7 @@ describe('buildMessage Output', () => {
 				{ type : 'string', value : 'there' },
 			],
 		}
-		expect(() => oscRegular.buildMessage(oscMessage)).toThrow(osc.OSCSyntaxError)
+		expect(() => oscRegular.buildMessage(oscMessage as osc.OSCMessage)).toThrow(osc.OSCSyntaxError)
 	})
 	test('address is required (missing)', () => {
 		const oscMessage = {
@@ -82,28 +76,30 @@ describe('buildMessage Output', () => {
 				{ type : 'string', value : 'there' },
 			],
 		}
-		expect(() => oscRegular.buildMessage(oscMessage)).toThrow(osc.OSCSyntaxError)
+		expect(() => oscRegular.buildMessage(oscMessage as osc.OSCMessage)).toThrow(osc.OSCSyntaxError)
 	})
 	test('arguments are optional', () => {
 		const oscMessage = {
 			address : '/hello',
 		}
 		const expected = Buffer.from(`/hello${osc.null}${osc.null}`)
-		expect(oscRegular.buildMessage(oscMessage)).toEqual(expected)
+		expect(oscRegular.buildMessage(oscMessage as osc.OSCMessage)).toEqual(expected)
 	})
 	test('arguments must be an array', () => {
 		const oscMessage = {
 			address : 'hello',
 			args    : 'hello there',
 		}
-		expect(() => oscRegular.buildMessage(oscMessage)).toThrow(osc.OSCSyntaxError)
+		// @ts-expect-error testing failure
+		expect(() => oscRegular.buildMessage(oscMessage as osc.OSCMessage)).toThrow(osc.OSCSyntaxError)
 	})
 	test('arguments must be correct type', () => {
 		const oscMessage = {
 			address : 'hello',
 			args    : [{ type : 'string', blag : 'me' }],
 		}
-		expect(() => oscRegular.buildMessage(oscMessage)).toThrow(osc.OSCSyntaxError)
+		// @ts-expect-error testing failure
+		expect(() => oscRegular.buildMessage(oscMessage as osc.OSCMessage)).toThrow(osc.OSCSyntaxError)
 	})
 
 	describe('standard message build', () => {
@@ -121,7 +117,7 @@ describe('buildMessage Output', () => {
 				address : a,
 				args : [{type : c, value : b}],
 			}
-			const thisBuild = oscRegular.buildMessage(thisMessage)
+			const thisBuild = oscRegular.buildMessage(thisMessage as osc.OSCMessage)
 
 			expect(thisBuild.length).toEqual(expected)
 		})

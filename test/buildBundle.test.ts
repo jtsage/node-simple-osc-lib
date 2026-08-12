@@ -7,42 +7,35 @@
  *     | |                                                 
  *     |_|   Test Suite - buildBundle */
 
-if ( require.main === module ) {
-	const path = require('node:path')
-	const scriptName = path.basename(__filename).replace('.test.js', '')
-	process.stdout.write(`part of the jest test suite, try "npm test ${scriptName}" instead.\n`)
-	process.exit(1)
-}
-const osc  = require('../dist/index.js')
+
+import * as osc from '../src/index'
 
 const oscRegular = new osc.simpleOscLib()
 
-const bundleMsgPair = [
-	{
-		address : '/hello',
-		args : [
-			{ type : 'string', value : 'world' },
-			{ type : 'integer', value : 20 },
-		],
-	},
-	{
-		address : '/goodnight',
-		args : [
-			{ type : 'string', value : 'moon' },
-			{ type : 'integer', value : 69 },
-		],
-	},
+const msg1 = new osc.OSCMessage('/hello')
+msg1.args = [
+	{ type : 'string', value : 'world' },
+	{ type : 'integer', value : 20 },
 ]
+const msg2 = new osc.OSCMessage('/goodnight')
+msg2.args = [
+	{ type : 'string', value : 'moon' },
+	{ type : 'integer', value : 69 }
+]
+
+const bundleMsgPair = [msg1, msg2]
 
 describe('bundle testing', () => {
 	describe('building', () => {
 		test('build with non-object fails', () => {
+			// @ts-expect-error testing failure
 			expect(() => oscRegular.buildBundle('hello')).toThrow(TypeError)
 		})
 		test('build with no timetag fails', () => {
 			const thisBundle = {
 				elements : bundleMsgPair,
 			}
+			// @ts-expect-error testing failure
 			expect(() => oscRegular.buildBundle(thisBundle)).toThrow(TypeError)
 		})
 
@@ -51,34 +44,38 @@ describe('bundle testing', () => {
 				timetag : oscRegular.getTimeTagBufferFromDelta(0.5),
 				elements : [],
 			}
+			// @ts-expect-error testing failure
 			expect(() => oscRegular.buildBundle(thisBundle)).toThrow(RangeError)
 		})
 
 		test('build with single message works', () => {
-			const thisBundle = {
-				timetag : oscRegular.getTimeTagBufferFromDelta(0.5),
-				elements : [bundleMsgPair[1]],
-			}
+			const thisBundle = new osc.OSCBundle()
+			
+			thisBundle.timetag = oscRegular.getTimeTagBufferFromDelta(0.5)
+			thisBundle.elements = [bundleMsgPair[1]]
+
 			expect(oscRegular.buildBundle(thisBundle).length).toEqual(48)
 		})
 
 		test('build with multiple messages works', () => {
-			const thisBundle = {
-				timetag : oscRegular.getTimeTagBufferFromDelta(0.5),
-				elements : bundleMsgPair,
-			}
+			const thisBundle = new osc.OSCBundle()
+			
+			thisBundle.timetag = oscRegular.getTimeTagBufferFromDelta(0.5)
+			thisBundle.elements = bundleMsgPair
+
 			expect(oscRegular.buildBundle(thisBundle).length).toEqual(76)
 		})
 
 		test('build with nested works', () => {
-			const thisBundle = {
-				timetag : oscRegular.getTimeTagBufferFromDelta(0.5),
-				elements : bundleMsgPair,
-			}
-			const thisBundle2 = {
-				timetag : oscRegular.getTimeTagBufferFromDelta(0.5),
-				elements : [oscRegular.buildBundle(thisBundle), ...bundleMsgPair],
-			}
+			const thisBundle = new osc.OSCBundle()
+			
+			thisBundle.timetag = oscRegular.getTimeTagBufferFromDelta(0.5)
+			thisBundle.elements = bundleMsgPair
+
+			const thisBundle2 = new osc.OSCBundle()
+			thisBundle2.timetag = oscRegular.getTimeTagBufferFromDelta(0.5)
+			thisBundle2.elements = [oscRegular.buildBundle(thisBundle), ...bundleMsgPair]
+			
 			expect(oscRegular.buildBundle(thisBundle2).length).toEqual(156)
 		})
 	})
@@ -100,32 +97,34 @@ describe('bundle testing', () => {
 		})
 
 		test('read with single message works', () => {
-			const thisBundle = {
-				timetag : oscRegular.getTimeTagBufferFromDelta(0.5),
-				elements : [bundleMsgPair[1]],
-			}
+			const thisBundle = new osc.OSCBundle()
+			
+			thisBundle.timetag = oscRegular.getTimeTagBufferFromDelta(0.5)
+			thisBundle.elements = [bundleMsgPair[1]]
 			const thisBuffer = oscRegular.buildBundle(thisBundle)
 			expect(JSON.stringify(oscRegular.readBundle(thisBuffer)).length).toEqual(189)
 		})
 
 		test('read with multiple messages works', () => {
-			const thisBundle = {
-				timetag : oscRegular.getTimeTagBufferFromDelta(0.5),
-				elements : bundleMsgPair,
-			}
+			const thisBundle = new osc.OSCBundle()
+
+			thisBundle.timetag = oscRegular.getTimeTagBufferFromDelta(0.5)
+			thisBundle.elements = bundleMsgPair
+
 			const thisBuffer = oscRegular.buildBundle(thisBundle)
 			expect(JSON.stringify(oscRegular.readBundle(thisBuffer)).length).toEqual(304)
 		})
 
 		test('build with nested works', () => {
-			const thisBundle = {
-				timetag : oscRegular.getTimeTagBufferFromDelta(0.5),
-				elements : bundleMsgPair,
-			}
-			const thisBundle2 = {
-				timetag : oscRegular.getTimeTagBufferFromDelta(0.5),
-				elements : [oscRegular.buildBundle(thisBundle), ...bundleMsgPair],
-			}
+			const thisBundle = new osc.OSCBundle()
+			
+			thisBundle.timetag = oscRegular.getTimeTagBufferFromDelta(0.5)
+			thisBundle.elements = bundleMsgPair
+
+			const thisBundle2 = new osc.OSCBundle()
+			thisBundle2.timetag = oscRegular.getTimeTagBufferFromDelta(0.5)
+			thisBundle2.elements = [oscRegular.buildBundle(thisBundle), ...bundleMsgPair]
+			
 			const thisBuffer = oscRegular.buildBundle(thisBundle2)
 			expect(JSON.stringify(oscRegular.readPacket(thisBuffer)).length).toEqual(609)
 		})

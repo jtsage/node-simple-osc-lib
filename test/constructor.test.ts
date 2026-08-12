@@ -7,13 +7,7 @@
  *     | |                                                 
  *     |_|   Test Suite - class constructor */
 
-if ( require.main === module ) {
-	const path = require('node:path')
-	const scriptName = path.basename(__filename).replace('.test.js', '')
-	process.stdout.write(`part of the jest test suite, try "npm test ${scriptName}" instead.\n`)
-	process.exit(1)
-}
-const osc = require('../dist/index.js')
+import * as osc from '../src/index'
 
 describe('library initialization', () => {
 	test('no options', () => {
@@ -56,6 +50,7 @@ describe('library initialization', () => {
 		expect(thisOSC.options).toEqual(theseOpts)
 	})
 	test('invalid preprocessor', () => {
+		// @ts-expect-error testing bad input
 		expect(() => new osc.simpleOscLib({preprocessor : 'hi'})).toThrow(TypeError)
 	})
 })

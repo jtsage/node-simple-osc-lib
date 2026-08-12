@@ -25,7 +25,7 @@ export type OSCArg = {type : string, value : OSCArgTypes }
 export interface OSCMessageInterface {
 	address        : string
 	args           : OSCArg[]
-	type           : string
+	type         ? : string
 }
 
 /**
@@ -39,7 +39,7 @@ export interface OSCMessageInterface {
 export class OSCMessage implements OSCMessageInterface {
 	address : string
 	args    : OSCArg[] = []
-	type    : string
+	type  ? : string
 
 	constructor(address : string, type : string = 'osc-message') {
 		this.address = address
@@ -56,8 +56,8 @@ export class OSCMessage implements OSCMessageInterface {
  * 
  */
 export class OSCBundle {
-	elements : Array<OSCMessage | OSCBundle> = []
-	timetag  : Date                          = new Date()
+	elements : Array<OSCMessage | OSCBundle | Buffer> = []
+	timetag  : Buffer | Date                 = Buffer.alloc(8)
 	type     : string                        = 'osc-bundle'
 }
 
@@ -90,7 +90,7 @@ const uNULL       = '\u0000'
 export { uNULL as null }
 
 export class OSCSyntaxError extends Error {
-	constructor(message : string, opts ?: ErrorOptions ) {
+	constructor(message : string, opts ? : ErrorOptions ) {
 		super(message, opts)
 	}
 }
@@ -460,7 +460,7 @@ export class simpleOscLib {
 	 * 
 	 * @param options - simpleOscLib options.
 	 */
-	constructor ( options : Partial<OscLibOptions> ) {
+	constructor ( options ? : Partial<OscLibOptions> ) {
 		this.options = { ...this.#defaultOptions, ...options }
 
 		if ( typeof this.options.preprocessor !== 'function' ) {
@@ -785,7 +785,7 @@ export class simpleOscLib {
 	 * @param oscBundleObject - osc bundle object
 	 * @returns 4 byte chunked buffer
 	 */
-	buildBundle( oscBundleObject : OSCBundle ) {
+	buildBundle( oscBundleObject : OSCBundle  ) {
 		if ( typeof oscBundleObject !== 'object' ) {
 			throw new TypeError('improper OSC bundle object')
 		}

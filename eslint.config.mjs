@@ -40,11 +40,10 @@ export default defineConfig({
 		'@typescript-eslint/no-unused-vars' : ['error'],
 
 		'@stylistic/type-annotation-spacing' : ['error', {
-			after     : true,
-			before    : true,
-			overrides : {
-				arrow        : { before : true, after : true },
-				// questionMark : { before : true, after : true },
+			'after'     : true,
+			'before'    : true,
+			'overrides' : {
+				'questionMark'        : { 'before' : true, 'after' : true },
 			},
 		}],
 

@@ -11,48 +11,48 @@
 
 import * as osc from '../src/index'
 
-describe('library initialization', () => {
-	test('no options', () => {
+describe( 'library initialization', () => {
+	test( 'no options', () => {
 		const thisOSC = new osc.simpleOscLib()
 		const theseOpts = {
 			asciiOnly      : false,
 			blockCharacter : '¦',
 			coerceStrings  : false,
 			debugCharacter : '•',
-			preprocessor   : expect.any(Function),
+			preprocessor   : expect.any( Function ),
 			strictAddress  : false,
 			strictMode     : false,
 		}
-		expect(thisOSC.options).toEqual(theseOpts)
-	})
-	test('strict mode options', () => {
-		const thisOSC = new osc.simpleOscLib({strictMode : true, strictAddress : true, asciiOnly : true})
+		expect( thisOSC.options ).toEqual( theseOpts )
+	} )
+	test( 'strict mode options', () => {
+		const thisOSC = new osc.simpleOscLib( {strictMode : true, strictAddress : true, asciiOnly : true} )
 		const theseOpts = {
 			asciiOnly      : true,
 			blockCharacter : '¦',
 			coerceStrings  : false,
 			debugCharacter : '•',
-			preprocessor   : expect.any(Function),
+			preprocessor   : expect.any( Function ),
 			strictAddress  : true,
 			strictMode     : true,
 		}
-		expect(thisOSC.options).toEqual(theseOpts)
-	})
-	test('strict mode options', () => {
-		const thisOSC = new osc.simpleOscLib({coerceStrings : true})
+		expect( thisOSC.options ).toEqual( theseOpts )
+	} )
+	test( 'strict mode options', () => {
+		const thisOSC = new osc.simpleOscLib( {coerceStrings : true} )
 		const theseOpts = {
 			asciiOnly      : false,
 			blockCharacter : '¦',
 			coerceStrings  : true,
 			debugCharacter : '•',
-			preprocessor   : expect.any(Function),
+			preprocessor   : expect.any( Function ),
 			strictAddress  : false,
 			strictMode     : false,
 		}
-		expect(thisOSC.options).toEqual(theseOpts)
-	})
-	test('invalid preprocessor', () => {
+		expect( thisOSC.options ).toEqual( theseOpts )
+	} )
+	test( 'invalid preprocessor', () => {
 		// @ts-expect-error testing bad input
-		expect(() => new osc.simpleOscLib({preprocessor : 'hi'})).toThrow(TypeError)
-	})
-})
+		expect( () => new osc.simpleOscLib( {preprocessor : 'hi'} ) ).toThrow( TypeError )
+	} )
+} )

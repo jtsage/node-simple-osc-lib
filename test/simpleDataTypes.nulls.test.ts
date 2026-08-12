@@ -11,9 +11,9 @@
 
 import * as osc from '../src/index'
 
-const getSimpleExpected = (type : string, value : osc.OSCArgTypes, emptyBuffer = true) => {
+const getSimpleExpected = ( type : string, value : osc.OSCArgTypes, emptyBuffer = true ) => {
 	return {
-		buffer_remain : emptyBuffer ? Buffer.alloc(0) : expect.any(Buffer),
+		buffer_remain : emptyBuffer ? Buffer.alloc( 0 ) : expect.any( Buffer ),
 		type          : type,
 		value         : value,
 	}
@@ -21,29 +21,29 @@ const getSimpleExpected = (type : string, value : osc.OSCArgTypes, emptyBuffer =
 
 const oscRegular = new osc.simpleOscLib()
 
-describe('argument-less types', () => {
-	describe('encode', () => {
-		test.each([
+describe( 'argument-less types', () => {
+	describe( 'encode', () => {
+		test.each( [
 			['T', 'true'],
 			['F', 'false'],
 			['N', 'null/nil'],
 			['I', 'bang'],
-		])('low level encode [%s] %s : empty zero length buffer', (a, _b) => {
-			const expected = Buffer.alloc(0)
-			expect(oscRegular.encodeBufferChunk(a)).toEqual(expected)
-		})
-	})
-	describe('decode', () => {
-		test.each([
+		] )( 'low level encode [%s] %s : empty zero length buffer', ( a, _b ) => {
+			const expected = Buffer.alloc( 0 )
+			expect( oscRegular.encodeBufferChunk( a ) ).toEqual( expected )
+		} )
+	} )
+	describe( 'decode', () => {
+		test.each( [
 			['T', 'true', 'true'],
 			['F', 'false', 'false'],
 			['N', 'null/nil', 'null'],
 			['I', 'bang', 'bang'],
-		])('low level decode [%s] %s', (a, _b, expectType) => {
-			const input    = Buffer.alloc(0)
-			const expected = getSimpleExpected(expectType, null)
-			expect(oscRegular.decodeBufferChunk(a, input)).toEqual(expected)
-		})
-	})
-})
+		] )( 'low level decode [%s] %s', ( a, _b, expectType ) => {
+			const input    = Buffer.alloc( 0 )
+			const expected = getSimpleExpected( expectType, null )
+			expect( oscRegular.decodeBufferChunk( a, input ) ).toEqual( expected )
+		} )
+	} )
+} )
 

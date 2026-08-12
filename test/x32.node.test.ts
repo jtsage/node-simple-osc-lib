@@ -13,121 +13,121 @@ import * as osc from '../src/index'
 import * as osc_x32 from '../src/x32'
 import * as x32 from '../src/lib/x32_preprocessors'
 
-const x32Pre = new osc_x32.x32PreProcessor('all')
+const x32Pre = new osc_x32.x32PreProcessor( 'all' )
 
-const oscX32 = new osc.simpleOscLib({
+const oscX32 = new osc.simpleOscLib( {
 	strictMode   : true,
-	preprocessor : (msg) => x32Pre.readMessage(msg as osc_x32.X32MessageInterface),
-})
+	preprocessor : ( msg ) => x32Pre.readMessage( msg as osc_x32.X32MessageInterface ),
+} )
 
-const normalizedName = (faderName : string, stringIndex : string) => ({
-	index  : parseInt(stringIndex),
+const normalizedName = ( faderName : string, stringIndex : string ) => ( {
+	index  : parseInt( stringIndex ),
 	name   : faderName,
 	zIndex : stringIndex,
-})
-const normalizedMix = (isOn : boolean, level : string, stringIndex : string) => ({
-	index : parseInt(stringIndex),
+} )
+const normalizedMix = ( isOn : boolean, level : string, stringIndex : string ) => ( {
+	index : parseInt( stringIndex ),
 	isOn  : {
 		text : isOn ? 'ON': 'OFF',
 		bool : isOn,
-		int  : Number(isOn),
+		int  : Number( isOn ),
 	},
 	level : {
 		db   : `${level} dB`,
-		float : expect.any(Number),
+		float : expect.any( Number ),
 	},
 	zIndex : stringIndex,
-})
+} )
 
 const knownNodeMessages = [
 	{
 		arg       : '/auxin/01/config "Q Main-L" 1 RD 33',
 		msgResult : { address : '/auxin/01/config', argLength : 4 },
-		result    : normalizedName('Q Main-L', '01'),
+		result    : normalizedName( 'Q Main-L', '01' ),
 		testName  : 'auxName',
 	},
 	{
 		arg       : '/auxin/01/mix ON   0.0 ON -100 OFF   -oo',
 		msgResult : { address : '/auxin/01/mix', argLength : 6 },
-		result    : normalizedMix(true, '0.0', '01'),
+		result    : normalizedMix( true, '0.0', '01' ),
 		testName  : 'auxMix',
 	},
 
 	{
 		arg       : '/bus/01/config "StgMon" 63 YEi',
 		msgResult : { address : '/bus/01/config', argLength : 3 },
-		result    : normalizedName('StgMon', '01'),
+		result    : normalizedName( 'StgMon', '01' ),
 		testName  : 'busName',
 	},
 	{
 		arg       : '/bus/01/mix ON -11.0 OFF +0 OFF   -oo',
 		msgResult : { address : '/bus/01/mix', argLength : 6 },
-		result    : normalizedMix(true, '-11.0', '01'),
+		result    : normalizedMix( true, '-11.0', '01' ),
 		testName  : 'busMix',
 	},
 
 	{
 		arg       : '/dca/2/config "2024" 1 RD',
 		msgResult : { address : '/dca/2/config', argLength : 3 },
-		result    : normalizedName('2024', '2'),
+		result    : normalizedName( '2024', '2' ),
 		testName  : 'dcaName',
 	},
 	{
 		arg       : '/dca/2 OFF   -32.5',
 		msgResult : { address : '/dca/2', argLength : 2 },
-		result    : normalizedMix(false, '-32.5', '2'),
+		result    : normalizedMix( false, '-32.5', '2' ),
 		testName  : 'dcaMix',
 	},
 	
 	{
 		arg       : '/ch/02/config "" 1 YE 2',
 		msgResult : { address : '/ch/02/config', argLength : 4 },
-		result    : normalizedName('', '02'),
+		result    : normalizedName( '', '02' ),
 		testName  : 'chanName',
 	},
 	{
 		arg       : '/ch/01/mix OFF   -oo OFF +0 OFF   -oo',
 		msgResult : { address : '/ch/01/mix', argLength : 6 },
-		result    : normalizedMix(false, '-oo', '01'),
+		result    : normalizedMix( false, '-oo', '01' ),
 		testName  : 'chanMix',
 	},
 
 	{
 		arg       : '/mtx/01/config "SMAART" 72 RDi',
 		msgResult : { address : '/mtx/01/config', argLength : 3 },
-		result    : normalizedName('SMAART', '01'),
+		result    : normalizedName( 'SMAART', '01' ),
 		testName  : 'mtxName',
 	},
 	{
 		arg       : '/mtx/01/mix ON   0.0',
 		msgResult : { address : '/mtx/01/mix', argLength : 2 },
-		result    : normalizedMix(true, '0.0', '01'),
+		result    : normalizedMix( true, '0.0', '01' ),
 		testName  : 'mtxMix',
 	},
 
 	{
 		arg       : '/main/st/config "MainArray" 66 YEi',
 		msgResult : { address : '/main/st/config', argLength : 3 },
-		result    : normalizedName('MainArray', '0'),
+		result    : normalizedName( 'MainArray', '0' ),
 		testName  : 'mainName',
 	},
 	{
 		arg       : '/main/st/mix ON   0.0 +0',
 		msgResult : { address : '/main/st/mix', argLength : 3 },
-		result    : normalizedMix(true, '0.0', '0'),
+		result    : normalizedMix( true, '0.0', '0' ),
 		testName  : 'mainMix',
 	},
 
 	{
 		arg       : '/main/m/config "" 67 WH',
 		msgResult : { address : '/main/m/config', argLength : 3 },
-		result    : normalizedName('', '0'),
+		result    : normalizedName( '', '0' ),
 		testName  : 'monoName',
 	},
 	{
 		arg       : '/main/m/mix ON   -oo',
 		msgResult : { address : '/main/m/mix', argLength : 2 },
-		result    : normalizedMix(true, '-oo', '0'),
+		result    : normalizedMix( true, '-oo', '0' ),
 		testName  : 'monoMix',
 	},
 	
@@ -184,32 +184,32 @@ const knownNodeMessages = [
 	},
 ]
 
-describe.each(knownNodeMessages)('Test node message ($arg) ($testName)', ({arg, msgResult, result, testName}) => {
-	const decodedMessage = x32Pre.processNodeMessage(arg)
+describe.each( knownNodeMessages )( 'Test node message ($arg) ($testName)', ( {arg, msgResult, result, testName} ) => {
+	const decodedMessage = x32Pre.processNodeMessage( arg )
 
-	test(`subtype ${testName}`, () => {
-		expect(decodedMessage.props.subtype).toEqual(testName)
-	})
+	test( `subtype ${testName}`, () => {
+		expect( decodedMessage.props.subtype ).toEqual( testName )
+	} )
 
-	test(`osc address ${msgResult.address}`, () => {
-		expect(decodedMessage.address).toEqual(msgResult.address)
-	})
+	test( `osc address ${msgResult.address}`, () => {
+		expect( decodedMessage.address ).toEqual( msgResult.address )
+	} )
 
-	test(`osc arg length ${msgResult.argLength}`, () => {
-		expect(decodedMessage.args.length).toEqual(msgResult.argLength)
-	})
+	test( `osc arg length ${msgResult.argLength}`, () => {
+		expect( decodedMessage.args.length ).toEqual( msgResult.argLength )
+	} )
 
-	test('props result as expected', () => {
-		expect(x32.node[testName].props(decodedMessage)).toEqual(result)
-	})
+	test( 'props result as expected', () => {
+		expect( x32.node[testName].props( decodedMessage ) ).toEqual( result )
+	} )
 
-	const builtMessage  = oscX32.buildMessage({ address : 'node', args : [{ type : 'string', value : arg }]})
-	const returnMessage = oscX32.readMessage(builtMessage) as osc_x32.X32MessageInterface
+	const builtMessage  = oscX32.buildMessage( { address : 'node', args : [{ type : 'string', value : arg }]} )
+	const returnMessage = oscX32.readMessage( builtMessage ) as osc_x32.X32MessageInterface
 
-	test('roundtrip processed', () => {
-		expect(returnMessage.wasProcessed).toEqual(true)
-	})
-	test('roundtrip props result as expected', () => {
-		expect(returnMessage.props).toEqual({...result, subtype : testName})
-	})
-})
+	test( 'roundtrip processed', () => {
+		expect( returnMessage.wasProcessed ).toEqual( true )
+	} )
+	test( 'roundtrip props result as expected', () => {
+		expect( returnMessage.props ).toEqual( {...result, subtype : testName} )
+	} )
+} )

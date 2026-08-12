@@ -46,49 +46,49 @@ const knownLevels : [number, string][] = [
 	[1.0000, '+10.0 dB'],
 ]
 
-describe('level conversion operates as expected', () => {
-	describe.each([
+describe( 'level conversion operates as expected', () => {
+	describe.each( [
 		['hi', false, true],
 		[null, false, false],
 		[[1], false, false],
 		[{}, false, false],
 		[0.2, true, true]
-	])('Test input type', (a, b, c) => {
+	] )( 'Test input type', ( a, b, c ) => {
 		if ( ! b ) {
-			test(`float2db with ${typeof a} (${JSON.stringify(a)}) throws`, () => {
+			test( `float2db with ${typeof a} (${JSON.stringify( a )}) throws`, () => {
 				// @ts-expect-error checking errors.
-				expect(() => osc_x32.float2dB(a)).toThrow(TypeError)
-			})
+				expect( () => osc_x32.float2dB( a ) ).toThrow( TypeError )
+			} )
 		} else {
-			test(`float2db with ${typeof a} does not throw`, () => {
+			test( `float2db with ${typeof a} does not throw`, () => {
 				// @ts-expect-error checking errors.
-				expect(() => osc_x32.float2dB(a)).not.toThrow()
-			})
+				expect( () => osc_x32.float2dB( a ) ).not.toThrow()
+			} )
 		}
 
 		if ( ! c ) {
-			test(`dB2Float with ${typeof a} (${JSON.stringify(a)}) throws`, () => {
+			test( `dB2Float with ${typeof a} (${JSON.stringify( a )}) throws`, () => {
 				// @ts-expect-error checking errors.
-				expect(() => osc_x32.dB2Float(a)).toThrow(TypeError)
-			})
+				expect( () => osc_x32.dB2Float( a ) ).toThrow( TypeError )
+			} )
 		} else {
-			test(`dB2Float with ${typeof a} does not throw`, () => {
+			test( `dB2Float with ${typeof a} does not throw`, () => {
 				// @ts-expect-error checking errors.
-				expect(() => osc_x32.dB2Float(a)).not.toThrow()
-			})
+				expect( () => osc_x32.dB2Float( a ) ).not.toThrow()
+			} )
 		}
-	})
+	} )
 	
-	describe.each(knownLevels)('%f <--> %s', (a, b) => {
-		test(`${a} <float> -> ${b}`, () => {
-			expect(osc_x32.float2dB(a)).toEqual(b)
-		})
-		test(`${b} <string> -> ${a}`, () => {
-			expect(osc_x32.dB2Float(b)).toBeCloseTo(a)
-		})
-		const dbFloat = b === '-oo dB' ? -90.0 : parseFloat(b.replace(' dB', ''))
-		test(`${b} <float> -> ${a}`, () => {
-			expect(osc_x32.dB2Float(dbFloat)).toBeCloseTo(a)
-		})
-	})
-})
+	describe.each( knownLevels )( '%f <--> %s', ( a, b ) => {
+		test( `${a} <float> -> ${b}`, () => {
+			expect( osc_x32.float2dB( a ) ).toEqual( b )
+		} )
+		test( `${b} <string> -> ${a}`, () => {
+			expect( osc_x32.dB2Float( b ) ).toBeCloseTo( a )
+		} )
+		const dbFloat = b === '-oo dB' ? -90.0 : parseFloat( b.replace( ' dB', '' ) )
+		test( `${b} <float> -> ${a}`, () => {
+			expect( osc_x32.dB2Float( dbFloat ) ).toBeCloseTo( a )
+		} )
+	} )
+} )

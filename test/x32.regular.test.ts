@@ -13,38 +13,38 @@ import * as osc from '../src/index'
 import * as osc_x32 from '../src/x32'
 import * as x32 from '../src/lib/x32_preprocessors'
 
-const x32Pre = new osc_x32.x32PreProcessor('all')
+const x32Pre = new osc_x32.x32PreProcessor( 'all' )
 
-const oscX32 = new osc.simpleOscLib({
+const oscX32 = new osc.simpleOscLib( {
 	strictMode   : true,
-	preprocessor : (msg) => x32Pre.readMessage(msg as osc_x32.X32MessageInterface),
-})
+	preprocessor : ( msg ) => x32Pre.readMessage( msg as osc_x32.X32MessageInterface ),
+} )
 
 
-const normalizedName = (faderName : string, stringIndex : string) => ({
-	index  : parseInt(stringIndex),
+const normalizedName = ( faderName : string, stringIndex : string ) => ( {
+	index  : parseInt( stringIndex ),
 	name   : faderName,
 	zIndex : stringIndex,
-})
+} )
 
-const normalizeMute = (mute : boolean, fader : string) => ({
-	index   : parseInt(fader),
+const normalizeMute = ( mute : boolean, fader : string ) => ( {
+	index   : parseInt( fader ),
 	isOn    : {
 		bool : mute,
-		int  : Number(mute),
+		int  : Number( mute ),
 		text : mute ? 'ON' : 'OFF',
 	},
 	zIndex  : fader,
-})
+} )
 
-const normalizeLevel = (level : number, fader : string) => ({
-	index   : parseInt(fader),
+const normalizeLevel = ( level : number, fader : string ) => ( {
+	index   : parseInt( fader ),
 	level   : {
-		float : expect.closeTo(level),
-		db    : expect.any(String),
+		float : expect.closeTo( level ),
+		db    : expect.any( String ),
 	},
 	zIndex  : fader,
-})
+} )
 
 const knownMessages = [
 	{
@@ -69,7 +69,7 @@ const knownMessages = [
 			address : '/auxin/03/mix/fader',
 			args    : [{ type : 'float', value : 0.7498}],
 		},
-		result   : normalizeLevel(0.7498, '03'),
+		result   : normalizeLevel( 0.7498, '03' ),
 		testName : 'auxLevel',
 	},
 	{
@@ -77,7 +77,7 @@ const knownMessages = [
 			address : '/auxin/03/mix/on',
 			args    : [{ type : 'integer', value : 1}],
 		},
-		result   : normalizeMute(true, '03'),
+		result   : normalizeMute( true, '03' ),
 		testName : 'auxMute',
 	},
 	{
@@ -85,7 +85,7 @@ const knownMessages = [
 			address : '/auxin/03/config/name',
 			args    : [{ type : 'string', value : 'HELLO'}],
 		},
-		result   : normalizedName('HELLO', '03'),
+		result   : normalizedName( 'HELLO', '03' ),
 		testName : 'auxName',
 	},
 
@@ -94,7 +94,7 @@ const knownMessages = [
 			address : '/bus/12/mix/fader',
 			args    : [{ type : 'float', value : 0.0020}],
 		},
-		result   : normalizeLevel(0.0020, '12'),
+		result   : normalizeLevel( 0.0020, '12' ),
 		testName : 'busLevel',
 	},
 	{
@@ -102,7 +102,7 @@ const knownMessages = [
 			address : '/bus/12/mix/on',
 			args    : [{ type : 'integer', value : 0}],
 		},
-		result   : normalizeMute(false, '12'),
+		result   : normalizeMute( false, '12' ),
 		testName : 'busMute',
 	},
 	{
@@ -110,7 +110,7 @@ const knownMessages = [
 			address : '/bus/12/config/name',
 			args    : [{ type : 'string', value : ''}],
 		},
-		result   : normalizedName('', '12'),
+		result   : normalizedName( '', '12' ),
 		testName : 'busName',
 	},
 
@@ -119,7 +119,7 @@ const knownMessages = [
 			address : '/ch/12/mix/fader',
 			args    : [{ type : 'float', value : 0.0020}],
 		},
-		result   : normalizeLevel(0.0020, '12'),
+		result   : normalizeLevel( 0.0020, '12' ),
 		testName : 'chanLevel',
 	},
 	{
@@ -127,7 +127,7 @@ const knownMessages = [
 			address : '/ch/12/mix/on',
 			args    : [{ type : 'integer', value : 0}],
 		},
-		result   : normalizeMute(false, '12'),
+		result   : normalizeMute( false, '12' ),
 		testName : 'chanMute',
 	},
 	{
@@ -135,7 +135,7 @@ const knownMessages = [
 			address : '/ch/12/config/name',
 			args    : [{ type : 'string', value : ''}],
 		},
-		result   : normalizedName('', '12'),
+		result   : normalizedName( '', '12' ),
 		testName : 'chanName',
 	},
 
@@ -144,7 +144,7 @@ const knownMessages = [
 			address : '/dca/6/fader',
 			args    : [{ type : 'float', value : 0.0230}],
 		},
-		result   : normalizeLevel(0.0230, '6'),
+		result   : normalizeLevel( 0.0230, '6' ),
 		testName : 'dcaLevel',
 	},
 	{
@@ -152,7 +152,7 @@ const knownMessages = [
 			address : '/dca/6/on',
 			args    : [{ type : 'integer', value : 0}],
 		},
-		result   : normalizeMute(false, '6'),
+		result   : normalizeMute( false, '6' ),
 		testName : 'dcaMute',
 	},
 	{
@@ -160,7 +160,7 @@ const knownMessages = [
 			address : '/dca/6/config/name',
 			args    : [{ type : 'string', value : 'GOODBYE'}],
 		},
-		result   : normalizedName('GOODBYE', '6'),
+		result   : normalizedName( 'GOODBYE', '6' ),
 		testName : 'dcaName',
 	},
 
@@ -170,7 +170,7 @@ const knownMessages = [
 			address : '/main/st/mix/fader',
 			args    : [{ type : 'float', value : 0.7498}],
 		},
-		result   : normalizeLevel(0.7498, '0'),
+		result   : normalizeLevel( 0.7498, '0' ),
 		testName : 'mainLevel',
 	},
 	{
@@ -178,7 +178,7 @@ const knownMessages = [
 			address : '/main/st/mix/on',
 			args    : [{ type : 'integer', value : 0}],
 		},
-		result   : normalizeMute(false, '0'),
+		result   : normalizeMute( false, '0' ),
 		testName : 'mainMute',
 	},
 	{
@@ -186,7 +186,7 @@ const knownMessages = [
 			address : '/main/st/config/name',
 			args    : [{ type : 'string', value : 'MAIN'}],
 		},
-		result   : normalizedName('MAIN', '0'),
+		result   : normalizedName( 'MAIN', '0' ),
 		testName : 'mainName',
 	},
 
@@ -195,7 +195,7 @@ const knownMessages = [
 			address : '/main/m/mix/fader',
 			args    : [{ type : 'float', value : 0}],
 		},
-		result   : normalizeLevel(0, '0'),
+		result   : normalizeLevel( 0, '0' ),
 		testName : 'monoLevel',
 	},
 	{
@@ -203,7 +203,7 @@ const knownMessages = [
 			address : '/main/m/mix/on',
 			args    : [{ type : 'integer', value : 0}],
 		},
-		result   : normalizeMute(false, '0'),
+		result   : normalizeMute( false, '0' ),
 		testName : 'monoMute',
 	},
 	{
@@ -211,7 +211,7 @@ const knownMessages = [
 			address : '/main/m/config/name',
 			args    : [{ type : 'string', value : 'center'}],
 		},
-		result   : normalizedName('center', '0'),
+		result   : normalizedName( 'center', '0' ),
 		testName : 'monoName',
 	},
 
@@ -220,7 +220,7 @@ const knownMessages = [
 			address : '/mtx/04/mix/fader',
 			args    : [{ type : 'float', value : 0.0030}],
 		},
-		result   : normalizeLevel(0.0030, '04'),
+		result   : normalizeLevel( 0.0030, '04' ),
 		testName : 'mtxLevel',
 	},
 	{
@@ -228,7 +228,7 @@ const knownMessages = [
 			address : '/mtx/04/mix/on',
 			args    : [{ type : 'integer', value : 0}],
 		},
-		result   : normalizeMute(false, '04'),
+		result   : normalizeMute( false, '04' ),
 		testName : 'mtxMute',
 	},
 	{
@@ -236,7 +236,7 @@ const knownMessages = [
 			address : '/mtx/04/config/name',
 			args    : [{ type : 'string', value : ''}],
 		},
-		result   : normalizedName('', '04'),
+		result   : normalizedName( '', '04' ),
 		testName : 'mtxName',
 	},
 
@@ -266,59 +266,59 @@ const knownMessages = [
 	},
 ]
 
-describe('read standard x32 messages', () => {
-	describe.each(knownMessages)('test $testName :: $message.address', ({message, testName, result}) => {
-		test('regex works', () => {
-			expect(x32.regular[testName].regEx.test(message.address)).toEqual(true)
-		})
-		test('props result as expected', () => {
-			expect(x32.regular[testName].props(message)).toEqual(result)
-		})
+describe( 'read standard x32 messages', () => {
+	describe.each( knownMessages )( 'test $testName :: $message.address', ( {message, testName, result} ) => {
+		test( 'regex works', () => {
+			expect( x32.regular[testName].regEx.test( message.address ) ).toEqual( true )
+		} )
+		test( 'props result as expected', () => {
+			expect( x32.regular[testName].props( message ) ).toEqual( result )
+		} )
 		let builtMessage : Buffer
 		let returnMessage : osc_x32.X32MessageInterface
-		test('build and return message', () => {
+		test( 'build and return message', () => {
 			// const oscMessage = new osc.OSCMessage(message.address, message.args)
-			builtMessage  = oscX32.buildMessage(message as osc.OSCMessage)
-			returnMessage = oscX32.readMessage(builtMessage) as osc_x32.X32MessageInterface
-		})
+			builtMessage  = oscX32.buildMessage( message as osc.OSCMessage )
+			returnMessage = oscX32.readMessage( builtMessage ) as osc_x32.X32MessageInterface
+		} )
 
-		test('roundtrip processed', () => {
-			expect(returnMessage.wasProcessed).toEqual(true)
-		})
-		test('roundtrip props result as expected', () => {
-			expect(returnMessage.props).toEqual({...result, subtype : testName})
-		})
-	})
-})
+		test( 'roundtrip processed', () => {
+			expect( returnMessage.wasProcessed ).toEqual( true )
+		} )
+		test( 'roundtrip props result as expected', () => {
+			expect( returnMessage.props ).toEqual( {...result, subtype : testName} )
+		} )
+	} )
+} )
 
 
-test('roundtrip unprocessed standard x32 message', () => {
+test( 'roundtrip unprocessed standard x32 message', () => {
 	const thisMessage = {
 		address : '/-show/prepos',
 		args    : [{ type : 'integer', value : 2}],
 	}
 
-	const builtMessage  = oscX32.buildMessage(thisMessage)
-	const returnMessage = oscX32.readMessage(builtMessage) as osc_x32.X32MessageInterface
+	const builtMessage  = oscX32.buildMessage( thisMessage )
+	const returnMessage = oscX32.readMessage( builtMessage ) as osc_x32.X32MessageInterface
 
-	expect(returnMessage.wasProcessed).toEqual(false)
-	expect(returnMessage.props).not.toBeDefined()
+	expect( returnMessage.wasProcessed ).toEqual( false )
+	expect( returnMessage.props ).not.toBeDefined()
 
-})
+} )
 
-test('skip malformed ocs message (null)', () => {
+test( 'skip malformed ocs message (null)', () => {
 	// @ts-expect-error checking errors.
-	expect(x32Pre.readMessage(null)).toEqual(null)
-})
-test('skip malformed ocs message (string)', () => {
+	expect( x32Pre.readMessage( null ) ).toEqual( null )
+} )
+test( 'skip malformed ocs message (string)', () => {
 	// @ts-expect-error checking errors.
-	expect(x32Pre.readMessage('hi')).toEqual('hi')
-})
-test('skip malformed ocs message (no address)', () => {
+	expect( x32Pre.readMessage( 'hi' ) ).toEqual( 'hi' )
+} )
+test( 'skip malformed ocs message (no address)', () => {
 	// @ts-expect-error checking errors.
-	expect(x32Pre.readMessage({ hi : 'bye' })).toEqual({ hi : 'bye' })
-})
-test('skip malformed ocs message (empty address)', () => {
+	expect( x32Pre.readMessage( { hi : 'bye' } ) ).toEqual( { hi : 'bye' } )
+} )
+test( 'skip malformed ocs message (empty address)', () => {
 	// @ts-expect-error checking errors.
-	expect(x32Pre.readMessage({ address : '' })).toEqual({ address : '' })
-})
+	expect( x32Pre.readMessage( { address : '' } ) ).toEqual( { address : '' } )
+} )

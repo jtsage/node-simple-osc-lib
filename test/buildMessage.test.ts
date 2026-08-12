@@ -12,10 +12,14 @@
 import * as osc from '../src/index'
 
 const oscRegular = new osc.simpleOscLib()
-const oscStrict  = new osc.simpleOscLib({strictMode : true, strictAddress : true, asciiOnly : true})
+const oscStrict  = new osc.simpleOscLib( {
+	strictMode    : true,
+	strictAddress : true,
+	asciiOnly     : true,
+} )
 
-describe('buildMessage Output', () => {
-	test('two strings with nested array (bang)', () => {
+describe( 'buildMessage Output', () => {
+	test( 'two strings with nested array (bang)', () => {
 		const oscMessage = {
 			address : '/hello',
 			args    : [
@@ -27,10 +31,10 @@ describe('buildMessage Output', () => {
 				{ type : 'string', value : 'there' },
 			],
 		}
-		const expected = Buffer.from(`/hello${osc.null}${osc.null},[[I]]ss${osc.null}${osc.null}${osc.null}${osc.null}hi${osc.null}${osc.null}there${osc.null}${osc.null}${osc.null}`)
-		expect(oscRegular.buildMessage(oscMessage as osc.OSCMessage)).toEqual(expected)
-	})
-	test('two strings with nested garbage (fail)', () => {
+		const expected = Buffer.from( `/hello${osc.null}${osc.null},[[I]]ss${osc.null}${osc.null}${osc.null}${osc.null}hi${osc.null}${osc.null}there${osc.null}${osc.null}${osc.null}` )
+		expect( oscRegular.buildMessage( oscMessage as osc.OSCMessage ) ).toEqual( expected )
+	} )
+	test( 'two strings with nested garbage (fail)', () => {
 		const oscMessage = {
 			address : '/hello',
 			args    : [
@@ -39,9 +43,9 @@ describe('buildMessage Output', () => {
 				{ type : 'string', value : 'there' },
 			],
 		}
-		expect(() => oscRegular.buildMessage(oscMessage as osc.OSCMessage)).toThrow(osc.OSCSyntaxError)
-	})
-	test('strict mode fails with non slash address', () => {
+		expect( () => oscRegular.buildMessage( oscMessage as osc.OSCMessage ) ).toThrow( osc.OSCSyntaxError )
+	} )
+	test( 'strict mode fails with non slash address', () => {
 		const oscMessage = {
 			address : 'hello',
 			args    : [
@@ -49,9 +53,9 @@ describe('buildMessage Output', () => {
 				{ type : 'string', value : 'there' },
 			],
 		}
-		expect(() => oscStrict.buildMessage(oscMessage as osc.OSCMessage)).toThrow(osc.OSCSyntaxError)
-	})
-	test('address is required (empty)', () => {
+		expect( () => oscStrict.buildMessage( oscMessage as osc.OSCMessage ) ).toThrow( osc.OSCSyntaxError )
+	} )
+	test( 'address is required (empty)', () => {
 		const oscMessage = {
 			address : '',
 			args    : [
@@ -59,9 +63,9 @@ describe('buildMessage Output', () => {
 				{ type : 'string', value : 'there' },
 			],
 		}
-		expect(() => oscRegular.buildMessage(oscMessage as osc.OSCMessage)).toThrow(osc.OSCSyntaxError)
-	})
-	test('address is ascii-only', () => {
+		expect( () => oscRegular.buildMessage( oscMessage as osc.OSCMessage ) ).toThrow( osc.OSCSyntaxError )
+	} )
+	test( 'address is ascii-only', () => {
 		const oscMessage = {
 			address : '/ÄÄBB',
 			args    : [
@@ -69,43 +73,43 @@ describe('buildMessage Output', () => {
 				{ type : 'string', value : 'there' },
 			],
 		}
-		expect(() => oscRegular.buildMessage(oscMessage as osc.OSCMessage)).toThrow(osc.OSCSyntaxError)
-	})
-	test('address is required (missing)', () => {
+		expect( () => oscRegular.buildMessage( oscMessage as osc.OSCMessage ) ).toThrow( osc.OSCSyntaxError )
+	} )
+	test( 'address is required (missing)', () => {
 		const oscMessage = {
 			args    : [
 				{ type : 'string', value : 'hi' },
 				{ type : 'string', value : 'there' },
 			],
 		}
-		expect(() => oscRegular.buildMessage(oscMessage as osc.OSCMessage)).toThrow(osc.OSCSyntaxError)
-	})
-	test('arguments are optional', () => {
+		expect( () => oscRegular.buildMessage( oscMessage as osc.OSCMessage ) ).toThrow( osc.OSCSyntaxError )
+	} )
+	test( 'arguments are optional', () => {
 		const oscMessage = {
 			address : '/hello',
 		}
-		const expected = Buffer.from(`/hello${osc.null}${osc.null}`)
-		expect(oscRegular.buildMessage(oscMessage as osc.OSCMessage)).toEqual(expected)
-	})
-	test('arguments must be an array', () => {
+		const expected = Buffer.from( `/hello${osc.null}${osc.null}` )
+		expect( oscRegular.buildMessage( oscMessage as osc.OSCMessage ) ).toEqual( expected )
+	} )
+	test( 'arguments must be an array', () => {
 		const oscMessage = {
 			address : 'hello',
 			args    : 'hello there',
 		}
 		// @ts-expect-error testing failure
-		expect(() => oscRegular.buildMessage(oscMessage as osc.OSCMessage)).toThrow(osc.OSCSyntaxError)
-	})
-	test('arguments must be correct type', () => {
+		expect( () => oscRegular.buildMessage( oscMessage as osc.OSCMessage ) ).toThrow( osc.OSCSyntaxError )
+	} )
+	test( 'arguments must be correct type', () => {
 		const oscMessage = {
 			address : 'hello',
 			args    : [{ type : 'string', blag : 'me' }],
 		}
 		// @ts-expect-error testing failure
-		expect(() => oscRegular.buildMessage(oscMessage as osc.OSCMessage)).toThrow(osc.OSCSyntaxError)
-	})
+		expect( () => oscRegular.buildMessage( oscMessage as osc.OSCMessage ) ).toThrow( osc.OSCSyntaxError )
+	} )
 
-	describe('standard message build', () => {
-		test.each([
+	describe( 'standard message build', () => {
+		test.each( [
 			['/-show/prepos/current', 1, 'integer', 32],
 			['/-show/prepos', 1, 'integer', 24],
 			['/bus/14/mix/fader', 0.4878, 'float', 28],
@@ -114,14 +118,14 @@ describe('buildMessage Output', () => {
 			['/bus/08/mix/on', 1, 'integer', 24],
 			['/bus/08/config/name', 'HEAD', 'string', 32],
 			['/dca/1/config/name', 'TESTER', 'string', 32],
-		])('build osc buffer (%s) [%s:%s] and check size (%i bytes)', (a, b, c, expected) => {
+		] )( 'build osc buffer (%s) [%s:%s] and check size (%i bytes)', ( a, b, c, expected ) => {
 			const thisMessage = {
 				address : a,
 				args : [{type : c, value : b}],
 			}
-			const thisBuild = oscRegular.buildMessage(thisMessage as osc.OSCMessage)
+			const thisBuild = oscRegular.buildMessage( thisMessage as osc.OSCMessage )
 
-			expect(thisBuild.length).toEqual(expected)
-		})
-	})
-})
+			expect( thisBuild.length ).toEqual( expected )
+		} )
+	} )
+} )

@@ -11,72 +11,72 @@
 
 import * as osc from '../src/index'
 
-const getSimpleExpected = (type : string, value : osc.OSCArgTypes, emptyBuffer = true) => {
+const getSimpleExpected = ( type : string, value : osc.OSCArgTypes, emptyBuffer = true ) => {
 	return {
-		buffer_remain : emptyBuffer ? Buffer.alloc(0) : expect.any(Buffer),
+		buffer_remain : emptyBuffer ? Buffer.alloc( 0 ) : expect.any( Buffer ),
 		type          : type,
 		value         : value,
 	}
 }
 
-const makeDoubleBuffer = (value : number) => {
-	const buffer = Buffer.alloc(8)
-	buffer.writeDoubleBE(value)
+const makeDoubleBuffer = ( value : number ) => {
+	const buffer = Buffer.alloc( 8 )
+	buffer.writeDoubleBE( value )
 	return buffer
 }
 
 const oscRegular = new osc.simpleOscLib()
 
-describe('type :: DOUBLE', () => {
-	describe('encodeBufferChunk', () => {
-		test.each([
+describe( 'type :: DOUBLE', () => {
+	describe( 'encodeBufferChunk', () => {
+		test.each( [
 			//['name', 'value', 'Passes non-strict']
 			{ humanName : 'string', value : 'hello'},
 			{ humanName : 'object', value : {}},
 			{ humanName : 'array', value : []},
 			{ humanName : 'null', value : null},
 		// eslint-disable-next-line @typescript-eslint/no-unused-vars
-		])('Test with $value ($humanName)', ({humanName, value}) => {
+		] )( 'Test with $value ($humanName)', ( {humanName, value} ) => {
 			// @ts-expect-error checking errors.
-			expect(() => oscRegular.encodeBufferChunk('d', value)).toThrow(TypeError)
-		})
+			expect( () => oscRegular.encodeBufferChunk( 'd', value ) ).toThrow( TypeError )
+		} )
 
-		test.each([
+		test.each( [
 			[12.6, 8],
 			[486.0, 8],
 			[135435345e-8, 8],
-		])('Test expected length %s -> %i', (a, b) => {
-			expect(oscRegular.encodeBufferChunk('d', a).length).toEqual(b)
-		})
-	})
-	describe('decodeBufferChunk', () => {
-		test('good positive double', () => {
-			const input    = makeDoubleBuffer(53.865)
-			const expected = getSimpleExpected('double', 53.865)
-			expect(oscRegular.decodeBufferChunk('d', input)).toEqual(expected)
-		})
-		test('good negative double', () => {
-			const input    = makeDoubleBuffer(-3265.4)
-			const expected = getSimpleExpected('double', -3265.4)
-			expect(oscRegular.decodeBufferChunk('d', input)).toEqual(expected)
-		})
-		test('non-buffer', () => {
+		] )( 'Test expected length %s -> %i', ( a, b ) => {
+			expect( oscRegular.encodeBufferChunk( 'd', a ).length ).toEqual( b )
+		} )
+	} )
+	describe( 'decodeBufferChunk', () => {
+		test( 'good positive double', () => {
+			const input    = makeDoubleBuffer( 53.865 )
+			const expected = getSimpleExpected( 'double', 53.865 )
+			expect( oscRegular.decodeBufferChunk( 'd', input ) ).toEqual( expected )
+		} )
+		test( 'good negative double', () => {
+			const input    = makeDoubleBuffer( -3265.4 )
+			const expected = getSimpleExpected( 'double', -3265.4 )
+			expect( oscRegular.decodeBufferChunk( 'd', input ) ).toEqual( expected )
+		} )
+		test( 'non-buffer', () => {
 			const input    = 'hello'
 			// @ts-expect-error checking errors.
-			expect(() => oscRegular.decodeBufferChunk('d', input)).toThrow(TypeError)
-		})
-		test('insufficiently padded buffer', () => {
-			const input    = Buffer.alloc(7)
-			expect(() => oscRegular.decodeBufferChunk('d', input)).toThrow(RangeError)
-		})
-		test('double pair (buffer leftover)', () => {
-			const input = Buffer.alloc(12)
-			input.writeDoubleBE(384.6)
-			input.write('bye', 8)
-			const expected = getSimpleExpected('double', 384.6, false)
-			const result = oscRegular.decodeBufferChunk('d', input)
-			expect(result).toEqual(expected)
-			expect(result.buffer_remain.length).toEqual(4)
-		})
-	})
-})
+			expect( () => oscRegular.decodeBufferChunk( 'd', input ) ).toThrow( TypeError )
+		} )
+		test( 'insufficiently padded buffer', () => {
+			const input    = Buffer.alloc( 7 )
+			expect( () => oscRegular.decodeBufferChunk( 'd', input ) ).toThrow( RangeError )
+		} )
+		test( 'double pair (buffer leftover)', () => {
+			const input = Buffer.alloc( 12 )
+			input.writeDoubleBE( 384.6 )
+			input.write( 'bye', 8 )
+			const expected = getSimpleExpected( 'double', 384.6, false )
+			const result = oscRegular.decodeBufferChunk( 'd', input )
+			expect( result ).toEqual( expected )
+			expect( result.buffer_remain.length ).toEqual( 4 )
+		} )
+	} )
+} )

@@ -51,24 +51,24 @@ const testMessages = [
 import * as osc from '../src/index'
 const oscRegular = new osc.simpleOscLib()
 
-describe('printableBuffer', () => {
-	describe.each(testMessages)('Test $message.address', ({message, resultBare, resultDefault, resultNoBar, resultTilde}) => {
-		const thisBuffer = oscRegular.buildMessage(message)
-		test(`Default value == ${resultDefault}`, () => {
-			expect(oscRegular.printableBuffer(thisBuffer)).toEqual(resultDefault)
-		})
-		test(`Tilde value   == ${resultTilde}`, () => {
-			expect(oscRegular.printableBuffer(thisBuffer, '~')).toEqual(resultTilde)
-		})
-		test(`No Bar value  == ${resultNoBar}`, () => {
-			expect(oscRegular.printableBuffer(thisBuffer, null, '')).toEqual(resultNoBar)
-		})
-		test(`Bare value    == ${resultBare}`, () => {
-			expect(oscRegular.printableBuffer(thisBuffer, null, null, true)).toEqual(resultBare)
-		})
-	})
-	test('invalid input', () => {
+describe( 'printableBuffer', () => {
+	describe.each( testMessages )( 'Test $message.address', ( {message, resultBare, resultDefault, resultNoBar, resultTilde} ) => {
+		const thisBuffer = oscRegular.buildMessage( message )
+		test( `Default value == ${resultDefault}`, () => {
+			expect( oscRegular.printableBuffer( thisBuffer ) ).toEqual( resultDefault )
+		} )
+		test( `Tilde value   == ${resultTilde}`, () => {
+			expect( oscRegular.printableBuffer( thisBuffer, '~' ) ).toEqual( resultTilde )
+		} )
+		test( `No Bar value  == ${resultNoBar}`, () => {
+			expect( oscRegular.printableBuffer( thisBuffer, null, '' ) ).toEqual( resultNoBar )
+		} )
+		test( `Bare value    == ${resultBare}`, () => {
+			expect( oscRegular.printableBuffer( thisBuffer, null, null, true ) ).toEqual( resultBare )
+		} )
+	} )
+	test( 'invalid input', () => {
 		// @ts-expect-error testing failure.
-		expect(() => oscRegular.printableBuffer('hello')).toThrow(TypeError)
-	})
-})
+		expect( () => oscRegular.printableBuffer( 'hello' ) ).toThrow( TypeError )
+	} )
+} )

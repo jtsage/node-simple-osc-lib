@@ -14,58 +14,58 @@ import * as osc from '../src/index'
 const oscRegular = new osc.simpleOscLib()
 
 const valueNameMap = {
-	blob    : Buffer.from('AbCDeF'),
+	blob    : Buffer.from( 'AbCDeF' ),
 	float   : 69.69,
 	integer : 20,
 	string  : 'hello world',
 }
 
-describe('message builder', () => {
-	test('build init fail (no address)', () => {
+describe( 'message builder', () => {
+	test( 'build init fail (no address)', () => {
 		// @ts-expect-error testing failure.
-		expect(() => oscRegular.messageBuilder()).toThrow(TypeError)
-	})
+		expect( () => oscRegular.messageBuilder() ).toThrow( TypeError )
+	} )
 
-	const testBuilder = oscRegular.messageBuilder('/test')
+	const testBuilder = oscRegular.messageBuilder( '/test' )
 
-	describe.each(Object.keys(valueNameMap))('Test build type %s', (buildType) => {
-		describe.each(Object.keys(valueNameMap))('Test input of type %s,', (inputType) => {
-			if ( buildType === inputType || (buildType === 'float' && inputType === 'integer') ) {
-				test('type is valid', () => {
+	describe.each( Object.keys( valueNameMap ) )( 'Test build type %s', ( buildType ) => {
+		describe.each( Object.keys( valueNameMap ) )( 'Test input of type %s,', ( inputType ) => {
+			if ( buildType === inputType || ( buildType === 'float' && inputType === 'integer' ) ) {
+				test( 'type is valid', () => {
 					// @ts-expect-error testing fun.
-					expect(() => testBuilder[buildType](valueNameMap[inputType])).not.toThrow()
-				})
-				test('type is valid (shortcut)', () => {
+					expect( () => testBuilder[buildType]( valueNameMap[inputType] ) ).not.toThrow()
+				} )
+				test( 'type is valid (shortcut)', () => {
 					// @ts-expect-error testing fun.
-					expect(() => testBuilder[buildType[0]](valueNameMap[inputType])).not.toThrow()
-				})
+					expect( () => testBuilder[buildType[0]]( valueNameMap[inputType] ) ).not.toThrow()
+				} )
 			} else {
-				test('type is invalid', () => {
+				test( 'type is invalid', () => {
 					// @ts-expect-error testing fun.
-					expect(() => testBuilder[buildType](valueNameMap[inputType])).toThrow(TypeError)
-				})
+					expect( () => testBuilder[buildType]( valueNameMap[inputType] ) ).toThrow( TypeError )
+				} )
 			}
-		})
-	})
+		} )
+	} )
 
-	describe('messageBuilder output', () => {
-		const thisBuilder = oscRegular.messageBuilder('/test')
+	describe( 'messageBuilder output', () => {
+		const thisBuilder = oscRegular.messageBuilder( '/test' )
 		
 		thisBuilder
-			.integer(20)
-			.float(69.69)
-			.string('hello world')
-			.blob(Buffer.from('AaBbCc'))
+			.integer( 20 )
+			.float( 69.69 )
+			.string( 'hello world' )
+			.blob( Buffer.from( 'AaBbCc' ) )
 
-		const results = Buffer.from('2f746573740000002c6966736200000000000014428b614868656c6c6f20776f726c6400000000064161426243630000', 'hex')
+		const results = Buffer.from( '2f746573740000002c6966736200000000000014428b614868656c6c6f20776f726c6400000000064161426243630000', 'hex' )
 		const debug   = '[48]  :: ¦/tes¦t•••¦,ifs¦b•••¦[..]¦B¿aH¦hell¦o wo¦rld•¦[..]¦AaBb¦Cc••¦'
 		
-		test('buffer identical', () => {
-			expect(thisBuilder.toBuffer()).toEqual(results)
-		})
+		test( 'buffer identical', () => {
+			expect( thisBuilder.toBuffer() ).toEqual( results )
+		} )
 
-		test('debug identical', () => {
-			expect(thisBuilder.toString()).toEqual(debug)
-		})
-	})
-})
+		test( 'debug identical', () => {
+			expect( thisBuilder.toString() ).toEqual( debug )
+		} )
+	} )
+} )

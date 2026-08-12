@@ -11,30 +11,30 @@
 
 import * as osc from '../src/index'
 
-const getSimpleExpected = (type : string, value : osc.OSCArgTypes, emptyBuffer = true) => {
+const getSimpleExpected = ( type : string, value : osc.OSCArgTypes, emptyBuffer = true ) => {
 	return {
-		buffer_remain : emptyBuffer ? Buffer.alloc(0) : expect.any(Buffer),
+		buffer_remain : emptyBuffer ? Buffer.alloc( 0 ) : expect.any( Buffer ),
 		type          : type,
 		value         : value,
 	}
 }
 
-const makeColorBuffer = (r : number, g : number, b : number, a : number) => {
-	const buffer = Buffer.alloc(4)
-	buffer.writeUInt8(r, 0)
-	buffer.writeUInt8(g, 1)
-	buffer.writeUInt8(b, 2)
-	buffer.writeUInt8(a, 3)
+const makeColorBuffer = ( r : number, g : number, b : number, a : number ) => {
+	const buffer = Buffer.alloc( 4 )
+	buffer.writeUInt8( r, 0 )
+	buffer.writeUInt8( g, 1 )
+	buffer.writeUInt8( b, 2 )
+	buffer.writeUInt8( a, 3 )
 	return buffer
 }
 
 const oscRegular = new osc.simpleOscLib()
 
-describe('type :: COLOR', () => {
-	describe('encodeBufferChunk', () => {
-		test.each([
+describe( 'type :: COLOR', () => {
+	describe( 'encodeBufferChunk', () => {
+		test.each( [
 			//['name', 'value', 'Passes non-strict']
-			{ humanName : 'buffer', value : Buffer.alloc(4)},
+			{ humanName : 'buffer', value : Buffer.alloc( 4 )},
 			{ humanName : 'string', value : 'hello'},
 			{ humanName : 'number', value : 72},
 			{ humanName : 'unicode', value : '❤️'},
@@ -45,41 +45,41 @@ describe('type :: COLOR', () => {
 			{ humanName : 'out-of-bounds array', value : [365, 0, 0, 0]},
 			{ humanName : 'null', value : null},
 		// eslint-disable-next-line @typescript-eslint/no-unused-vars
-		])('Test with $value ($humanName)', ({humanName, value}) => {
+		] )( 'Test with $value ($humanName)', ( {humanName, value} ) => {
 			// @ts-expect-error checking errors.
-			expect(() => oscRegular.encodeBufferChunk('r', value)).toThrow(TypeError)
-		})
+			expect( () => oscRegular.encodeBufferChunk( 'r', value ) ).toThrow( TypeError )
+		} )
 
-		test.each([
+		test.each( [
 			[[255, 255, 255, 255], 4],
 			[[0, 0, 0, 255], 4],
-		])('Test expected length %s -> %i', (a, b) => {
-			expect(oscRegular.encodeBufferChunk('r', a).length).toEqual(b)
-		})
-	})
-	describe('decodeBufferChunk', () => {
-		test('good color', () => {
-			const input    = makeColorBuffer(255, 125, 100, 255)
-			const expected = getSimpleExpected('color', [255, 125, 100, 255])
-			expect(oscRegular.decodeBufferChunk('r', input)).toEqual(expected)
-		})
-		test('non-buffer', () => {
+		] )( 'Test expected length %s -> %i', ( a, b ) => {
+			expect( oscRegular.encodeBufferChunk( 'r', a ).length ).toEqual( b )
+		} )
+	} )
+	describe( 'decodeBufferChunk', () => {
+		test( 'good color', () => {
+			const input    = makeColorBuffer( 255, 125, 100, 255 )
+			const expected = getSimpleExpected( 'color', [255, 125, 100, 255] )
+			expect( oscRegular.decodeBufferChunk( 'r', input ) ).toEqual( expected )
+		} )
+		test( 'non-buffer', () => {
 			const input    = 'hello'
 			// @ts-expect-error checking errors.
-			expect(() => oscRegular.decodeBufferChunk('r', input)).toThrow(TypeError)
-		})
-		test('insufficiently padded buffer', () => {
-			const input    = Buffer.alloc(3)
-			expect(() => oscRegular.decodeBufferChunk('r', input)).toThrow(RangeError)
-		})
-		test('char pair (buffer leftover)', () => {
-			const input = Buffer.alloc(4)
-			input.write('bye', 4)
-			const color = makeColorBuffer(255, 125, 100, 255)
-			const expected = getSimpleExpected('color', [255, 125, 100, 255], false)
-			const result = oscRegular.decodeBufferChunk('r', Buffer.concat([color, input]))
-			expect(result).toEqual(expected)
-			expect(result.buffer_remain.length).toEqual(4)
-		})
-	})
-})
+			expect( () => oscRegular.decodeBufferChunk( 'r', input ) ).toThrow( TypeError )
+		} )
+		test( 'insufficiently padded buffer', () => {
+			const input    = Buffer.alloc( 3 )
+			expect( () => oscRegular.decodeBufferChunk( 'r', input ) ).toThrow( RangeError )
+		} )
+		test( 'char pair (buffer leftover)', () => {
+			const input = Buffer.alloc( 4 )
+			input.write( 'bye', 4 )
+			const color = makeColorBuffer( 255, 125, 100, 255 )
+			const expected = getSimpleExpected( 'color', [255, 125, 100, 255], false )
+			const result = oscRegular.decodeBufferChunk( 'r', Buffer.concat( [color, input] ) )
+			expect( result ).toEqual( expected )
+			expect( result.buffer_remain.length ).toEqual( 4 )
+		} )
+	} )
+} )

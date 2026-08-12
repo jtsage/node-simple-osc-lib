@@ -11,65 +11,65 @@
 
 import * as osc from '../src/index'
 
-const getSimpleExpected = (type : string, value : osc.OSCArgTypes, emptyBuffer = true) => {
+const getSimpleExpected = ( type : string, value : osc.OSCArgTypes, emptyBuffer = true ) => {
 	return {
-		buffer_remain : emptyBuffer ? Buffer.alloc(0) : expect.any(Buffer),
+		buffer_remain : emptyBuffer ? Buffer.alloc( 0 ) : expect.any( Buffer ),
 		type          : type,
 		value         : value,
 	}
 }
 
-const makeStringBuffer = (size : number, content : string) => {
-	const buffer = Buffer.alloc(size)
-	buffer.write(content)
+const makeStringBuffer = ( size : number, content : string ) => {
+	const buffer = Buffer.alloc( size )
+	buffer.write( content )
 	return buffer
 }
 
 const oscRegular = new osc.simpleOscLib()
-const oscCoerce  = new osc.simpleOscLib({coerceStrings : true})
-const oscStrict  = new osc.simpleOscLib({strictMode : true, strictAddress : true, asciiOnly : true})
+const oscCoerce  = new osc.simpleOscLib( {coerceStrings : true} )
+const oscStrict  = new osc.simpleOscLib( {strictMode : true, strictAddress : true, asciiOnly : true} )
 
 
-describe('type :: STRING', () => {
-	describe('encodeBufferChunk', () => {
-		describe.each([
+describe( 'type :: STRING', () => {
+	describe( 'encodeBufferChunk', () => {
+		describe.each( [
 			//['name', 'value', 'Passes non-strict']
 			{ humanName : 'number',  passCOR : true,  passSTD : false,  value : 69 },
 			{ humanName : 'object',  passCOR : true,  passSTD : false,  value : {} },
 			{ humanName : 'array',   passCOR : true,  passSTD : false,  value : [] },
 			{ humanName : 'null',    passCOR : false, passSTD : false,  value : null },
-			{ humanName : 'buffer',  passCOR : true,  passSTD : false,  value : Buffer.alloc(4) },
-			{ humanName : 'odd OBJ', passCOR : false, passSTD : false,  value : Object.create(null) },
-		])('Test with $humanName', ({humanName, value, passSTD, passCOR}) => {
-			test(`STRICT FAIL :: ${humanName}`, () => {
-				expect(() => oscStrict.encodeBufferChunk('s', value)).toThrow(TypeError)
-			})
-			test(`NON-STRICT ${ passSTD ? 'PASS' : 'FAIL'} :: ${humanName}`, () => {
+			{ humanName : 'buffer',  passCOR : true,  passSTD : false,  value : Buffer.alloc( 4 ) },
+			{ humanName : 'odd OBJ', passCOR : false, passSTD : false,  value : Object.create( null ) },
+		] )( 'Test with $humanName', ( {humanName, value, passSTD, passCOR} ) => {
+			test( `STRICT FAIL :: ${humanName}`, () => {
+				expect( () => oscStrict.encodeBufferChunk( 's', value ) ).toThrow( TypeError )
+			} )
+			test( `NON-STRICT ${ passSTD ? 'PASS' : 'FAIL'} :: ${humanName}`, () => {
 				if ( passSTD ) {
-					expect(() => oscRegular.encodeBufferChunk('s', value)).not.toThrow()
+					expect( () => oscRegular.encodeBufferChunk( 's', value ) ).not.toThrow()
 				} else {
-					expect(() => oscRegular.encodeBufferChunk('s', value)).toThrow(TypeError)
+					expect( () => oscRegular.encodeBufferChunk( 's', value ) ).toThrow( TypeError )
 				}
-			})
-			test(`COERCED ${ passCOR ? 'PASS' : 'FAIL'} :: ${humanName}`, () => {
+			} )
+			test( `COERCED ${ passCOR ? 'PASS' : 'FAIL'} :: ${humanName}`, () => {
 				if ( passCOR ) {
-					expect(() => oscCoerce.encodeBufferChunk('s', value)).not.toThrow()
+					expect( () => oscCoerce.encodeBufferChunk( 's', value ) ).not.toThrow()
 				} else {
-					expect(() => oscCoerce.encodeBufferChunk('s', value)).toThrow(TypeError)
+					expect( () => oscCoerce.encodeBufferChunk( 's', value ) ).toThrow( TypeError )
 				}
-			})
-		})
-		describe('unicode string', () => {
+			} )
+		} )
+		describe( 'unicode string', () => {
 			const input    ='he❤️'
-			test('STRICT :: FAIL', () => {
-				expect(() => oscStrict.encodeBufferChunk('S', input)).toThrow(osc.OSCSyntaxError)
-			})
-			test('NON-STRICT :: PASS', () => {
-				expect(() => oscRegular.encodeBufferChunk('S', input)).not.toThrow()
-			})
-		})
+			test( 'STRICT :: FAIL', () => {
+				expect( () => oscStrict.encodeBufferChunk( 'S', input ) ).toThrow( osc.OSCSyntaxError )
+			} )
+			test( 'NON-STRICT :: PASS', () => {
+				expect( () => oscRegular.encodeBufferChunk( 'S', input ) ).not.toThrow()
+			} )
+		} )
 
-		test.each([
+		test.each( [
 			['h', 4],
 			['he', 4],
 			['hel', 4],
@@ -78,95 +78,95 @@ describe('type :: STRING', () => {
 			['helloW', 8],
 			['helloWo', 8],
 			['helloWorld', 12],
-		])('Test expected length %s -> %i', (a, b) => {
-			expect(oscRegular.encodeBufferChunk('s', a).length).toEqual(b)
-		})
-	})
-	describe('decodeBufferChunk', () => {
-		describe('good string', () => {
-			const input    = makeStringBuffer(8, 'hello')
-			const expected = getSimpleExpected('string', 'hello')
-			test('STRICT :: PASS', () => {
-				expect(oscStrict.decodeBufferChunk('s', input)).toEqual(expected)
-			})
-			test('NON-STRICT :: PASS', () => {
-				expect(oscRegular.decodeBufferChunk('s', input)).toEqual(expected)
-			})
-		})
-		describe('unicode string', () => {
-			const input    = makeStringBuffer(12, 'he❤️')
-			const expected = getSimpleExpected('string', 'he❤️')
-			test('STRICT :: FAIL', () => {
-				expect(() => oscStrict.decodeBufferChunk('S', input)).toThrow(osc.OSCSyntaxError)
-			})
-			test('NON-STRICT :: PASS', () => {
-				expect(oscRegular.decodeBufferChunk('S', input)).toEqual(expected)
-			})
-		})
-		describe('non-buffer', () => {
+		] )( 'Test expected length %s -> %i', ( a, b ) => {
+			expect( oscRegular.encodeBufferChunk( 's', a ).length ).toEqual( b )
+		} )
+	} )
+	describe( 'decodeBufferChunk', () => {
+		describe( 'good string', () => {
+			const input    = makeStringBuffer( 8, 'hello' )
+			const expected = getSimpleExpected( 'string', 'hello' )
+			test( 'STRICT :: PASS', () => {
+				expect( oscStrict.decodeBufferChunk( 's', input ) ).toEqual( expected )
+			} )
+			test( 'NON-STRICT :: PASS', () => {
+				expect( oscRegular.decodeBufferChunk( 's', input ) ).toEqual( expected )
+			} )
+		} )
+		describe( 'unicode string', () => {
+			const input    = makeStringBuffer( 12, 'he❤️' )
+			const expected = getSimpleExpected( 'string', 'he❤️' )
+			test( 'STRICT :: FAIL', () => {
+				expect( () => oscStrict.decodeBufferChunk( 'S', input ) ).toThrow( osc.OSCSyntaxError )
+			} )
+			test( 'NON-STRICT :: PASS', () => {
+				expect( oscRegular.decodeBufferChunk( 'S', input ) ).toEqual( expected )
+			} )
+		} )
+		describe( 'non-buffer', () => {
 			const input    = 'hello'
-			test('STRICT :: FAIL', () => {
+			test( 'STRICT :: FAIL', () => {
 				// @ts-expect-error checking errors.
-				expect(() => oscStrict.decodeBufferChunk('s', input)).toThrow(TypeError)
-			})
-			test('NON-STRICT :: FAIL', () => {
+				expect( () => oscStrict.decodeBufferChunk( 's', input ) ).toThrow( TypeError )
+			} )
+			test( 'NON-STRICT :: FAIL', () => {
 				// @ts-expect-error checking errors.
-				expect(() => oscRegular.decodeBufferChunk('s', input)).toThrow(TypeError)
-			})
-		})
-		describe('no null character', () => {
-			const input    = makeStringBuffer(4, 'hell')
-			const expected = getSimpleExpected('string', 'hell')
-			test('STRICT :: FAIL', () => {
-				expect(() => oscStrict.decodeBufferChunk('s', input)).toThrow(osc.OSCSyntaxError)
-			})
-			test('NON-STRICT :: PASS', () => {
-				expect(oscRegular.decodeBufferChunk('s', input)).toEqual(expected)
-			})
-		})
-		describe('insufficiently padded buffer', () => {
-			const input    = makeStringBuffer(6, '/hello')
-			const expected = getSimpleExpected('string', '/hello')
-			test('STRICT :: FAIL', () => {
-				expect(() => oscStrict.decodeBufferChunk('s', input)).toThrow(RangeError)
-			})
-			test('NON-STRICT :: PASS', () => {
-				expect(oscRegular.decodeBufferChunk('s', input)).toEqual(expected)
-			})
-		})
-		describe('incorrectly padded buffer', () => {
-			const input    = makeStringBuffer(4, `by${osc.null}e`)
-			const expected = getSimpleExpected('string', 'by')
-			test('STRICT :: FAIL', () => {
-				expect(() => oscStrict.decodeBufferChunk('s', input)).toThrow(osc.OSCSyntaxError)
-			})
-			test('NON-STRICT :: PASS', () => {
-				expect(oscRegular.decodeBufferChunk('s', input)).toEqual(expected)
-			})
-		})
-		describe('empty string', () => {
-			const input    = makeStringBuffer(4, '')
-			const expected = getSimpleExpected('string', '')
-			test('STRICT :: PASS', () => {
-				expect(oscStrict.decodeBufferChunk('s', input)).toEqual(expected)
-			})
-			test('NON-STRICT :: PASS', () => {
-				expect(oscRegular.decodeBufferChunk('s', input)).toEqual(expected)
-			})
-		})
-		describe('string pair (buffer leftover)', () => {
-			const input = Buffer.from(`hel${osc.null}bye${osc.null}`)
-			const expected = getSimpleExpected('string', 'hel', false)
-			test('STRICT :: PASS', () => {
-				const result = oscStrict.decodeBufferChunk('s', input)
-				expect(result).toEqual(expected)
-				expect(result.buffer_remain.length).toEqual(4)
-			})
-			test('NON-STRICT :: PASS', () => {
-				const result = oscRegular.decodeBufferChunk('s', input)
-				expect(result).toEqual(expected)
-				expect(result.buffer_remain.length).toEqual(4)
-			})
-		})
-	})
-})
+				expect( () => oscRegular.decodeBufferChunk( 's', input ) ).toThrow( TypeError )
+			} )
+		} )
+		describe( 'no null character', () => {
+			const input    = makeStringBuffer( 4, 'hell' )
+			const expected = getSimpleExpected( 'string', 'hell' )
+			test( 'STRICT :: FAIL', () => {
+				expect( () => oscStrict.decodeBufferChunk( 's', input ) ).toThrow( osc.OSCSyntaxError )
+			} )
+			test( 'NON-STRICT :: PASS', () => {
+				expect( oscRegular.decodeBufferChunk( 's', input ) ).toEqual( expected )
+			} )
+		} )
+		describe( 'insufficiently padded buffer', () => {
+			const input    = makeStringBuffer( 6, '/hello' )
+			const expected = getSimpleExpected( 'string', '/hello' )
+			test( 'STRICT :: FAIL', () => {
+				expect( () => oscStrict.decodeBufferChunk( 's', input ) ).toThrow( RangeError )
+			} )
+			test( 'NON-STRICT :: PASS', () => {
+				expect( oscRegular.decodeBufferChunk( 's', input ) ).toEqual( expected )
+			} )
+		} )
+		describe( 'incorrectly padded buffer', () => {
+			const input    = makeStringBuffer( 4, `by${osc.null}e` )
+			const expected = getSimpleExpected( 'string', 'by' )
+			test( 'STRICT :: FAIL', () => {
+				expect( () => oscStrict.decodeBufferChunk( 's', input ) ).toThrow( osc.OSCSyntaxError )
+			} )
+			test( 'NON-STRICT :: PASS', () => {
+				expect( oscRegular.decodeBufferChunk( 's', input ) ).toEqual( expected )
+			} )
+		} )
+		describe( 'empty string', () => {
+			const input    = makeStringBuffer( 4, '' )
+			const expected = getSimpleExpected( 'string', '' )
+			test( 'STRICT :: PASS', () => {
+				expect( oscStrict.decodeBufferChunk( 's', input ) ).toEqual( expected )
+			} )
+			test( 'NON-STRICT :: PASS', () => {
+				expect( oscRegular.decodeBufferChunk( 's', input ) ).toEqual( expected )
+			} )
+		} )
+		describe( 'string pair (buffer leftover)', () => {
+			const input = Buffer.from( `hel${osc.null}bye${osc.null}` )
+			const expected = getSimpleExpected( 'string', 'hel', false )
+			test( 'STRICT :: PASS', () => {
+				const result = oscStrict.decodeBufferChunk( 's', input )
+				expect( result ).toEqual( expected )
+				expect( result.buffer_remain.length ).toEqual( 4 )
+			} )
+			test( 'NON-STRICT :: PASS', () => {
+				const result = oscRegular.decodeBufferChunk( 's', input )
+				expect( result ).toEqual( expected )
+				expect( result.buffer_remain.length ).toEqual( 4 )
+			} )
+		} )
+	} )
+} )

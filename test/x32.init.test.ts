@@ -66,20 +66,20 @@ const testConstructors = [
 	},
 ]
 
-describe.each(testConstructors)('init X32 preprocessor with "$input"', ({fail, input, output}) => {
+describe.each( testConstructors )( 'init X32 preprocessor with "$input"', ( {fail, input, output} ) => {
 	if ( fail ) {
-		test('throw exception', () => {
+		test( 'throw exception', () => {
 			// @ts-expect-error checking errors.
-			expect(() => new osc_x32.x32PreProcessor(input)).toThrow(TypeError)
-		})
+			expect( () => new osc_x32.x32PreProcessor( input ) ).toThrow( TypeError )
+		} )
 	} else {
 		// @ts-expect-error checking errors.
-		const preProc = new osc_x32.x32PreProcessor(input)
-		test(`expect ${output?.node} node types`, () => {
-			expect(preProc.getActiveTypes().node.size).toEqual(output!.node)
-		})
-		test(`expect ${output?.regular} regular types`, () => {
-			expect(preProc.getActiveTypes().regular.size).toEqual(output!.regular)
-		})
+		const preProc = new osc_x32.x32PreProcessor( input )
+		test( `expect ${output?.node} node types`, () => {
+			expect( preProc.getActiveTypes().node.size ).toEqual( output!.node )
+		} )
+		test( `expect ${output?.regular} regular types`, () => {
+			expect( preProc.getActiveTypes().regular.size ).toEqual( output!.regular )
+		} )
 	}
-})
+} )

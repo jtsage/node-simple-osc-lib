@@ -70,6 +70,9 @@ describe( 'non-buffer fails', () => {
 		// @ts-expect-error testing failure.
 		expect( () => oscRegular.readMessage( 'hi' ) ).toThrow( TypeError )
 	} )
+	test( 'empty buffer', () => {
+		expect( () => oscRegular.readPacket( Buffer.alloc( 0 ) ) ).toThrow( TypeError )
+	} )
 } )
 
 describe( 'known packets', () => {

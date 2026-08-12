@@ -107,6 +107,26 @@ describe( 'buildMessage Output', () => {
 		// @ts-expect-error testing failure
 		expect( () => oscRegular.buildMessage( oscMessage as osc.OSCMessage ) ).toThrow( osc.OSCSyntaxError )
 	} )
+	test( 'object must exist', () => {
+		const oscMessage = null
+		// @ts-expect-error testing failure
+		expect( () => oscRegular.buildMessage( oscMessage as osc.OSCMessage ) ).toThrow( osc.OSCSyntaxError )
+	} )
+	test( 'address must exist', () => {
+		const oscMessage = {
+			args    : [{ type : 'string', blag : 'me' }],
+		}
+		// @ts-expect-error testing failure
+		expect( () => oscRegular.buildMessage( oscMessage as osc.OSCMessage ) ).toThrow( osc.OSCSyntaxError )
+	} )
+	test( 'bundles work though', () => {
+		const oscBundle = new osc.OSCBundle()
+		oscBundle.elements = [
+			new osc.OSCMessage( '/hello' )
+		]
+
+		expect( oscRegular.buildMessage( oscBundle ).length ).toEqual( 32 )
+	} )
 
 	describe( 'standard message build', () => {
 		test.each( [

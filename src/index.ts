@@ -875,10 +875,6 @@ export class simpleOscLib {
 
 		const timeTag = this.decodeBufferChunk( 't', buffer_in.subarray( 8 ) )
 
-		if ( typeof timeTag === 'undefined' ) {
-			throw new TypeError( 'osc timetag not found' )
-		}
-
 		bundleObject.timetag = this.getDateFromTimeTagArray( timeTag.value )
 
 		let buffer_remain = timeTag.buffer_remain

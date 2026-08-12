@@ -94,6 +94,13 @@ describe( 'bundle testing', () => {
 			expect( JSON.stringify( oscRegular.readBundle( emptyBundle ) ).length ).toEqual( 72 )
 		} )
 
+		test( 'read with malformed timetag fails', () => {
+			const emptyBundle = Buffer.alloc( 12 )
+			emptyBundle.write( '#bundle' )
+			emptyBundle.writeUInt32BE( 2222, 8 )
+			expect( () => oscRegular.readBundle( emptyBundle ) ).toThrow( RangeError )
+		} )
+
 		test( 'read with incorrect ID fail', () => {
 			const emptyBundle = Buffer.alloc( 16 )
 			emptyBundle.write( '#blundl' )

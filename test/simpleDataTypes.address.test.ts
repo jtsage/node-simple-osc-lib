@@ -6,17 +6,12 @@
  * |___/_|_| |_| |_| .__/|_|\___|      \___/|___/\___|      |_|_|_.__/ 
  *     | |                                                 
  *     |_|   Test Suite - ADDRESS type */
+/// <reference types="node" />
+/// <reference types="jest" />
 
-if ( require.main === module ) {
-	const path = require('node:path')
-	const scriptName = path.basename(__filename).replace('.test.js', '')
-	process.stdout.write(`part of the jest test suite, try "npm test ${scriptName}" instead.\n`)
-	process.exit(1)
-}
+import * as osc from '../src/index'
 
-const osc  = require('../dist/index.js')
-
-const getSimpleExpected = (type, value, emptyBuffer = true) => {
+const getSimpleExpected = (type : string, value : osc.OSCArgTypes, emptyBuffer = true) => {
 	return {
 		buffer_remain : emptyBuffer ? Buffer.alloc(0) : expect.any(Buffer),
 		type          : type,
@@ -24,7 +19,7 @@ const getSimpleExpected = (type, value, emptyBuffer = true) => {
 	}
 }
 
-const makeStringBuffer = (size, content) => {
+const makeStringBuffer = (size : number, content : string) => {
 	const buffer = Buffer.alloc(size)
 	buffer.write(content)
 	return buffer
@@ -46,12 +41,15 @@ describe('type :: ADDRESS', () => {
 			{ humanName : 'no lead slash', value : 'hello', passSTD : true},
 		])('Test with $value address', ({humanName, value, passSTD}) => {
 			test(`STRICT FAIL :: ${humanName}`, () => {
+				// @ts-expect-error testing errors
 				expect(() => oscStrict.encodeBufferChunk('A', value)).toThrow(osc.OSCSyntaxError)
 			})
 			test(`NON-STRICT ${passSTD?'PASS':'FAIL'} :: ${humanName}`, () => {
 				if ( passSTD ) {
+					// @ts-expect-error testing errors
 					expect(() => oscRegular.encodeBufferChunk('A', value)).not.toThrow()
 				} else {
+					// @ts-expect-error testing errors
 					expect(() => oscRegular.encodeBufferChunk('A', value)).toThrow(osc.OSCSyntaxError)
 				}
 			})
@@ -94,9 +92,11 @@ describe('type :: ADDRESS', () => {
 		describe('non-buffer', () => {
 			const input    = 'hello'
 			test('STRICT :: FAIL', () => {
+				// @ts-expect-error testing errors
 				expect(() => oscStrict.decodeBufferChunk('A', input)).toThrow(TypeError)
 			})
 			test('NON-STRICT :: FAIL', () => {
+				// @ts-expect-error testing errors
 				expect(() => oscRegular.decodeBufferChunk('A', input)).toThrow(TypeError)
 			})
 		})

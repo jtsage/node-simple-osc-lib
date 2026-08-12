@@ -6,24 +6,21 @@
  * |___/_|_| |_| |_| .__/|_|\___|      \___/|___/\___|      |_|_|_.__/ 
  *     | |                                                 
  *     |_|   Test Suite - message redirection */
+/// <reference types="node" />
+/// <reference types="jest" />
 
-if ( require.main === module ) {
-	const path = require('node:path')
-	const scriptName = path.basename(__filename).replace('.test.js', '')
-	process.stdout.write(`part of the jest test suite, try "npm test ${scriptName}" instead.\n`)
-	process.exit(1)
-}
+import * as osc from '../src/index'
 
-const osc = require('../dist/index.js')
 const oscRegular = new osc.simpleOscLib()
 const oscStrict  = new osc.simpleOscLib({strictMode : true, strictAddress : true, asciiOnly : true})
 
-const tildeEncode = (message) => {
+const tildeEncode = (message : string) => {
 	return Buffer.from(message.replaceAll('~', osc.null))
 }
 
 describe('messageRedirect', () => {
 	test('fail on non-buffer', () => {
+		// @ts-expect-error Testing failures.
 		expect(() => oscRegular.redirectMessage('hello', '/newTown')).toThrow(TypeError)
 	})
 	test('strict fail on incorrect padding', () => {
@@ -39,6 +36,7 @@ describe('messageRedirect', () => {
 	})
 	test('fail on empty new address', () => {
 		const validMessage = (oscRegular.messageBuilder('/hello')).string('world').toBuffer()
+		// @ts-expect-error testing failures
 		expect(() => oscRegular.redirectMessage(validMessage)).toThrow(osc.OSCSyntaxError)
 
 	})
@@ -69,7 +67,7 @@ describe('messageRedirect', () => {
 
 	test('pass on good args, address on end (callback 1)', () => {
 		const validMessage = (oscRegular.messageBuilder('/hello')).string('world').toBuffer()
-		const callBack = (bufferNewAddress, bufferOldAddress, argList, argBuffer) => {
+		const callBack = (bufferNewAddress : Buffer, bufferOldAddress : Buffer, argList : string[], argBuffer : Buffer) => {
 			argList.push('s')
 
 			return Buffer.concat([
@@ -85,13 +83,13 @@ describe('messageRedirect', () => {
 
 	test('redirect square first integer (callback 2)', () => {
 		const validMessage = (oscRegular.messageBuilder('/hello')).integer(20).toBuffer()
-		const callBack = (bufferNewAddress, _bufferOldAddress, _argList, argBuffer) => {
+		const callBack = (bufferNewAddress : Buffer, _bufferOldAddress : Buffer, _argList : string[], argBuffer : Buffer) => {
 			const firstArgument = oscRegular.decodeBufferChunk('i', argBuffer)
 
 			return Buffer.concat([
 				bufferNewAddress,
 				oscRegular.encodeBufferChunk('s', ',i'),
-				oscRegular.encodeBufferChunk('i', firstArgument.value * firstArgument.value)
+				oscRegular.encodeBufferChunk('i', (firstArgument.value as number) * (firstArgument.value as number))
 			])
 		}
 		const expected = { address : '/newTown', args : [{ type : 'integer', value : 400 }], type : 'osc-message' }

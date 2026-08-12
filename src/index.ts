@@ -997,7 +997,7 @@ export class simpleOscLib {
 	 * @param callBack - callback to apply - must return a buffer
 	 * @returns Buffer
 	 */
-	redirectMessage ( buffer_in : Buffer, newAddress : string, callBack : redirectCallback ) : Buffer {
+	redirectMessage ( buffer_in : Buffer, newAddress : string, callBack ? : redirectCallback ) : Buffer {
 		if ( ! Buffer.isBuffer(buffer_in) ) {
 			throw new TypeError('buffer expected')
 		}

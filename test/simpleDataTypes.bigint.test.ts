@@ -7,16 +7,12 @@
  *     | |                                                 
  *     |_|   Test Suite - BIG INTEGER type */
 
-if ( require.main === module ) {
-	const path = require('node:path')
-	const scriptName = path.basename(__filename).replace('.test.js', '')
-	process.stdout.write(`part of the jest test suite, try "npm test ${scriptName}" instead.\n`)
-	process.exit(1)
-}
+/// <reference types="node" />
+/// <reference types="jest" />
 
-const osc = require('../dist/index.js')
+import * as osc from '../src/index'
 
-const getSimpleExpected = (type, value, emptyBuffer = true) => {
+const getSimpleExpected = (type : string, value : osc.OSCArgTypes, emptyBuffer = true) => {
 	return {
 		buffer_remain : emptyBuffer ? Buffer.alloc(0) : expect.any(Buffer),
 		type          : type,
@@ -24,7 +20,7 @@ const getSimpleExpected = (type, value, emptyBuffer = true) => {
 	}
 }
 
-const makeBigIntegerBuffer = (value) => {
+const makeBigIntegerBuffer = (value : bigint) => {
 	const buffer = Buffer.alloc(8)
 	buffer.writeBigInt64BE(value)
 	return buffer
@@ -43,8 +39,9 @@ describe('type :: BIGINT', () => {
 			{ humanName : 'array', value : []},
 			{ humanName : 'null', value : null},
 			{ humanName : 'buffer', value : Buffer.alloc(4)},
-		// eslint-disable-next-line no-unused-vars
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		])('Test with $value ($humanName)', ({humanName, value}) => {
+			// @ts-expect-error Testing errors.
 			expect(() => oscRegular.encodeBufferChunk('h', value)).toThrow(TypeError)
 		})
 
@@ -69,6 +66,7 @@ describe('type :: BIGINT', () => {
 		})
 		test('non-buffer', () => {
 			const input    = 'hello'
+			// @ts-expect-error Testing errors.
 			expect(() => oscRegular.decodeBufferChunk('h', input)).toThrow(TypeError)
 		})
 		test('insufficiently padded buffer', () => {

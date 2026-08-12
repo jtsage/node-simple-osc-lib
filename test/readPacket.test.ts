@@ -6,6 +6,8 @@
  * |___/_|_| |_| |_| .__/|_|\___|      \___/|___/\___|      |_|_|_.__/ 
  *     | |                                                 
  *     |_|   Test Suite - readPacket */
+/// <reference types="node" />
+/// <reference types="jest" />
 
 import * as osc from '../src/index'
 
@@ -119,8 +121,8 @@ test('pass on missing comma (non-strict)', () => {
 	const input = Buffer.from(`/hello${osc.null}${osc.null}ss${osc.null}${osc.null}hi${osc.null}${osc.null}there${osc.null}${osc.null}${osc.null}`)
 	const decoded = oscRegular.readMessage(input)
 	expect(decoded.address).toEqual('/hello')
-	expect(decoded.args[0].value).toEqual('hi')
-	expect(decoded.args[1].value).toEqual('there')
+	expect(decoded.args[0]!.value).toEqual('hi')
+	expect(decoded.args[1]!.value).toEqual('there')
 })
 
 test('fail on missing comma (strict)', () => {

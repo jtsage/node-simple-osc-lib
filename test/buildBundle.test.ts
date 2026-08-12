@@ -6,7 +6,8 @@
  * |___/_|_| |_| |_| .__/|_|\___|      \___/|___/\___|      |_|_|_.__/ 
  *     | |                                                 
  *     |_|   Test Suite - buildBundle */
-
+/// <reference types="node" />
+/// <reference types="jest" />
 
 import * as osc from '../src/index'
 

@@ -7,6 +7,7 @@
  *     | |                                                 
  *     |_|   Simple OSC Communication Library */
 
+
 /**
  * Simple OSC communication for nodeJS
  */
@@ -60,6 +61,16 @@ export class OSCBundle {
 	elements : Array<OSCMessage | OSCBundle | Buffer> = []
 	timetag  : Buffer | Date                 = Buffer.alloc( 8 )
 	type     : string                        = 'osc-bundle'
+
+	constructor( elements ? : Array<OSCMessage | OSCBundle | Buffer>, timeBuffer ? : Buffer ) {
+		if ( Array.isArray( elements ) ) {
+			this.elements = elements
+		}
+		if ( typeof timeBuffer !== 'undefined' ) {
+			this.timetag = timeBuffer
+		}
+		return this
+	}
 }
 
 type BufferArgList = {

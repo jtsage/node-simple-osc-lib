@@ -62,6 +62,15 @@ describe( 'bundle testing', () => {
 
 			expect( oscRegular.buildBundle( thisBundle ).length ).toEqual( 48 )
 		} )
+		
+		test( 'build with single message works (constructor)', () => {
+			const thisBundle = new osc.OSCBundle(
+				[bundleMsgPair[1]],
+				oscRegular.getTimeTagBufferFromDelta( 0.5 )
+			)
+
+			expect( oscRegular.buildBundle( thisBundle ).length ).toEqual( 48 )
+		} )
 
 		test( 'build with multiple messages works', () => {
 			const thisBundle = new osc.OSCBundle()

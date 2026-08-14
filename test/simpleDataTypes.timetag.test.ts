@@ -11,12 +11,11 @@
 
 import * as osc from '../src/index'
 
-const getSimpleExpected = ( type : string, value : osc.OSCArgTypes, emptyBuffer = true ) => {
-	return {
-		buffer_remain : emptyBuffer ? Buffer.alloc( 0 ) : expect.any( Buffer ),
-		type          : type,
-		value         : value,
-	}
+const getSimpleExpected = ( value : osc.OSCArg, emptyBuffer = true ) => {
+	return [
+		value,
+		emptyBuffer ? Buffer.alloc( 0 ) : expect.any( Buffer ),
+	]
 }
 
 const oscRegular = new osc.simpleOscLib()
@@ -103,7 +102,7 @@ describe( 'type :: TIMETAG', () => {
 	} )
 	describe( 'decodeBufferChunk', () => {
 		test( 'good timetag', () => {
-			const expected = getSimpleExpected( 'timetag', [3165615030, 536870912] )
+			const expected = getSimpleExpected( { type : 'timetag', value : [3165615030, 536870912] } )
 			expect( oscRegular.decodeBufferChunk( 't', getTimeTagBuffer() ) ).toEqual( expected )
 		} )
 		test( 'non-buffer', () => {
@@ -120,10 +119,10 @@ describe( 'type :: TIMETAG', () => {
 			input.writeUInt32BE( 3165615030 )
 			input.writeUInt32BE( 536870912, 4 )
 			input.write( 'bye', 8 )
-			const expected = getSimpleExpected( 'timetag', [3165615030, 536870912], false )
+			const expected = getSimpleExpected( { type : 'timetag', value : [3165615030, 536870912] }, false )
 			const result = oscRegular.decodeBufferChunk( 't', input )
 			expect( result ).toEqual( expected )
-			expect( result.buffer_remain.length ).toEqual( 4 )
+			expect( result[1].length ).toEqual( 4 )
 		} )
 	} )
 } )

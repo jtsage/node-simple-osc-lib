@@ -12,12 +12,11 @@
 
 import * as osc from '../src/index'
 
-const getSimpleExpected = (type : string, value : osc.OSCArgTypes, emptyBuffer = true) => {
-	return {
-		buffer_remain : emptyBuffer ? Buffer.alloc(0) : expect.any(Buffer),
-		type          : type,
-		value         : value,
-	}
+const getSimpleExpected = ( value : osc.OSCArg, emptyBuffer = true ) => {
+	return [
+		value,
+		emptyBuffer ? Buffer.alloc( 0 ) : expect.any( Buffer ),
+	]
 }
 
 const oscRegular = new osc.simpleOscLib()
@@ -55,7 +54,7 @@ describe('type :: BLOB', () => {
 			sender.write('hello', 4)
 			sender.writeUInt32BE(5)
 
-			const expected = getSimpleExpected('blob', input)
+			const expected = getSimpleExpected({ type : 'blob', value : input })
 			expect(oscRegular.decodeBufferChunk('b', sender)).toEqual(expected)
 		})
 		test('non-buffer', () => {
@@ -78,7 +77,7 @@ describe('type :: BLOB', () => {
 			malformedBuffer.writeUInt32BE(5)
 			malformedBuffer.write('hello', 4)
 
-			const expected = getSimpleExpected('blob', Buffer.from('hello'))
+			const expected = getSimpleExpected({ type : 'blob', value : Buffer.from('hello') } )
 			
 			expect(oscRegular.decodeBufferChunk('b', malformedBuffer)).toEqual(expected)
 		})
@@ -96,10 +95,10 @@ describe('type :: BLOB', () => {
 			sender.writeUInt32BE(5)
 			sender.write('bye', 12) // string on end
 			
-			const expected = getSimpleExpected('blob', input, false)
+			const expected = getSimpleExpected({ type : 'blob', value : input }, false)
 			const result = oscRegular.decodeBufferChunk('b', sender)
 			expect(result).toEqual(expected)
-			expect(result.buffer_remain.length).toEqual(4)
+			expect(result[1].length).toEqual(4)
 		})
 
 		test('decode non-padded buffer (non-strict)', () => {
@@ -107,7 +106,7 @@ describe('type :: BLOB', () => {
 			malformedBuffer.writeUInt32BE(5)
 			malformedBuffer.write('hello', 4)
 
-			const expected = getSimpleExpected('blob', Buffer.from('hello'))
+			const expected = getSimpleExpected({ type : 'blob', value : Buffer.from('hello') } )
 			
 			expect(oscRegular.decodeBufferChunk('b', malformedBuffer)).toEqual(expected)
 		})
@@ -126,7 +125,7 @@ describe('type :: BLOB', () => {
 			const encodedBlock = oscRegular.encodeBufferChunk('b', inputBuffer)
 			const decodedBlock = oscRegular.decodeBufferChunk('b', encodedBlock)
 
-			const expected = getSimpleExpected('blob', inputBuffer)
+			const expected = getSimpleExpected( { type : 'blob', value : inputBuffer } )
 			
 			expect(decodedBlock).toEqual(expected)
 		})

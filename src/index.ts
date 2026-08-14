@@ -11,9 +11,25 @@
 /**
  * Simple OSC communication for nodeJS
  */
-/* eslint @stylistic/brace-style: "error" */
-export type OSCArgTypes = boolean | string | number | bigint | Buffer | Array<number|OSCArg|boolean> | null
-export type OSCArg = {type : string, value : OSCArgTypes }
+export type OSCColor = [ number, number, number, number ]
+export type OSCTimeTag = [ number, number ]
+
+export type OSCArg =
+	| { type : 'address'; value : string }
+	| { type : 'array';   value : OSCArg[] }
+	| { type : 'bang';    value : null }
+	| { type : 'bigint';  value : bigint }
+	| { type : 'blob';    value : Buffer }
+	| { type : 'char';    value : string }
+	| { type : 'color';   value : OSCColor }
+	| { type : 'double';  value : number }
+	| { type : 'false';   value : null }
+	| { type : 'float';   value : number }
+	| { type : 'integer'; value : number }
+	| { type : 'null';    value : null }
+	| { type : 'string';  value : string }
+	| { type : 'timetag'; value : OSCTimeTag }
+	| { type : 'true';    value : null }
 
 /**
  * OSC Message Interface
@@ -86,15 +102,11 @@ type BufferArgList = {
  * @param type - text representation of the type, 'string'
  * 
  */
-type BufferDecodePart = {
-	buffer_remain : Buffer<ArrayBufferLike>;
-	type          : string;
-	value         : OSCArgTypes;
-}
+type BufferDecodePart = [ OSCArg, Buffer<ArrayBufferLike>]
 
 interface Operation {
 	name : string;
-	toBuffer( value : OSCArgTypes ) : Buffer;
+	toBuffer( value : OSCArg['value'] ) : Buffer;
 	toArray( buffer_in : Buffer ) : BufferDecodePart;
 }
 const uNULL       = '\u0000'
@@ -197,7 +209,7 @@ export class simpleOscLib {
 			name : 'address',
 			toArray : ( buffer_in : Buffer ) : BufferDecodePart => {
 				const addressArray = this.#operations.s!.toArray( buffer_in )
-				const stringAddress = addressArray.value
+				const stringAddress = addressArray[0].value
 
 				if ( typeof stringAddress !== 'string' || stringAddress.length === 0 ) {
 					throw new OSCSyntaxError( 'address cannot be empty' )
@@ -205,7 +217,7 @@ export class simpleOscLib {
 				if ( this.options.strictAddress && !stringAddress.startsWith( '/' ) ) {
 					throw new OSCSyntaxError( 'address must start with a slash' )
 				}
-				addressArray.type = 'address'
+				addressArray[0].type = 'address'
 				return addressArray
 			},
 			toBuffer : ( value : string ) => {
@@ -223,7 +235,7 @@ export class simpleOscLib {
 		},
 		b : {
 			name : 'blob',
-			toArray : ( buffer_in : Buffer ) : BufferDecodePart => {
+			toArray : ( buffer_in : Buffer ) => {
 				if ( buffer_in.length < 8 ) {
 					throw new RangeError( 'buffer too small for blob type' )
 				}
@@ -233,7 +245,13 @@ export class simpleOscLib {
 				}
 				const origBuffer = buffer_in.subarray( 4, 4 + dataLength )
 				const chunkSize  = 4 + dataLength + ( 4 - ( dataLength % 4 ) )
-				return this.#decodedBuffer( origBuffer, buffer_in.subarray( chunkSize ), 'blob' )
+				return [
+					{
+						type  : 'blob',
+						value : origBuffer,
+					},
+					buffer_in.subarray( chunkSize )
+				]
 			},
 			toBuffer : ( buffer_in : Buffer ) => {
 				if ( ! Buffer.isBuffer( buffer_in ) ) {
@@ -259,8 +277,13 @@ export class simpleOscLib {
 				if ( thisCharCode > 127 ) {
 					throw new TypeError( 'expected single ASCII character' )
 				}
-				return this.#decodedBuffer( String.fromCharCode( thisCharCode ), buffer_in.subarray( 4 ), 'char' )
-
+				return [
+					{
+						type  : 'char',
+						value : String.fromCharCode( thisCharCode ),
+					},
+					buffer_in.subarray( 4 )
+				]
 			},
 			toBuffer : ( value : string ) => {
 				if ( typeof value !== 'string' || value.length > 1 || ! this.#isASCII( value, true ) ) {
@@ -274,12 +297,18 @@ export class simpleOscLib {
 		},
 		d : {
 			name : 'double',
-			toArray : ( buffer_in : Buffer ) : BufferDecodePart => {
+			toArray : ( buffer_in : Buffer ) => {
 				if ( buffer_in.length < 8 ) {
 					throw new RangeError( 'buffer too small for float type' )
 				}
 				const thisNumber = buffer_in.readDoubleBE()
-				return this.#decodedBuffer( thisNumber, buffer_in.subarray( 8 ), 'double' )
+				return [
+					{
+						type  : 'double',
+						value : thisNumber,
+					},
+					buffer_in.subarray( 8 )
+				]
 			},
 			toBuffer : ( value : number ) => {
 				if ( typeof value !== 'number' ) {
@@ -292,12 +321,18 @@ export class simpleOscLib {
 		},
 		f : {
 			name : 'float',
-			toArray : ( buffer_in : Buffer ) : BufferDecodePart => {
+			toArray : ( buffer_in : Buffer ) => {
 				if ( buffer_in.length < 4 ) {
 					throw new RangeError( 'buffer too small for float type' )
 				}
 				const thisNumber = buffer_in.readFloatBE()
-				return this.#decodedBuffer( thisNumber, buffer_in.subarray( 4 ), 'float' )
+				return [
+					{
+						type  : 'float',
+						value : thisNumber,
+					},
+					buffer_in.subarray( 4 )
+				]
 			},
 			toBuffer : ( value : number ) => {
 				if ( typeof value !== 'number' ) {
@@ -310,7 +345,15 @@ export class simpleOscLib {
 		},
 		F : {
 			name     : 'false',
-			toArray  : ( buffer_in : Buffer ) : BufferDecodePart => this.#decodedBuffer( null, buffer_in, 'false' ),
+			toArray  : ( buffer_in : Buffer ) => {
+				return [
+					{
+						type  : 'false',
+						value : null,
+					},
+					buffer_in
+				]
+			},
 			toBuffer : () => Buffer.alloc( 0 ),
 		},
 		h : {
@@ -320,7 +363,13 @@ export class simpleOscLib {
 					throw new RangeError( 'buffer too small for bigint type' )
 				}
 				const thisNumber = BigInt( buffer_in.readBigInt64BE() )
-				return this.#decodedBuffer( thisNumber, buffer_in.subarray( 8 ), 'bigint' )
+				return [
+					{
+						type  : 'bigint',
+						value : thisNumber,
+					},
+					buffer_in.subarray( 8 )
+				]
 			},
 			toBuffer : ( value : bigint ) => {
 				if ( typeof value !== 'bigint' ) {
@@ -333,12 +382,18 @@ export class simpleOscLib {
 		},
 		i : {
 			name : 'integer',
-			toArray : ( buffer_in : Buffer ) : BufferDecodePart => {
+			toArray : ( buffer_in : Buffer ) => {
 				if ( buffer_in.length < 4 ) {
 					throw new RangeError( 'buffer too small for integer type' )
 				}
 				const thisNumber = buffer_in.readInt32BE()
-				return this.#decodedBuffer( thisNumber, buffer_in.subarray( 4 ), 'integer' )
+				return [
+					{
+						type  : 'integer',
+						value : thisNumber,
+					},
+					buffer_in.subarray( 4 )
+				]
 			},
 			toBuffer : ( value : number ) => {
 				if ( typeof value !== 'number' || ! Number.isInteger( value ) ) {
@@ -351,12 +406,28 @@ export class simpleOscLib {
 		},
 		I : {
 			name     : 'bang',
-			toArray  : ( buffer_in : Buffer ) : BufferDecodePart => this.#decodedBuffer( null, buffer_in, 'bang' ),
+			toArray  : ( buffer_in : Buffer ) => {
+				return [
+					{
+						type  : 'bang',
+						value : null,
+					},
+					buffer_in
+				]
+			},
 			toBuffer : () => Buffer.alloc( 0 ),
 		},
 		N : {
 			name    : 'null',
-			toArray : ( buffer_in : Buffer ) : BufferDecodePart => this.#decodedBuffer( null, buffer_in, 'null' ),
+			toArray  : ( buffer_in : Buffer ) => {
+				return [
+					{
+						type  : 'null',
+						value : null,
+					},
+					buffer_in
+				]
+			},
 			toBuffer : () => Buffer.alloc( 0 ),
 		},
 		r : {
@@ -365,16 +436,21 @@ export class simpleOscLib {
 				if ( buffer_in.length < 4 ) {
 					throw new RangeError( 'buffer too small for color type' )
 				}
-				const colorArray = [
+				const colorArray : OSCColor = [
 					buffer_in.readUInt8( 0 ),
 					buffer_in.readUInt8( 1 ),
 					buffer_in.readUInt8( 2 ),
 					buffer_in.readUInt8( 3 )
 				]
-
-				return this.#decodedBuffer( colorArray, buffer_in.subarray( 4 ), 'color' )
+				return [
+					{
+						type  : 'color',
+						value : colorArray,
+					},
+					buffer_in.subarray( 4 )
+				]
 			},
-			toBuffer : ( value : [number, number, number, number] ) => {
+			toBuffer : ( value : OSCColor ) => {
 				if ( !Array.isArray( value ) || value.length !== 4 ) {
 					throw new TypeError( 'expected 4 element numeric array' )
 				}
@@ -400,7 +476,13 @@ export class simpleOscLib {
 					if ( this.options.strictMode ) {
 						throw new OSCSyntaxError( 'osc string buffers must contain a null character' )
 					}
-					return this.#decodedBuffer( rawString, Buffer.alloc( 0 ), 'string' )
+					return [
+						{
+							type  : 'string',
+							value : rawString,
+						},
+						Buffer.alloc( 0 )
+					]
 				}
 
 				const goodString = rawString.slice( 0, nullIndex )
@@ -419,7 +501,13 @@ export class simpleOscLib {
 					}
 				}
 			
-				return this.#decodedBuffer( goodString, buffer_in.subarray( splitPoint ), 'string' )
+				return [
+					{
+						type  : 'string',
+						value : goodString,
+					},
+					buffer_in.subarray( splitPoint )
+				]
 			},
 			toBuffer : ( value_in : string ) => {
 				const value = this.options.coerceStrings === true ?
@@ -448,9 +536,15 @@ export class simpleOscLib {
 				}
 				const number1 = buffer_in.readUInt32BE()
 				const number2 = buffer_in.readUInt32BE( 4 )
-				return this.#decodedBuffer( [number1, number2], buffer_in.subarray( 8 ), 'timetag' )
+				return [
+					{
+						type  : 'timetag',
+						value : [number1, number2],
+					},
+					buffer_in.subarray( 8 )
+				]
 			},
-			toBuffer : ( value : OSCArgTypes ) => {
+			toBuffer : ( value : OSCTimeTag ) => {
 				const timeTagArray = this.getTimeTagArrayFromUnknownType( value )
 				const buffer_out   = Buffer.alloc( 8 )
 
@@ -462,7 +556,15 @@ export class simpleOscLib {
 		},
 		T : {
 			name     : 'true',
-			toArray  : ( buffer_in : Buffer ) : BufferDecodePart => this.#decodedBuffer( null, buffer_in, 'true' ),
+			toArray  : ( buffer_in : Buffer ) => {
+				return [
+					{
+						type          : 'true',
+						value         : null,
+					},
+					buffer_in
+				]
+			},
 			toBuffer : () => Buffer.alloc( 0 ),
 		},
 	}
@@ -528,14 +630,6 @@ export class simpleOscLib {
 		return padString
 	}
 
-	#decodedBuffer( value : OSCArgTypes, buffer_remain : Buffer, type : string ) {
-		return {
-			buffer_remain : buffer_remain,
-			type          : type,
-			value         : value,
-		}
-	}
-
 	#argArrayToBuffer( args : OSCArg[], nested : boolean = false ) : BufferArgList {
 		const thisArgTypeList   = []
 		const thisArgBufferList : Buffer[] = []
@@ -582,7 +676,7 @@ export class simpleOscLib {
 	 * @param value - Value for data (assumed null for null types)
 	 * @returns buffer padded to 32-bit blocks with NULLs
 	 */
-	encodeBufferChunk( type : string, value : OSCArgTypes = null ) : Buffer {
+	encodeBufferChunk( type : string, value : OSCArg['value'] = null ) : Buffer {
 		const thisType = this.getTypeCharFromStringOrChar( type )
 		return this.#operations[thisType]!.toBuffer( value )
 	}
@@ -605,10 +699,10 @@ export class simpleOscLib {
 	}
 
 
-	getTimeTagArrayFromUnknownType( value : OSCArgTypes | Date ) : number[] {
+	getTimeTagArrayFromUnknownType( value : OSCTimeTag | number | Date ) : OSCTimeTag {
 		if ( Array.isArray( value ) && value.length === 2 && typeof value[0] === 'number' && typeof value[1] === 'number' ) {
 			// already prepared
-			return value as number[]
+			return [value[0], value[1]]
 		} else if ( typeof value === 'number' ) {
 			// is a timestamp
 			return this.getTimeTagArrayFromSeconds( value )
@@ -619,7 +713,7 @@ export class simpleOscLib {
 		throw new TypeError( 'invalid timetag type' )
 	}
 
-	getTimeTagArrayFromSeconds( seconds : number ) {
+	getTimeTagArrayFromSeconds( seconds : number ) : OSCTimeTag {
 		const unixSeconds = Math.floor( seconds )
 		const fracSeconds = seconds - unixSeconds
 	
@@ -634,7 +728,7 @@ export class simpleOscLib {
 	 * @param timetag - 2 element array for a timetag [unix seconds, fractional seconds]
 	 * @returns Date object
 	 */
-	getDateFromTimeTagArray( timetag : OSCArgTypes ) {
+	getDateFromTimeTagArray( timetag : OSCTimeTag ) {
 		if ( !Array.isArray( timetag ) || timetag.length !== 2 || typeof timetag[0] !== 'number' || typeof timetag[1] !== 'number' ) {
 			throw new RangeError( 'timetag array format incorrect' )
 		}
@@ -870,17 +964,17 @@ export class simpleOscLib {
 
 		const timeTag = this.decodeBufferChunk( 't', buffer_in.subarray( 8 ) )
 
-		bundleObject.timetag = this.getDateFromTimeTagArray( timeTag.value )
+		bundleObject.timetag = this.getDateFromTimeTagArray( timeTag[0].value as OSCTimeTag )
 
-		let buffer_remain = timeTag.buffer_remain
+		let buffer_remain = timeTag[1]
 
 		while ( buffer_remain.length !== 0 ) {
 			const nextMessageSize : BufferDecodePart = this.decodeBufferChunk( 'i', buffer_remain )
-			const nextMessage : Buffer = nextMessageSize.buffer_remain.subarray( 0, nextMessageSize.value as number )
+			const nextMessage : Buffer = nextMessageSize[1].subarray( 0, nextMessageSize[0].value as number )
 
 			bundleObject.elements.push( this.readPacket( nextMessage ) )
 
-			buffer_remain = buffer_remain.subarray( nextMessageSize.value as number + 4 )
+			buffer_remain = buffer_remain.subarray( nextMessageSize[0].value as number + 4 )
 		}
 
 		return bundleObject
@@ -904,15 +998,15 @@ export class simpleOscLib {
 
 		const thisAddress_array = this.decodeBufferChunk( 'A', buffer_in )
 
-		oscMessage.address = thisAddress_array.value as string
+		oscMessage.address = thisAddress_array[0].value as string
 
-		if ( thisAddress_array.buffer_remain.length === 0 ) {
+		if ( thisAddress_array[1].length === 0 ) {
 			return this.options.preprocessor( oscMessage )
 		}
 
-		const thisArgList_array = this.decodeBufferChunk( 's', thisAddress_array.buffer_remain )
+		const thisArgList_array = this.decodeBufferChunk( 's', thisAddress_array[1] )
 
-		const argListString = thisArgList_array.value as string
+		const argListString = thisArgList_array[0].value as string
 
 		const arrayOpenMarks  = argListString.split( '[' ).length - 1
 		const arrayCloseMarks = argListString.split( ']' ).length - 1
@@ -921,7 +1015,7 @@ export class simpleOscLib {
 			throw new OSCSyntaxError( 'mismatched array nesting' )
 		}
 
-		let buffer_remain = thisArgList_array.buffer_remain
+		let buffer_remain = thisArgList_array[1]
 
 		const arrayStack = [oscMessage.args]
 
@@ -945,22 +1039,21 @@ export class simpleOscLib {
 
 				const stackItem = arrayStack[arrayStack.length - 1]
 
-				stackItem!.push( {
-					type  : 'array',
-					value : built as OSCArgTypes,
-				} )
+				if ( typeof built !== 'undefined' ) {
+					stackItem!.push( {
+						type  : 'array',
+						value : built,
+					} )
+				}
 				continue
 			}
 
-			const thisArg_array = this.decodeBufferChunk( thisItem as string, buffer_remain )
+			const decodedBufferChunk = this.decodeBufferChunk( thisItem as string, buffer_remain )
 			const stackItem     = arrayStack[arrayStack.length - 1]
 
-			stackItem!.push( {
-				type  : this.getTypeStringFromChar( thisItem as string ),
-				value : thisArg_array.value,
-			} )
+			stackItem!.push( decodedBufferChunk[0] )
 
-			buffer_remain = thisArg_array.buffer_remain
+			buffer_remain = decodedBufferChunk[1]
 		}
 		return this.options.preprocessor( oscMessage )
 	}
@@ -1010,9 +1103,9 @@ export class simpleOscLib {
 
 		const thisAddress_array = this.decodeBufferChunk( 'A', buffer_in )
 
-		originalOSC.address = thisAddress_array.value as string
+		originalOSC.address = thisAddress_array[0].value as string
 
-		if ( thisAddress_array.buffer_remain.length === 0 ) {
+		if ( thisAddress_array[1].length === 0 ) {
 			// no arguments, add old address and dump
 			return Buffer.concat( [
 				newAddressBuffer,
@@ -1021,10 +1114,10 @@ export class simpleOscLib {
 			] )
 		}
 
-		const thisArgList_array = this.decodeBufferChunk( 's', thisAddress_array.buffer_remain )
+		const thisArgList_array = this.decodeBufferChunk( 's', thisAddress_array[1] )
 
-		originalOSC.argArray  = [...thisArgList_array.value as string]
-		originalOSC.argBuffer = thisArgList_array.buffer_remain
+		originalOSC.argArray  = [...thisArgList_array[0].value as string]
+		originalOSC.argBuffer = thisArgList_array[1]
 
 		let newArgArray : string[]
 		

@@ -11,12 +11,11 @@
 
 import * as osc from '../src/index'
 
-const getSimpleExpected = ( type : string, value : osc.OSCArgTypes, emptyBuffer = true ) => {
-	return {
-		buffer_remain : emptyBuffer ? Buffer.alloc( 0 ) : expect.any( Buffer ),
-		type          : type,
-		value         : value,
-	}
+const getSimpleExpected = ( value : osc.OSCArg, emptyBuffer = true ) => {
+	return [
+		value,
+		emptyBuffer ? Buffer.alloc( 0 ) : expect.any( Buffer ),
+	]
 }
 
 const makeIntegerBuffer = ( value : number ) => {
@@ -56,17 +55,17 @@ describe( 'type :: INTEGER', () => {
 	describe( 'decodeBufferChunk', () => {
 		test( 'zero integer', () => {
 			const input    = makeIntegerBuffer( 0 )
-			const expected = getSimpleExpected( 'integer', 0 )
+			const expected = getSimpleExpected( { type : 'integer', value : 0 } )
 			expect( oscRegular.decodeBufferChunk( 'i', input ) ).toEqual( expected )
 		} )
 		test( 'good positive integer', () => {
 			const input    = makeIntegerBuffer( 53 )
-			const expected = getSimpleExpected( 'integer', 53 )
+			const expected = getSimpleExpected( { type : 'integer', value : 53 } )
 			expect( oscRegular.decodeBufferChunk( 'i', input ) ).toEqual( expected )
 		} )
 		test( 'good negative integer', () => {
 			const input    = makeIntegerBuffer( -32 )
-			const expected = getSimpleExpected( 'integer', -32 )
+			const expected = getSimpleExpected( { type : 'integer', value : -32 } )
 			expect( oscRegular.decodeBufferChunk( 'i', input ) ).toEqual( expected )
 		} )
 		test( 'non-buffer', () => {
@@ -82,10 +81,10 @@ describe( 'type :: INTEGER', () => {
 			const input = Buffer.alloc( 8 )
 			input.writeInt32BE( 384 )
 			input.write( 'bye', 4 )
-			const expected = getSimpleExpected( 'integer', 384, false )
+			const expected = getSimpleExpected( { type : 'integer', value : 384 }, false )
 			const result = oscRegular.decodeBufferChunk( 'i', input )
 			expect( result ).toEqual( expected )
-			expect( result.buffer_remain.length ).toEqual( 4 )
+			expect( result[1].length ).toEqual( 4 )
 		} )
 	} )
 } )

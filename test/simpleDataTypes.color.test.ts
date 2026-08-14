@@ -11,12 +11,11 @@
 
 import * as osc from '../src/index'
 
-const getSimpleExpected = ( type : string, value : osc.OSCArgTypes, emptyBuffer = true ) => {
-	return {
-		buffer_remain : emptyBuffer ? Buffer.alloc( 0 ) : expect.any( Buffer ),
-		type          : type,
-		value         : value,
-	}
+const getSimpleExpected = ( value : osc.OSCArg, emptyBuffer = true ) => {
+	return [
+		value,
+		emptyBuffer ? Buffer.alloc( 0 ) : expect.any( Buffer ),
+	]
 }
 
 const makeColorBuffer = ( r : number, g : number, b : number, a : number ) => {
@@ -60,7 +59,7 @@ describe( 'type :: COLOR', () => {
 	describe( 'decodeBufferChunk', () => {
 		test( 'good color', () => {
 			const input    = makeColorBuffer( 255, 125, 100, 255 )
-			const expected = getSimpleExpected( 'color', [255, 125, 100, 255] )
+			const expected = getSimpleExpected( { type : 'color', value : [255, 125, 100, 255] } )
 			expect( oscRegular.decodeBufferChunk( 'r', input ) ).toEqual( expected )
 		} )
 		test( 'non-buffer', () => {
@@ -76,10 +75,10 @@ describe( 'type :: COLOR', () => {
 			const input = Buffer.alloc( 4 )
 			input.write( 'bye', 4 )
 			const color = makeColorBuffer( 255, 125, 100, 255 )
-			const expected = getSimpleExpected( 'color', [255, 125, 100, 255], false )
+			const expected = getSimpleExpected( { type : 'color', value : [255, 125, 100, 255] }, false )
 			const result = oscRegular.decodeBufferChunk( 'r', Buffer.concat( [color, input] ) )
 			expect( result ).toEqual( expected )
-			expect( result.buffer_remain.length ).toEqual( 4 )
+			expect( result[1].length ).toEqual( 4 )
 		} )
 	} )
 } )

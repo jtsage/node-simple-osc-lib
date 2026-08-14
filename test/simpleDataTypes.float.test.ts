@@ -11,12 +11,11 @@
 
 import * as osc from '../src/index'
 
-const getSimpleExpected = ( type : string, value : osc.OSCArgTypes, emptyBuffer = true ) => {
-	return {
-		buffer_remain : emptyBuffer ? Buffer.alloc( 0 ) : expect.any( Buffer ),
-		type          : type,
-		value         : value,
-	}
+const getSimpleExpected = ( value : osc.OSCArg, emptyBuffer = true ) => {
+	return [
+		value,
+		emptyBuffer ? Buffer.alloc( 0 ) : expect.any( Buffer ),
+	]
 }
 
 const makeFloatBuffer = ( value : number ) => {
@@ -53,13 +52,13 @@ describe( 'type :: FLOAT', () => {
 	describe( 'decodeBufferChunk', () => {
 		test( 'good positive float', () => {
 			const input    = makeFloatBuffer( 53.865 )
-			const expected = getSimpleExpected( 'float', 53.865 )
-			expect( oscRegular.decodeBufferChunk( 'f', input ).value ).toBeCloseTo( expected.value as number )
+			const expected = getSimpleExpected( { type : 'float', value :  53.865 } )
+			expect( oscRegular.decodeBufferChunk( 'f', input )[0].value ).toBeCloseTo( expected[0].value as number )
 		} )
 		test( 'good negative float', () => {
 			const input    = makeFloatBuffer( -3265.4 )
-			const expected = getSimpleExpected( 'float', -3265.4 )
-			expect( oscRegular.decodeBufferChunk( 'f', input ).value ).toBeCloseTo( expected.value as number )
+			const expected = getSimpleExpected( { type : 'float', value :  -3265.4 } )
+			expect( oscRegular.decodeBufferChunk( 'f', input )[0].value ).toBeCloseTo( expected[0].value as number )
 		} )
 		test( 'non-buffer', () => {
 			const input    = 'hello'
@@ -74,10 +73,10 @@ describe( 'type :: FLOAT', () => {
 			const input = Buffer.alloc( 8 )
 			input.writeFloatBE( 384.6 )
 			input.write( 'bye', 4 )
-			const expected = getSimpleExpected( 'float', 384.6, false )
+			const expected = getSimpleExpected( { type : 'float', value : 384.6 }, false )
 			const result = oscRegular.decodeBufferChunk( 'f', input )
-			expect( result.value ).toBeCloseTo( expected.value as number )
-			expect( result.buffer_remain.length ).toEqual( 4 )
+			expect( result[0].value ).toBeCloseTo( expected[0].value as number )
+			expect( result[1].length ).toEqual( 4 )
 		} )
 	} )
 } )

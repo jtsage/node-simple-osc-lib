@@ -101,7 +101,7 @@ describe( 'messageRedirect', () => {
 			return Buffer.concat( [
 				bufferNewAddress,
 				oscRegular.encodeBufferChunk( 's', ',i' ),
-				oscRegular.encodeBufferChunk( 'i', ( firstArgument.value as number ) * ( firstArgument.value as number ) )
+				oscRegular.encodeBufferChunk( 'i', ( firstArgument[0].value as number ) * ( firstArgument[0].value as number ) )
 			] )
 		}
 		const expected = { address : '/newTown', args : [{ type : 'integer', value : 400 }], type : 'osc-message' }

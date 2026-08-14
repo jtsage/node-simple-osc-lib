@@ -7,9 +7,10 @@
  *     | |                                                 
  *     |_|   X32 Preprocessor */
 
-import type { OSCMessageInterface, OSCArg, OSCArgTypes } from './index'
+import type { OSCMessageInterface, OSCArg } from './index'
 
-export type OSCArgTypeNest = OSCArgTypes | Record<string, OSCArgTypes>
+export type X32ArgValue = OSCArg['value'] | boolean
+export type OSCArgTypeNest = X32ArgValue | Record<string, X32ArgValue>
 
 /**
  * Additional items added to the OSCMessageInterface
@@ -239,7 +240,8 @@ export class x32PreProcessor {
 			return { type : 'integer', value : parseInt( argString, 10 ) }
 		}
 		if ( argString.startsWith( '%' ) ) {
-			return { type : 'bitmask', value : [...argString.slice( 1 )].map( ( x ) => x === '1' )}
+			// return { type : 'bitmask', value : [...argString.slice( 1 )].map( ( x ) => x === '1' )}
+			return { type : 'null', value : null }
 		}
 	
 		return { type : 'string', value : argString }

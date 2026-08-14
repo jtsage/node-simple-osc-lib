@@ -11,12 +11,11 @@
 
 import * as osc from '../src/index'
 
-const getSimpleExpected = ( type : string, value : osc.OSCArgTypes, emptyBuffer = true ) => {
-	return {
-		buffer_remain : emptyBuffer ? Buffer.alloc( 0 ) : expect.any( Buffer ),
-		type          : type,
-		value         : value,
-	}
+const getSimpleExpected = ( value : osc.OSCArg, emptyBuffer = true ) => {
+	return [
+		value,
+		emptyBuffer ? Buffer.alloc( 0 ) : expect.any( Buffer ),
+	]
 }
 
 const makeDoubleBuffer = ( value : number ) => {
@@ -52,12 +51,12 @@ describe( 'type :: DOUBLE', () => {
 	describe( 'decodeBufferChunk', () => {
 		test( 'good positive double', () => {
 			const input    = makeDoubleBuffer( 53.865 )
-			const expected = getSimpleExpected( 'double', 53.865 )
+			const expected = getSimpleExpected( { type : 'double', value : 53.865 } )
 			expect( oscRegular.decodeBufferChunk( 'd', input ) ).toEqual( expected )
 		} )
 		test( 'good negative double', () => {
 			const input    = makeDoubleBuffer( -3265.4 )
-			const expected = getSimpleExpected( 'double', -3265.4 )
+			const expected = getSimpleExpected( { type : 'double', value : -3265.4 } )
 			expect( oscRegular.decodeBufferChunk( 'd', input ) ).toEqual( expected )
 		} )
 		test( 'non-buffer', () => {
@@ -73,10 +72,10 @@ describe( 'type :: DOUBLE', () => {
 			const input = Buffer.alloc( 12 )
 			input.writeDoubleBE( 384.6 )
 			input.write( 'bye', 8 )
-			const expected = getSimpleExpected( 'double', 384.6, false )
+			const expected = getSimpleExpected( { type : 'double', value : 384.6 }, false )
 			const result = oscRegular.decodeBufferChunk( 'd', input )
 			expect( result ).toEqual( expected )
-			expect( result.buffer_remain.length ).toEqual( 4 )
+			expect( result[1].length ).toEqual( 4 )
 		} )
 	} )
 } )

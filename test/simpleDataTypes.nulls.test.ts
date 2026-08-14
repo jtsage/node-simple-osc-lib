@@ -11,12 +11,11 @@
 
 import * as osc from '../src/index'
 
-const getSimpleExpected = ( type : string, value : osc.OSCArgTypes, emptyBuffer = true ) => {
-	return {
-		buffer_remain : emptyBuffer ? Buffer.alloc( 0 ) : expect.any( Buffer ),
-		type          : type,
-		value         : value,
-	}
+const getSimpleExpected = ( value : osc.OSCArg, emptyBuffer = true ) => {
+	return [
+		value,
+		emptyBuffer ? Buffer.alloc( 0 ) : expect.any( Buffer ),
+	]
 }
 
 const oscRegular = new osc.simpleOscLib()
@@ -41,7 +40,8 @@ describe( 'argument-less types', () => {
 			['I', 'bang', 'bang'],
 		] )( 'low level decode [%s] %s', ( a, _b, expectType ) => {
 			const input    = Buffer.alloc( 0 )
-			const expected = getSimpleExpected( expectType, null )
+			// @ts-expect-error test funkiness.
+			const expected = getSimpleExpected( { type : expectType, value : null } )
 			expect( oscRegular.decodeBufferChunk( a, input ) ).toEqual( expected )
 		} )
 	} )

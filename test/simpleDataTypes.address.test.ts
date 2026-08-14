@@ -12,12 +12,11 @@
 
 import * as osc from '../src/index'
 
-const getSimpleExpected = (type : string, value : osc.OSCArgTypes, emptyBuffer = true) => {
-	return {
-		buffer_remain : emptyBuffer ? Buffer.alloc(0) : expect.any(Buffer),
-		type          : type,
-		value         : value,
-	}
+const getSimpleExpected = ( value : osc.OSCArg, emptyBuffer = true ) => {
+	return [
+		value,
+		emptyBuffer ? Buffer.alloc( 0 ) : expect.any( Buffer ),
+	]
 }
 
 const makeStringBuffer = (size : number, content : string) => {
@@ -72,7 +71,7 @@ describe('type :: ADDRESS', () => {
 	describe('decodeBufferChunk', () => {
 		describe('good address', () => {
 			const input    = makeStringBuffer(8, '/hello')
-			const expected = getSimpleExpected('address', '/hello')
+			const expected = getSimpleExpected({ type : 'address', value : '/hello'})
 			test('STRICT :: PASS', () => {
 				expect(oscStrict.decodeBufferChunk('A', input)).toEqual(expected)
 			})
@@ -82,7 +81,7 @@ describe('type :: ADDRESS', () => {
 		})
 		describe('no leading slash', () => {
 			const input    = makeStringBuffer(8, 'hello')
-			const expected = getSimpleExpected('address', 'hello')
+			const expected = getSimpleExpected({ type : 'address', value : 'hello'})
 			test('STRICT :: FAIL', () => {
 				expect(() => oscStrict.decodeBufferChunk('A', input)).toThrow(osc.OSCSyntaxError)
 			})
@@ -103,7 +102,7 @@ describe('type :: ADDRESS', () => {
 		})
 		describe('incorrectly padded buffer', () => {
 			const input    = makeStringBuffer(6, '/hello')
-			const expected = getSimpleExpected('address', '/hello')
+			const expected = getSimpleExpected({ type : 'address', value : '/hello'})
 			test('STRICT :: FAIL', () => {
 				expect(() => oscStrict.decodeBufferChunk('A', input)).toThrow(RangeError)
 			})

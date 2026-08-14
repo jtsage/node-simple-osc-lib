@@ -12,12 +12,11 @@
 
 import * as osc from '../src/index'
 
-const getSimpleExpected = (type : string, value : osc.OSCArgTypes, emptyBuffer = true) => {
-	return {
-		buffer_remain : emptyBuffer ? Buffer.alloc(0) : expect.any(Buffer),
-		type          : type,
-		value         : value,
-	}
+const getSimpleExpected = ( value : osc.OSCArg, emptyBuffer = true ) => {
+	return [
+		value,
+		emptyBuffer ? Buffer.alloc( 0 ) : expect.any( Buffer ),
+	]
 }
 
 const makeBigIntegerBuffer = (value : bigint) => {
@@ -56,12 +55,12 @@ describe('type :: BIGINT', () => {
 	describe('decodeBufferChunk', () => {
 		test('good positive integer', () => {
 			const input    = makeBigIntegerBuffer(BigInt(53))
-			const expected = getSimpleExpected('bigint', BigInt(53))
+			const expected = getSimpleExpected({ type : 'bigint', value : BigInt(53)})
 			expect(oscRegular.decodeBufferChunk('h', input)).toEqual(expected)
 		})
 		test('good negative integer', () => {
 			const input    = makeBigIntegerBuffer(BigInt(-9007199254740991))
-			const expected = getSimpleExpected('bigint', BigInt(-9007199254740991))
+			const expected = getSimpleExpected({ type : 'bigint', value : BigInt(-9007199254740991)})
 			expect(oscRegular.decodeBufferChunk('h', input)).toEqual(expected)
 		})
 		test('non-buffer', () => {
@@ -77,10 +76,10 @@ describe('type :: BIGINT', () => {
 			const input = Buffer.alloc(12)
 			input.writeBigInt64BE(BigInt(384))
 			input.write('bye', 8)
-			const expected = getSimpleExpected('bigint', BigInt(384), false)
+			const expected = getSimpleExpected({ type : 'bigint', value : BigInt(384) }, false )
 			const result = oscRegular.decodeBufferChunk('h', input)
 			expect(result).toEqual(expected)
-			expect(result.buffer_remain.length).toEqual(4)
+			expect(result[1].length).toEqual(4)
 		})
 	})
 })

@@ -11,12 +11,11 @@
 
 import * as osc from '../src/index'
 
-const getSimpleExpected = ( type : string, value : osc.OSCArgTypes, emptyBuffer = true ) => {
-	return {
-		buffer_remain : emptyBuffer ? Buffer.alloc( 0 ) : expect.any( Buffer ),
-		type          : type,
-		value         : value,
-	}
+const getSimpleExpected = ( value : osc.OSCArg, emptyBuffer = true ) => {
+	return [
+		value,
+		emptyBuffer ? Buffer.alloc( 0 ) : expect.any( Buffer ),
+	]
 }
 
 const makeCharBuffer = ( value : string ) => {
@@ -56,7 +55,7 @@ describe( 'type :: CHAR', () => {
 	describe( 'decodeBufferChunk', () => {
 		test( 'good char', () => {
 			const input    = makeCharBuffer( 'A' )
-			const expected = getSimpleExpected( 'char', 'A' )
+			const expected = getSimpleExpected( { type : 'char', value : 'A' } )
 			expect( oscRegular.decodeBufferChunk( 'c', input ) ).toEqual( expected )
 		} )
 		test( 'non-ASCII char', () => {
@@ -76,10 +75,10 @@ describe( 'type :: CHAR', () => {
 			const input = Buffer.alloc( 8 )
 			input.writeUint32BE( 'A'.charCodeAt( 0 ) )
 			input.write( 'bye', 4 )
-			const expected = getSimpleExpected( 'char', 'A', false )
+			const expected = getSimpleExpected( { type : 'char', value : 'A' }, false )
 			const result = oscRegular.decodeBufferChunk( 'c', input )
 			expect( result ).toEqual( expected )
-			expect( result.buffer_remain.length ).toEqual( 4 )
+			expect( result[1].length ).toEqual( 4 )
 		} )
 	} )
 } )

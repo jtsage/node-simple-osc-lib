@@ -11,12 +11,11 @@
 
 import * as osc from '../src/index'
 
-const getSimpleExpected = ( type : string, value : osc.OSCArgTypes, emptyBuffer = true ) => {
-	return {
-		buffer_remain : emptyBuffer ? Buffer.alloc( 0 ) : expect.any( Buffer ),
-		type          : type,
-		value         : value,
-	}
+const getSimpleExpected = ( value : osc.OSCArg, emptyBuffer = true ) => {
+	return [
+		value,
+		emptyBuffer ? Buffer.alloc( 0 ) : expect.any( Buffer ),
+	]
 }
 
 const makeStringBuffer = ( size : number, content : string ) => {
@@ -85,7 +84,7 @@ describe( 'type :: STRING', () => {
 	describe( 'decodeBufferChunk', () => {
 		describe( 'good string', () => {
 			const input    = makeStringBuffer( 8, 'hello' )
-			const expected = getSimpleExpected( 'string', 'hello' )
+			const expected = getSimpleExpected( { type : 'string', value : 'hello' } )
 			test( 'STRICT :: PASS', () => {
 				expect( oscStrict.decodeBufferChunk( 's', input ) ).toEqual( expected )
 			} )
@@ -95,7 +94,7 @@ describe( 'type :: STRING', () => {
 		} )
 		describe( 'unicode string', () => {
 			const input    = makeStringBuffer( 12, 'he❤️' )
-			const expected = getSimpleExpected( 'string', 'he❤️' )
+			const expected = getSimpleExpected( { type : 'string', value : 'he❤️' } )
 			test( 'STRICT :: FAIL', () => {
 				expect( () => oscStrict.decodeBufferChunk( 'S', input ) ).toThrow( osc.OSCSyntaxError )
 			} )
@@ -116,7 +115,7 @@ describe( 'type :: STRING', () => {
 		} )
 		describe( 'no null character', () => {
 			const input    = makeStringBuffer( 4, 'hell' )
-			const expected = getSimpleExpected( 'string', 'hell' )
+			const expected = getSimpleExpected( { type : 'string', value : 'hell' } )
 			test( 'STRICT :: FAIL', () => {
 				expect( () => oscStrict.decodeBufferChunk( 's', input ) ).toThrow( osc.OSCSyntaxError )
 			} )
@@ -126,7 +125,7 @@ describe( 'type :: STRING', () => {
 		} )
 		describe( 'insufficiently padded buffer', () => {
 			const input    = makeStringBuffer( 6, '/hello' )
-			const expected = getSimpleExpected( 'string', '/hello' )
+			const expected = getSimpleExpected( { type : 'string', value : '/hello' } )
 			test( 'STRICT :: FAIL', () => {
 				expect( () => oscStrict.decodeBufferChunk( 's', input ) ).toThrow( RangeError )
 			} )
@@ -136,7 +135,7 @@ describe( 'type :: STRING', () => {
 		} )
 		describe( 'incorrectly padded buffer', () => {
 			const input    = makeStringBuffer( 4, `by${osc.null}e` )
-			const expected = getSimpleExpected( 'string', 'by' )
+			const expected = getSimpleExpected( { type : 'string', value : 'by' } )
 			test( 'STRICT :: FAIL', () => {
 				expect( () => oscStrict.decodeBufferChunk( 's', input ) ).toThrow( osc.OSCSyntaxError )
 			} )
@@ -146,7 +145,7 @@ describe( 'type :: STRING', () => {
 		} )
 		describe( 'empty string', () => {
 			const input    = makeStringBuffer( 4, '' )
-			const expected = getSimpleExpected( 'string', '' )
+			const expected = getSimpleExpected( { type : 'string', value : '' } )
 			test( 'STRICT :: PASS', () => {
 				expect( oscStrict.decodeBufferChunk( 's', input ) ).toEqual( expected )
 			} )
@@ -156,16 +155,16 @@ describe( 'type :: STRING', () => {
 		} )
 		describe( 'string pair (buffer leftover)', () => {
 			const input = Buffer.from( `hel${osc.null}bye${osc.null}` )
-			const expected = getSimpleExpected( 'string', 'hel', false )
+			const expected = getSimpleExpected( { type : 'string', value : 'hel' }, false )
 			test( 'STRICT :: PASS', () => {
 				const result = oscStrict.decodeBufferChunk( 's', input )
 				expect( result ).toEqual( expected )
-				expect( result.buffer_remain.length ).toEqual( 4 )
+				expect( result[1].length ).toEqual( 4 )
 			} )
 			test( 'NON-STRICT :: PASS', () => {
 				const result = oscRegular.decodeBufferChunk( 's', input )
 				expect( result ).toEqual( expected )
-				expect( result.buffer_remain.length ).toEqual( 4 )
+				expect( result[1].length ).toEqual( 4 )
 			} )
 		} )
 	} )

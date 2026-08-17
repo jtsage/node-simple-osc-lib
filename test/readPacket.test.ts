@@ -9,10 +9,12 @@
 /// <reference types="node" />
 /// <reference types="jest" />
 
-import * as osc from '../src/index'
+import * as help                    from './helpers'
+import { OSCMessage }               from '../src/message'
+import { OSCDecodeError, OSCError } from '../src/types'
+import { NULL, simpleOSC }                     from '../src'
 
-const oscRegular = new osc.simpleOscLib()
-const oscStrict  = new osc.simpleOscLib( {strictMode : true, strictAddress : true, asciiOnly : true} )
+const oscLib = new simpleOSC()
 
 const knownPackets = [
 	{
@@ -58,94 +60,86 @@ const knownPackets = [
 ]
 
 describe( 'non-buffer fails', () => {
-	test( 'readPacket', () => {
+	test( 'fromBuffer, non-buffer', () => {
 		// @ts-expect-error testing failure.
-		expect( () => oscRegular.readPacket( 'hi' ) ).toThrow( TypeError )
-	} )
-	test( 'readBundle', () => {
-		// @ts-expect-error testing failure.
-		expect( () => oscRegular.readBundle( 'hi' ) ).toThrow( TypeError )
-	} )
-	test( 'readMessage', () => {
-		// @ts-expect-error testing failure.
-		expect( () => oscRegular.readMessage( 'hi' ) ).toThrow( TypeError )
+		expect( () => OSCMessage.fromBuffer( 'hi' ) ).toThrow( OSCError )
 	} )
 	test( 'empty buffer', () => {
-		expect( () => oscRegular.readPacket( Buffer.alloc( 0 ) ) ).toThrow( TypeError )
+		expect( () => OSCMessage.fromBuffer( Buffer.alloc( 0 ) ) ).toThrow( OSCError )
 	} )
 } )
 
 describe( 'known packets', () => {
 	test.each( knownPackets )( 'message from $address', ( {address, args, buffer} ) => {
-		const decoded = oscRegular.readPacket( buffer )
+		const decoded = OSCMessage.fromBuffer( buffer )
 		// @ts-expect-error expected error
-		expect( decoded.address ).toEqual( address )
+		expect( decoded.type.address ).toEqual( address )
+		expect( decoded.args ).toEqual( args )
+	} )
+
+	test.each( knownPackets )( 'message from $address (lib)', ( {address, args, buffer} ) => {
+		const decoded = oscLib.fromBuffer( buffer )
 		// @ts-expect-error expected error
+		expect( decoded.type.address ).toEqual( address )
 		expect( decoded.args ).toEqual( args )
 	} )
 } )
 
-test( 'fail on empty packet', () => {
-	const input = Buffer.alloc( 0 )
-	expect( () => oscRegular.readMessage( input ) ).toThrow( osc.OSCSyntaxError )
-} )
-
 test( 'pass on no arguments', () => {
-	const input = Buffer.from( `/hello${osc.null}${osc.null}` )
-	expect( oscRegular.readMessage( input ).address ).toEqual( '/hello' )
+	const input = Buffer.from( `/hello${NULL}${NULL}` )
+	// @ts-expect-error testing fun
+	expect( OSCMessage.fromBuffer( input ).type.address ).toEqual( '/hello' )
 } )
 
 test( 'pass on no arguments with comma', () => {
-	const input = Buffer.from( `/hello${osc.null}${osc.null},${osc.null}${osc.null}${osc.null}` )
-	expect( oscRegular.readMessage( input ).address ).toEqual( '/hello' )
+	const input = Buffer.from( `/hello${NULL}${NULL},${NULL}${NULL}${NULL}` )
+	// @ts-expect-error testing fun
+	expect( OSCMessage.fromBuffer( input ).type.address ).toEqual( '/hello' )
 } )
 
 test( 'fail on mismatched array read (unclosed)', () => {
-	const input = Buffer.from( `/hello${osc.null}${osc.null},[[I]ss${osc.null}${osc.null}${osc.null}${osc.null}${osc.null}hi${osc.null}${osc.null}there${osc.null}${osc.null}${osc.null}` )
-	expect( () => oscRegular.readMessage( input ) ).toThrow( osc.OSCSyntaxError )
+	const input = Buffer.from( `/hello${NULL}${NULL},[[I]ss${NULL}${NULL}${NULL}${NULL}${NULL}hi${NULL}${NULL}there${NULL}${NULL}${NULL}` )
+	expect( () => OSCMessage.fromBuffer( input ) ).toThrow( OSCDecodeError )
 } )
 
 test( 'fail on mismatched array read (unopened)', () => {
-	const input = Buffer.from( `/hello${osc.null}${osc.null},II]]ss${osc.null}${osc.null}${osc.null}${osc.null}${osc.null}hi${osc.null}${osc.null}there${osc.null}${osc.null}${osc.null}` )
-	expect( () => oscRegular.readMessage( input ) ).toThrow( osc.OSCSyntaxError )
+	const input = Buffer.from( `/hello${NULL}${NULL},II]]ss${NULL}${NULL}${NULL}${NULL}${NULL}hi${NULL}${NULL}there${NULL}${NULL}${NULL}` )
+	expect( () => OSCMessage.fromBuffer( input ) ).toThrow( OSCDecodeError )
 } )
 
 test( 'fail on incorrect buffer length (message) (strict)', () => {
-	const input = Buffer.from( `/hello${osc.null}${osc.null},[[I]]ss${osc.null}${osc.null}${osc.null}${osc.null}hi${osc.null}${osc.null}there${osc.null}${osc.null}` )
-	expect( () => oscStrict.readMessage( input ) ).toThrow( osc.OSCSyntaxError )
-} )
-
-test( 'fail on incorrect buffer length (packet) (strict)', () => {
-	const input = Buffer.from( `/hello${osc.null}${osc.null},[[I]]ss${osc.null}${osc.null}${osc.null}${osc.null}hi${osc.null}${osc.null}there${osc.null}${osc.null}` )
-	expect( () => oscStrict.readPacket( input ) ).toThrow( osc.OSCSyntaxError )
+	const input = Buffer.from( `/hello${NULL}${NULL},[[I]]ss${NULL}${NULL}${NULL}${NULL}hi${NULL}${NULL}there${NULL}${NULL}` )
+	expect( () => OSCMessage.fromBuffer( input, help.strictMode ) ).toThrow( OSCDecodeError )
 } )
 
 test( 'pass on missing comma (non-strict)', () => {
-	const input = Buffer.from( `/hello${osc.null}${osc.null}ss${osc.null}${osc.null}hi${osc.null}${osc.null}there${osc.null}${osc.null}${osc.null}` )
-	const decoded = oscRegular.readMessage( input )
-	expect( decoded.address ).toEqual( '/hello' )
+	const input = Buffer.from( `/hello${NULL}${NULL}ss${NULL}${NULL}hi${NULL}${NULL}there${NULL}${NULL}${NULL}` )
+	const decoded = OSCMessage.fromBuffer( input )
+	// @ts-expect-error testing fun.
+	expect( decoded.type.address ).toEqual( '/hello' )
 	expect( decoded.args[0]!.value ).toEqual( 'hi' )
 	expect( decoded.args[1]!.value ).toEqual( 'there' )
 } )
 
 test( 'fail on missing comma (strict)', () => {
-	const input = Buffer.from( `/hello${osc.null}${osc.null}ss${osc.null}${osc.null}hi${osc.null}${osc.null}there${osc.null}${osc.null}${osc.null}` )
-	expect( () => oscStrict.readMessage( input ) ).toThrow( osc.OSCSyntaxError )
+	const input = Buffer.from( `/hello${NULL}${NULL}ss${NULL}${NULL}hi${NULL}${NULL}there${NULL}${NULL}${NULL}` )
+	expect( () => OSCMessage.fromBuffer( input, help.strictMode ) ).toThrow( OSCDecodeError )
 } )
 
 test( 'read correct array', () => {
-	const input = Buffer.from( `/hello${osc.null}${osc.null},[[I]]ss${osc.null}${osc.null}${osc.null}${osc.null}hi${osc.null}${osc.null}there${osc.null}${osc.null}${osc.null}` )
-	const decoded = oscRegular.readPacket( input )
+	const input = Buffer.from( `/hello${NULL}${NULL},[[I]]ss${NULL}${NULL}${NULL}${NULL}hi${NULL}${NULL}there${NULL}${NULL}${NULL}` )
+	const decoded = OSCMessage.fromBuffer( input )
+
 	// @ts-expect-error expected error
-	expect( decoded.address ).toEqual( '/hello' )
-	// @ts-expect-error expected error
+	expect( decoded.type.address ).toEqual( '/hello' )
+	
 	expect( decoded.args[0].type ).toEqual( 'array' )
 	// @ts-expect-error expected error
 	expect( decoded.args[0].value[0].type ).toEqual( 'array' )
 	// @ts-expect-error expected error
 	expect( decoded.args[0].value[0].value[0].type ).toEqual( 'bang' )
-	// @ts-expect-error expected error
 	expect( decoded.args[1].value ).toEqual( 'hi' )
-	// @ts-expect-error expected error
 	expect( decoded.args[2].value ).toEqual( 'there' )
+	const expected = '{"address":"/hello","elements":[{"type":"array","value":[{"type":"array","value":[{"type":"bang","value":null}]}]},{"type":"string","value":"hi"},{"type":"string","value":"there"}],"type":"message"}'
+	expect( JSON.stringify( decoded ) ).toEqual( expected )
 } )

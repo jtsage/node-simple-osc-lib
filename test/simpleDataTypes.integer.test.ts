@@ -9,22 +9,16 @@
 /// <reference types="node" />
 /// <reference types="jest" />
 
-import * as osc from '../src/index'
-
-const getSimpleExpected = ( value : osc.OSCArg, emptyBuffer = true ) => {
-	return [
-		value,
-		emptyBuffer ? Buffer.alloc( 0 ) : expect.any( Buffer ),
-	]
-}
+import * as help from './helpers'
+import { encodeBuffer } from '../src/encode'
+import { decodeBuffer } from '../src/decode'
+import { OSCDecodeError, OSCEncodeError } from '../src/types'
 
 const makeIntegerBuffer = ( value : number ) => {
 	const buffer = Buffer.alloc( 4 )
 	buffer.writeInt32BE( value )
 	return buffer
 }
-
-const oscRegular = new osc.simpleOscLib()
 
 describe( 'type :: INTEGER', () => {
 	describe( 'encodeBufferChunk', () => {
@@ -40,7 +34,7 @@ describe( 'type :: INTEGER', () => {
 		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		] )( 'Test with $value ($humanName)', ( {humanName, value} ) => {
 			// @ts-expect-error checking errors.
-			expect( () => oscRegular.encodeBufferChunk( 'i', value ) ).toThrow( TypeError )
+			expect( () => encodeBuffer( { type : 'integer', value : value }, help.regularMode ) ).toThrow( OSCEncodeError )
 		} )
 
 		test.each( [
@@ -49,42 +43,42 @@ describe( 'type :: INTEGER', () => {
 			[486, 4],
 			[135435345, 4],
 		] )( 'Test expected length %s -> %i', ( a, b ) => {
-			expect( oscRegular.encodeBufferChunk( 'i', a ).length ).toEqual( b )
+			expect( encodeBuffer( { type : 'integer', value : a }, help.regularMode ).buffer.length ).toEqual( b )
 		} )
 	} )
 	describe( 'decodeBufferChunk', () => {
 		test( 'zero integer', () => {
 			const input    = makeIntegerBuffer( 0 )
-			const expected = getSimpleExpected( { type : 'integer', value : 0 } )
-			expect( oscRegular.decodeBufferChunk( 'i', input ) ).toEqual( expected )
+			const expected = help.getSimpleExpected( { type : 'integer', value : 0 } )
+			expect( decodeBuffer( 'i', input, help.regularMode ) ).toEqual( expected )
 		} )
 		test( 'good positive integer', () => {
 			const input    = makeIntegerBuffer( 53 )
-			const expected = getSimpleExpected( { type : 'integer', value : 53 } )
-			expect( oscRegular.decodeBufferChunk( 'i', input ) ).toEqual( expected )
+			const expected = help.getSimpleExpected( { type : 'integer', value : 53 } )
+			expect( decodeBuffer( 'i', input, help.regularMode ) ).toEqual( expected )
 		} )
 		test( 'good negative integer', () => {
 			const input    = makeIntegerBuffer( -32 )
-			const expected = getSimpleExpected( { type : 'integer', value : -32 } )
-			expect( oscRegular.decodeBufferChunk( 'i', input ) ).toEqual( expected )
+			const expected = help.getSimpleExpected( { type : 'integer', value : -32 } )
+			expect( decodeBuffer( 'i', input, help.regularMode ) ).toEqual( expected )
 		} )
 		test( 'non-buffer', () => {
 			const input    = 'hello'
 			// @ts-expect-error checking errors.
-			expect( () => oscRegular.decodeBufferChunk( 'i', input ) ).toThrow( TypeError )
+			expect( () => decodeBuffer( 'i', input, help.regularMode ) ).toThrow( OSCDecodeError )
 		} )
 		test( 'insufficiently padded buffer', () => {
 			const input    = Buffer.alloc( 3 )
-			expect( () => oscRegular.decodeBufferChunk( 'i', input ) ).toThrow( RangeError )
+			expect( () => decodeBuffer( 'i', input, help.regularMode ) ).toThrow( OSCDecodeError )
 		} )
 		test( 'integer pair (buffer leftover)', () => {
 			const input = Buffer.alloc( 8 )
 			input.writeInt32BE( 384 )
 			input.write( 'bye', 4 )
-			const expected = getSimpleExpected( { type : 'integer', value : 384 }, false )
-			const result = oscRegular.decodeBufferChunk( 'i', input )
+			const expected = help.getSimpleExpected( { type : 'integer', value : 384 }, false )
+			const result = decodeBuffer( 'i', input, help.regularMode )
 			expect( result ).toEqual( expected )
-			expect( result[1].length ).toEqual( 4 )
+			expect( result.remain.length ).toEqual( 4 )
 		} )
 	} )
 } )

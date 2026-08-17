@@ -10,23 +10,11 @@
 /// <reference types="node" />
 /// <reference types="jest" />
 
-import * as osc from '../src/index'
+import * as help from './helpers'
+import { encodeBuffer } from '../src/encode'
+import { decodeBuffer } from '../src/decode'
+import { OSCDecodeError, OSCEncodeError } from '../src/types'
 
-const getSimpleExpected = ( value : osc.OSCArg, emptyBuffer = true ) => {
-	return [
-		value,
-		emptyBuffer ? Buffer.alloc( 0 ) : expect.any( Buffer ),
-	]
-}
-
-const makeStringBuffer = (size : number, content : string) => {
-	const buffer = Buffer.alloc(size)
-	buffer.write(content)
-	return buffer
-}
-
-const oscRegular = new osc.simpleOscLib()
-const oscStrict  = new osc.simpleOscLib({strictMode : true, strictAddress : true, asciiOnly : true})
 
 describe('type :: ADDRESS', () => {
 	describe('encodeBufferChunk', () => {
@@ -40,17 +28,28 @@ describe('type :: ADDRESS', () => {
 			{ humanName : 'buffer', value : Buffer.alloc(4), passSTD : false},
 			{ humanName : 'no lead slash', value : 'hello', passSTD : true},
 		])('Test with $value address', ({humanName, value, passSTD}) => {
+
 			test(`STRICT FAIL :: ${humanName}`, () => {
-				// @ts-expect-error testing errors
-				expect(() => oscStrict.encodeBufferChunk('A', value)).toThrow(osc.OSCSyntaxError)
+				expect(() => encodeBuffer(
+					// @ts-expect-error testing errors
+					{ type : 'address', value : value },
+					help.strictMode
+				)).toThrow(OSCEncodeError)
 			})
+
 			test(`NON-STRICT ${passSTD?'PASS':'FAIL'} :: ${humanName}`, () => {
 				if ( passSTD ) {
-					// @ts-expect-error testing errors
-					expect(() => oscRegular.encodeBufferChunk('A', value)).not.toThrow()
+					expect(() => encodeBuffer(
+						// @ts-expect-error testing errors
+						{ type : 'address', value : value },
+						help.regularMode
+					)).not.toThrow()
 				} else {
-					// @ts-expect-error testing errors
-					expect(() => oscRegular.encodeBufferChunk('A', value)).toThrow(osc.OSCSyntaxError)
+					expect(() => encodeBuffer(
+						// @ts-expect-error testing errors
+						{ type : 'address', value : value },
+						help.regularMode
+					)).toThrow(OSCEncodeError)
 				}
 			})
 		})
@@ -65,58 +64,65 @@ describe('type :: ADDRESS', () => {
 			['/helloWo', 12],
 			['/helloWorld', 12],
 		])('Test expected length %s -> %i', (a, b) => {
-			expect(oscRegular.encodeBufferChunk('A', a).length).toEqual(b)
+			expect(encodeBuffer(
+				{ type : 'address', value : a },
+				help.regularMode
+			).buffer.length).toEqual(b)
 		})
 	})
 	describe('decodeBufferChunk', () => {
 		describe('good address', () => {
-			const input    = makeStringBuffer(8, '/hello')
-			const expected = getSimpleExpected({ type : 'address', value : '/hello'})
+			const input    = help.stringBuffer(8, '/hello')
+			const expected = help.getSimpleExpected({ type : 'address', value : '/hello'})
 			test('STRICT :: PASS', () => {
-				expect(oscStrict.decodeBufferChunk('A', input)).toEqual(expected)
+				expect(decodeBuffer('a', input, help.strictMode)).toEqual(expected)
 			})
 			test('NON-STRICT :: PASS', () => {
-				expect(oscRegular.decodeBufferChunk('A', input)).toEqual(expected)
+				expect(decodeBuffer('a', input, help.regularMode)).toEqual(expected)
 			})
 		})
+
 		describe('no leading slash', () => {
-			const input    = makeStringBuffer(8, 'hello')
-			const expected = getSimpleExpected({ type : 'address', value : 'hello'})
+			const input    = help.stringBuffer(8, 'hello')
+			const expected = help.getSimpleExpected({ type : 'address', value : 'hello'})
 			test('STRICT :: FAIL', () => {
-				expect(() => oscStrict.decodeBufferChunk('A', input)).toThrow(osc.OSCSyntaxError)
+				expect(() => decodeBuffer('a', input, help.strictMode)).toThrow('address must start with a slash')
 			})
 			test('NON-STRICT :: PASS', () => {
-				expect(oscRegular.decodeBufferChunk('A', input)).toEqual(expected)
+				expect(decodeBuffer('a', input, help.regularMode)).toEqual(expected)
 			})
 		})
+
 		describe('non-buffer', () => {
 			const input    = 'hello'
 			test('STRICT :: FAIL', () => {
 				// @ts-expect-error testing errors
-				expect(() => oscStrict.decodeBufferChunk('A', input)).toThrow(TypeError)
+				expect(() => decodeBuffer('a', input, help.strictMode)).toThrow('buffer expected')
 			})
 			test('NON-STRICT :: FAIL', () => {
 				// @ts-expect-error testing errors
-				expect(() => oscRegular.decodeBufferChunk('A', input)).toThrow(TypeError)
+				expect(() => decodeBuffer('a', input, help.regularMode)).toThrow('buffer expected')
 			})
 		})
+
 		describe('incorrectly padded buffer', () => {
-			const input    = makeStringBuffer(6, '/hello')
-			const expected = getSimpleExpected({ type : 'address', value : '/hello'})
+			const input    = help.stringBuffer(6, '/hello')
+			const expected = help.getSimpleExpected({ type : 'address', value : '/hello'})
 			test('STRICT :: FAIL', () => {
-				expect(() => oscStrict.decodeBufferChunk('A', input)).toThrow(RangeError)
+				expect(() => decodeBuffer('a', input, help.strictMode)).toThrow('null character')
 			})
 			test('NON-STRICT :: PASS', () => {
-				expect(oscRegular.decodeBufferChunk('A', input)).toEqual(expected)
+				expect(decodeBuffer('a', input, help.regularMode)).toEqual(expected)
 			})
 		})
+
 		describe('empty address', () => {
-			const input    = makeStringBuffer(4, '')
+			const input    = help.stringBuffer(4, '')
 			test('STRICT :: FAIL', () => {
-				expect(() => oscStrict.decodeBufferChunk('A', input)).toThrow(osc.OSCSyntaxError)
+				expect(() => decodeBuffer('a', input, help.strictMode)).toThrow(OSCDecodeError)
 			})
 			test('NON-STRICT :: FAIL', () => {
-				expect(() => oscRegular.decodeBufferChunk('A', input)).toThrow(osc.OSCSyntaxError)
+				expect(() => decodeBuffer('a', input, help.regularMode)).toThrow(OSCDecodeError)
 			})
 		})
 	})

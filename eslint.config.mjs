@@ -30,9 +30,9 @@ export default defineConfig( [
 			sourceType  : 'module',
 		},
 		plugins : {
-			unicorn : eslintPluginUnicorn,
+			unicorn      : eslintPluginUnicorn,
 			'@stylistic' : stylistic,
-			'tsdoc' : tsdocEslint,
+			'tsdoc'      : tsdocEslint,
 		},
 		rules : {
 			'tsdoc/syntax' : 'warn',
@@ -62,7 +62,7 @@ export default defineConfig( [
 				}
 			],
 			'@stylistic/indent' : [
-				'error',
+				'warn',
 				'tab',
 				{ 'SwitchCase' : 1 },
 			],
@@ -70,6 +70,7 @@ export default defineConfig( [
 				'error',
 				{
 					'afterColon'  : true,
+					'align'       : 'colon',
 					'beforeColon' : true,
 					'mode'        : 'minimum',
 				},

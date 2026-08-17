@@ -17,19 +17,20 @@ This package was heavily influenced by the [osc-min](https://github.com/russellm
 
 ## Input types
 
-+ `s` :: `string` - string value (String padded to 32 bit block with nulls)
-+ `f` :: `float` - numeric value (FloatBE - 32 bits)
-+ `d` :: `double` - numeric value (DoubleBE - 64 bits)
-+ `i` :: `integer` - numeric value (Int32BE - 32 bits)
++ `a` :: `address` - non-stander string value, with special processing to ensure a valid osc address string (String padded to 32 bit block with nulls)
 + `b` :: `blob` - node.js Buffer value (Buffer padded to 32 bit block with nulls)
-+ `T` :: `true` - no value (0 bits)
-+ `F` :: `false` - no value (0 bits)
-+ `N` :: `null` - no value (0 bits)
-+ `I` :: `bang` - no value (0 bits)
-+ `r` :: `color` - rgbA as an array [R(0-255),G,B,A] (4 x UInt8 - 32 bits)
 + `c` :: `char` - Character (Int32BE - 32 bits)
++ `d` :: `double` - numeric value (DoubleBE - 64 bits)
++ `F` :: `false` - no value (0 bits)
++ `f` :: `float` - numeric value (FloatBE - 32 bits)
++ `I` :: `bang` - no value (0 bits)
++ `i` :: `integer` - numeric value (Int32BE - 32 bits)
++ `N` :: `null` - no value (0 bits)
++ `r` :: `color` - rgbA as an array [R(0-255),G,B,A] (4 x UInt8 - 32 bits)
++ `s` :: `string` - string value (String padded to 32 bit block with nulls)
++ `S` :: `symbol` - symbol type - returned as a string, symbol handling left to implementer
 + `t` :: `timetag` - numeric value (pair of UInt32BE - 64 bits)
-+ `A` :: `address` - non-stander string value, with special processing to ensure a valid osc address string (String padded to 32 bit block with nulls)
++ `T` :: `true` - no value (0 bits)
 
 Note that `type` is always a string - i.e. `"true"` rather than `true`.
 
@@ -38,12 +39,11 @@ Note that `type` is always a string - i.e. `"true"` rather than `true`.
 ### Options
 
 + __asciiOnly__ _false_ Prevent non-ASCII characters in strings
-+ __blockCharacter__ _"&#xA6;"_ Character to delineate 4-byte blocks in debug output (or '')
 + __coerceStrings__ _false_ For string type, coerce input if non-string found.
-+ __debugCharacter__ _"&bull;"_, Character to replace nulls in debug output
-+ __preprocessor__ _\<function>_ osc-message processor
++ __processor__ _\<function>_ osc-message processor
 + __strictAddress__ _false_ Require leading slash (address is __always__ asciiOnly)
 + __strictMode__ _false_ Use strict mode elsewhere
++ __stringAsSymbol__ _false_ Send & Receive string type 's' as symbol 'S' instead.
 
 ```javascript
 const osc     = require('simple-osc-lib')

@@ -9,7 +9,13 @@
 /// <reference types="node" />
 /// <reference types="jest" />
 
-import * as osc from '../src/index'
+import * as help from './helpers'
+import { OSCArgumentCharToString, OSCArgumentStringToChar, OSCError } from '../src/types'
+import { encodeBuffer } from '../src/encode'
+import { decodeBuffer } from '../src/decode'
+import { simpleOSC } from '../src'
+
+const oscLib = new simpleOSC()
 
 const allTypesByString : Record<string, string> = {
 	bang    : 'I',
@@ -21,48 +27,64 @@ const allTypesByString : Record<string, string> = {
 	false   : 'F',
 	float   : 'f',
 	integer : 'i',
+	midi    : 'm',
 	null    : 'N',
 	string  : 's',
-	STRING  : 'S',
+	symbol  : 'S',
 	timetag : 't',
 	true    : 'T',
 }
 
-const oscRegular = new osc.simpleOscLib()
-
 describe( 'TYPE resolution', () => {
-	const listOfKeys = new Set( Object.values( allTypesByString ) )
+	const listOfChars    = new Set( Object.values( allTypesByString ) )
 	const listOfStrings = new Set( Object.keys( allTypesByString ) )
 	const allTypesByKey : Record<string, string> = {}
 
 	for ( const thisString of listOfStrings ) {
 		allTypesByKey[allTypesByString[thisString]] = thisString
 	}
-	allTypesByKey.r = 'color' // (double entry)
 
-	test.each( [...listOfKeys] )( 'resolve %s', ( a ) => {
-		expect( oscRegular.getTypeStringFromChar( a ) ).toEqual( allTypesByKey[a] )
-	} )
-	test.each( [...listOfKeys] )( 'lookup %s', ( a ) => {
-		expect( oscRegular.getTypeCharFromStringOrChar( a ) ).toEqual( a )
+	test.each( [...listOfChars] )( 'resolve %s', ( a ) => {
+		// @ts-expect-error test funkiness
+		expect( OSCArgumentCharToString( a ) ).toEqual( allTypesByKey[a] )
 	} )
 	test.each( [...listOfStrings] )( 'lookup %s', ( a ) => {
-		expect( oscRegular.getTypeCharFromStringOrChar( a ) ).toEqual( allTypesByString[a] )
+		// @ts-expect-error test funkiness
+		expect( OSCArgumentStringToChar( a ) ).toEqual( allTypesByString[a] )
 	} )
-	test( 'unknown incoming character', () => {
-		expect( oscRegular.getTypeStringFromChar( 'X' ) ).toEqual( 'unknown' )
-	} )
+	
 	test( 'unknown character', () => {
-		expect( () => oscRegular.getTypeCharFromStringOrChar( 'X' ) ).toThrow( RangeError )
+		// @ts-expect-error test funkiness
+		expect( () => OSCArgumentCharToString( 'X' ) ).toThrow( OSCError )
 	} )
 	test( 'unknown string', () => {
-		expect( () => oscRegular.getTypeCharFromStringOrChar( 'blahblah' ) ).toThrow( RangeError )
+		// @ts-expect-error test funkiness
+		expect( () => OSCArgumentStringToChar( 'blahblah' ) ).toThrow( OSCError )
 	} )
 	test( 'empty string', () => {
-		expect( () => oscRegular.getTypeCharFromStringOrChar( '' ) ).toThrow( TypeError )
+		// @ts-expect-error test funkiness
+		expect( () => OSCArgumentCharToString( '' ) ).toThrow( OSCError )
 	} )
 	test( 'non string', () => {
-		// @ts-expect-error checking errors.
-		expect( () => oscRegular.getTypeCharFromStringOrChar( 16 ) ).toThrow( TypeError )
+		// @ts-expect-error test funkiness
+		expect( () => OSCArgumentCharToString( 16 ) ).toThrow( OSCError )
+	} )
+
+	test( 'encode unknown type', () => {
+		// @ts-expect-error test funkiness
+		expect( () => encodeBuffer( { type : 'bullshit', value : null }, help.regularMode ) ).toThrow( OSCError )
+	} )
+	test( 'decode unknown type', () => {
+		// @ts-expect-error test funkiness
+		expect( () => decodeBuffer( 'x', Buffer.alloc( 0 ), help.regularMode ) ).toThrow( 'Decoding function does not exist' )
+	} )
+
+	test( 'osc version', () => {
+		expect( oscLib.oscVersion ).toEqual( '1.1' )
+	} )
+	
+	test( 'osc type list', () => {
+		/* cspell:disable-next-line */
+		expect( oscLib.typeList ).toEqual( 'FINSTabcdfhimrst' )
 	} )
 } )

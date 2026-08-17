@@ -10,8 +10,11 @@
 /// <reference types="jest" />
 
 import * as osc from '../src/index'
+import { NULL } from '../src/index'
+import { OSCError } from '../src/types'
 
-const oscRegular = new osc.simpleOscLib()
+const oscLib = new osc.simpleOSC()
+
 
 const valueNameMap = {
 	blob    : Buffer.from( 'AbCDeF' ),
@@ -23,10 +26,10 @@ const valueNameMap = {
 describe( 'message builder', () => {
 	test( 'build init fail (no address)', () => {
 		// @ts-expect-error testing failure.
-		expect( () => oscRegular.messageBuilder() ).toThrow( TypeError )
+		expect( () => oscLib.messageBuilder() ).toThrow( OSCError )
 	} )
 
-	const testBuilder = oscRegular.messageBuilder( '/test' )
+	const testBuilder = oscLib.messageBuilder( '/test' )
 
 	describe.each( Object.keys( valueNameMap ) )( 'Test build type %s', ( buildType ) => {
 		describe.each( Object.keys( valueNameMap ) )( 'Test input of type %s,', ( inputType ) => {
@@ -42,30 +45,78 @@ describe( 'message builder', () => {
 			} else {
 				test( 'type is invalid', () => {
 					// @ts-expect-error testing fun.
-					expect( () => testBuilder[buildType]( valueNameMap[inputType] ) ).toThrow( TypeError )
+					expect( () => testBuilder[buildType]( valueNameMap[inputType] ) ).toThrow( OSCError )
 				} )
 			}
 		} )
 	} )
 
 	describe( 'messageBuilder output', () => {
-		const thisBuilder = oscRegular.messageBuilder( '/test' )
+		const thisBuilder = oscLib.messageBuilder( '/test' )
 		
 		thisBuilder
 			.integer( 20 )
 			.float( 69.69 )
-			.string( 'hello world' )
+			.any( 'hello world' )
 			.blob( Buffer.from( 'AaBbCc' ) )
 
 		const results = Buffer.from( '2f746573740000002c6966736200000000000014428b614868656c6c6f20776f726c6400000000064161426243630000', 'hex' )
 		const debug   = '[48]  :: ¦/tes¦t•••¦,ifs¦b•••¦[..]¦B¿aH¦hell¦o wo¦rld•¦[..]¦AaBb¦Cc••¦'
 		
 		test( 'buffer identical', () => {
-			expect( thisBuilder.toBuffer() ).toEqual( results )
+			expect( thisBuilder.buffer ).toEqual( results )
 		} )
 
 		test( 'debug identical', () => {
 			expect( thisBuilder.toString() ).toEqual( debug )
 		} )
 	} )
+
+	test( 'library message', () => {
+		const oscMessage = oscLib.newMessage(
+			'/hello'
+		)
+		const expected = Buffer.from( `/hello${NULL}${NULL}` )
+		expect( oscMessage.buffer ).toEqual( expected )
+	} )
+
+	test( 'library message with args', () => {
+		const oscMessage = oscLib.newMessage(
+			'/hello',
+			[
+				{ type : 'string', value : 'hi' },
+				{ type : 'string', value : 'there' },
+			]
+		)
+	
+		const expected = Buffer.from( `/hello${NULL}${NULL},ss${NULL}hi${NULL}${NULL}there${NULL}${NULL}${NULL}` )
+		expect( oscMessage.buffer ).toEqual( expected )
+	} )
+
+	test( 'library bundle (empty)', () => {
+		const oscMessage = oscLib.newBundle()
+		expect( () => oscMessage.buffer ).toThrow( 'empty bundle' )
+	} )
+
+	test( 'library bundle', () => {
+		const msg1 = oscLib.newMessage(
+			'/hello',
+			[
+				{ type : 'string', value : 'world' },
+				{ type : 'integer', value : 20 },
+			]
+		)
+		
+		const msg2 = oscLib.newMessage(
+			'/goodnight',
+			[
+				{ type : 'string', value : 'moon' },
+				{ type : 'integer', value : 69 }
+			]
+		)
+		
+		const oscMessage = oscLib.newBundle( [msg1, msg2] )
+		expect( oscMessage.buffer ).toHaveLength( 76 )
+	} )
+	
 } )

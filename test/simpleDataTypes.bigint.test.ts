@@ -10,22 +10,16 @@
 /// <reference types="node" />
 /// <reference types="jest" />
 
-import * as osc from '../src/index'
-
-const getSimpleExpected = ( value : osc.OSCArg, emptyBuffer = true ) => {
-	return [
-		value,
-		emptyBuffer ? Buffer.alloc( 0 ) : expect.any( Buffer ),
-	]
-}
+import * as help from './helpers'
+import { encodeBuffer } from '../src/encode'
+import { decodeBuffer } from '../src/decode'
+import { OSCDecodeError, OSCEncodeError } from '../src/types'
 
 const makeBigIntegerBuffer = (value : bigint) => {
 	const buffer = Buffer.alloc(8)
 	buffer.writeBigInt64BE(value)
 	return buffer
 }
-
-const oscRegular = new osc.simpleOscLib()
 
 describe('type :: BIGINT', () => {
 	describe('encodeBufferChunk', () => {
@@ -41,7 +35,7 @@ describe('type :: BIGINT', () => {
 		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		])('Test with $value ($humanName)', ({humanName, value}) => {
 			// @ts-expect-error Testing errors.
-			expect(() => oscRegular.encodeBufferChunk('h', value)).toThrow(TypeError)
+			expect(() => encodeBuffer( { type : 'bigint', value : value }, help.regularMode)).toThrow(OSCEncodeError)
 		})
 
 		test.each([
@@ -49,37 +43,41 @@ describe('type :: BIGINT', () => {
 			[BigInt(486), 8],
 			[BigInt(9007199254740991), 8],
 		])('Test expected length %s -> %i', (a, b) => {
-			expect(oscRegular.encodeBufferChunk('h', a).length).toEqual(b)
+			expect(encodeBuffer( { type : 'bigint', value : a }, help.regularMode).buffer.length).toEqual(b)
 		})
 	})
 	describe('decodeBufferChunk', () => {
 		test('good positive integer', () => {
 			const input    = makeBigIntegerBuffer(BigInt(53))
-			const expected = getSimpleExpected({ type : 'bigint', value : BigInt(53)})
-			expect(oscRegular.decodeBufferChunk('h', input)).toEqual(expected)
+			const expected = help.getSimpleExpected({ type : 'bigint', value : BigInt(53)})
+			expect(decodeBuffer('h', input, help.regularMode)).toEqual(expected)
 		})
+
 		test('good negative integer', () => {
 			const input    = makeBigIntegerBuffer(BigInt(-9007199254740991))
-			const expected = getSimpleExpected({ type : 'bigint', value : BigInt(-9007199254740991)})
-			expect(oscRegular.decodeBufferChunk('h', input)).toEqual(expected)
+			const expected = help.getSimpleExpected({ type : 'bigint', value : BigInt(-9007199254740991)})
+			expect(decodeBuffer('h', input, help.regularMode)).toEqual(expected)
 		})
+
 		test('non-buffer', () => {
 			const input    = 'hello'
 			// @ts-expect-error Testing errors.
-			expect(() => oscRegular.decodeBufferChunk('h', input)).toThrow(TypeError)
+			expect(() => decodeBuffer('h', input, help.regularMode)).toThrow(OSCDecodeError)
 		})
+
 		test('insufficiently padded buffer', () => {
 			const input    = Buffer.alloc(7)
-			expect(() => oscRegular.decodeBufferChunk('h', input)).toThrow(RangeError)
+			expect(() => decodeBuffer('h', input, help.regularMode)).toThrow(OSCDecodeError)
 		})
+
 		test('bigint pair (buffer leftover)', () => {
 			const input = Buffer.alloc(12)
 			input.writeBigInt64BE(BigInt(384))
 			input.write('bye', 8)
-			const expected = getSimpleExpected({ type : 'bigint', value : BigInt(384) }, false )
-			const result = oscRegular.decodeBufferChunk('h', input)
+			const expected = help.getSimpleExpected({ type : 'bigint', value : BigInt(384) }, false )
+			const result = decodeBuffer('h', input, help.regularMode)
 			expect(result).toEqual(expected)
-			expect(result[1].length).toEqual(4)
+			expect(result.remain.length).toEqual(4)
 		})
 	})
 })

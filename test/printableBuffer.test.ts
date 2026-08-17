@@ -13,7 +13,7 @@ const testMessages = [
 	{
 		message : {
 			address : '/dca/1/fader',
-			args : [{ value : 0.7498, type : 'float' }],
+			args    : [{ value : 0.7498, type : 'float' }],
 		},
 		/* cSpell:disable */
 		resultBare    : '¦/dca¦/1/f¦ader¦••••¦,f••¦??¿¿¦',
@@ -25,7 +25,7 @@ const testMessages = [
 	{
 		message : {
 			address : '/bus/08/mix/on',
-			args : [{ value : 1, type : 'integer' }],
+			args    : [{ value : 1, type : 'integer' }],
 		},
 		/* cSpell:disable */
 		resultBare    : '¦/bus¦/08/¦mix/¦on••¦,i••¦[..]¦',
@@ -37,7 +37,7 @@ const testMessages = [
 	{
 		message : {
 			address : '/dca/1/config/name',
-			args : [{ value : 'TESTER', type : 'string' }],
+			args    : [{ value : 'TESTER', type : 'string' }],
 		},
 		/* cSpell:disable */
 		resultBare    : '¦/dca¦/1/c¦onfi¦g/na¦me••¦,s••¦TEST¦ER••¦',
@@ -48,27 +48,34 @@ const testMessages = [
 	},
 ]
 
-import * as osc from '../src/index'
-const oscRegular = new osc.simpleOscLib()
+import { printBuffer } from '../src'
+import { OSCMessage } from '../src/message'
+import { OSCMessageOptions } from '../src/types'
 
 describe( 'printableBuffer', () => {
 	describe.each( testMessages )( 'Test $message.address', ( {message, resultBare, resultDefault, resultNoBar, resultTilde} ) => {
-		const thisBuffer = oscRegular.buildMessage( message )
+		const thisBuffer = OSCMessage.newMessage( message as OSCMessageOptions ).buffer
 		test( `Default value == ${resultDefault}`, () => {
-			expect( oscRegular.printableBuffer( thisBuffer ) ).toEqual( resultDefault )
+			expect( printBuffer( thisBuffer ) ).toEqual( resultDefault )
 		} )
 		test( `Tilde value   == ${resultTilde}`, () => {
-			expect( oscRegular.printableBuffer( thisBuffer, '~' ) ).toEqual( resultTilde )
+			expect( printBuffer( thisBuffer, {
+				replacementCharacter : '~',
+			} ) ).toEqual( resultTilde )
 		} )
 		test( `No Bar value  == ${resultNoBar}`, () => {
-			expect( oscRegular.printableBuffer( thisBuffer, null, '' ) ).toEqual( resultNoBar )
+			expect( printBuffer( thisBuffer, {
+				fourByteMarkerCharacter : '',
+			} ) ).toEqual( resultNoBar )
 		} )
 		test( `Bare value    == ${resultBare}`, () => {
-			expect( oscRegular.printableBuffer( thisBuffer, null, null, true ) ).toEqual( resultBare )
+			expect( printBuffer( thisBuffer, {
+				skipSize : true,
+			} ) ).toEqual( resultBare )
 		} )
 	} )
 	test( 'invalid input', () => {
 		// @ts-expect-error testing failure.
-		expect( () => oscRegular.printableBuffer( 'hello' ) ).toThrow( TypeError )
+		expect( () => printBuffer( 'hello' ) ).toThrow( TypeError )
 	} )
 } )

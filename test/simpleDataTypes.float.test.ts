@@ -9,22 +9,16 @@
 /// <reference types="node" />
 /// <reference types="jest" />
 
-import * as osc from '../src/index'
-
-const getSimpleExpected = ( value : osc.OSCArg, emptyBuffer = true ) => {
-	return [
-		value,
-		emptyBuffer ? Buffer.alloc( 0 ) : expect.any( Buffer ),
-	]
-}
+import * as help from './helpers'
+import { encodeBuffer } from '../src/encode'
+import { decodeBuffer } from '../src/decode'
+import { OSCDecodeError, OSCEncodeError } from '../src/types'
 
 const makeFloatBuffer = ( value : number ) => {
 	const buffer = Buffer.alloc( 4 )
 	buffer.writeFloatBE( value )
 	return buffer
 }
-
-const oscRegular = new osc.simpleOscLib()
 
 describe( 'type :: FLOAT', () => {
 	describe( 'encodeBufferChunk', () => {
@@ -38,7 +32,7 @@ describe( 'type :: FLOAT', () => {
 		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		] )( 'Test with $value ($humanName)', ( {humanName, value} ) => {
 			// @ts-expect-error checking errors.
-			expect( () => oscRegular.encodeBufferChunk( 'f', value ) ).toThrow( TypeError )
+			expect( () => encodeBuffer( { type : 'float', value : value }, help.regularMode ) ).toThrow( OSCEncodeError )
 		} )
 
 		test.each( [
@@ -46,37 +40,37 @@ describe( 'type :: FLOAT', () => {
 			[486.0, 4],
 			[135435345e-8, 4],
 		] )( 'Test expected length %s -> %i', ( a, b ) => {
-			expect( oscRegular.encodeBufferChunk( 'f', a ).length ).toEqual( b )
+			expect( encodeBuffer( { type : 'float', value : a }, help.regularMode ).buffer.length ).toEqual( b )
 		} )
 	} )
 	describe( 'decodeBufferChunk', () => {
 		test( 'good positive float', () => {
 			const input    = makeFloatBuffer( 53.865 )
-			const expected = getSimpleExpected( { type : 'float', value :  53.865 } )
-			expect( oscRegular.decodeBufferChunk( 'f', input )[0].value ).toBeCloseTo( expected[0].value as number )
+			const expected = help.getSimpleExpected( { type : 'float', value :  53.865 } )
+			expect( decodeBuffer( 'f', input, help.regularMode ).arg.value ).toBeCloseTo( expected.arg.value as number )
 		} )
 		test( 'good negative float', () => {
 			const input    = makeFloatBuffer( -3265.4 )
-			const expected = getSimpleExpected( { type : 'float', value :  -3265.4 } )
-			expect( oscRegular.decodeBufferChunk( 'f', input )[0].value ).toBeCloseTo( expected[0].value as number )
+			const expected = help.getSimpleExpected( { type : 'float', value :  -3265.4 } )
+			expect( decodeBuffer( 'f', input, help.regularMode ).arg.value ).toBeCloseTo( expected.arg.value as number )
 		} )
 		test( 'non-buffer', () => {
 			const input    = 'hello'
 			// @ts-expect-error checking errors.
-			expect( () => oscRegular.decodeBufferChunk( 'f', input ) ).toThrow( TypeError )
+			expect( () => decodeBuffer( 'f', input, help.regularMode ) ).toThrow( OSCDecodeError )
 		} )
 		test( 'insufficiently padded buffer', () => {
 			const input    = Buffer.alloc( 3 )
-			expect( () => oscRegular.decodeBufferChunk( 'f', input ) ).toThrow( RangeError )
+			expect( () => decodeBuffer( 'f', input, help.regularMode ) ).toThrow( OSCDecodeError )
 		} )
 		test( 'float pair (buffer leftover)', () => {
 			const input = Buffer.alloc( 8 )
 			input.writeFloatBE( 384.6 )
 			input.write( 'bye', 4 )
-			const expected = getSimpleExpected( { type : 'float', value : 384.6 }, false )
-			const result = oscRegular.decodeBufferChunk( 'f', input )
-			expect( result[0].value ).toBeCloseTo( expected[0].value as number )
-			expect( result[1].length ).toEqual( 4 )
+			const expected = help.getSimpleExpected( { type : 'float', value : 384.6 }, false )
+			const result = decodeBuffer( 'f', input, help.regularMode )
+			expect( result.arg.value ).toBeCloseTo( expected.arg.value as number )
+			expect( result.remain.length ).toEqual( 4 )
 		} )
 	} )
 } )

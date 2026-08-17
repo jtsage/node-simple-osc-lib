@@ -9,16 +9,11 @@
 /// <reference types="node" />
 /// <reference types="jest" />
 
-import * as osc from '../src/index'
-
-const getSimpleExpected = ( value : osc.OSCArg, emptyBuffer = true ) => {
-	return [
-		value,
-		emptyBuffer ? Buffer.alloc( 0 ) : expect.any( Buffer ),
-	]
-}
-
-const oscRegular = new osc.simpleOscLib()
+import * as help from './helpers'
+import { encodeBuffer, makeTimeTag } from '../src/encode'
+import { decodeBuffer } from '../src/decode'
+import { OSCDecodeError, OSCEncodeError, OSCError, OSCTimeTag, OSCTimeTagImmediate } from '../src/types'
+import { dateFromTimeTag, diffTimeTag, diffTimeTagMS } from '../src'
 
 const getTimeTagBuffer = () => {
 	const buffer = Buffer.alloc( 8 )
@@ -28,7 +23,7 @@ const getTimeTagBuffer = () => {
 }
 
 describe( 'type :: TIMETAG', () => {
-	describe( 'getDateFromTimeTagArray', () => {
+	describe( 'makeTimeTag (bad)', () => {
 		test.each( [
 			//['name', 'value', 'Passes non-strict']
 			{ humanName : 'buffer', value : Buffer.alloc( 4 )},
@@ -40,40 +35,87 @@ describe( 'type :: TIMETAG', () => {
 		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		] )( 'Test with $value ($humanName)', ( {humanName, value} ) => {
 			// @ts-expect-error testing errors.
-			expect( () => oscRegular.getDateFromTimeTagArray( value ) ).toThrow( RangeError )
+			expect( () => makeTimeTag( value ) ).toThrow( OSCError )
 		} )
-		test( 'get date 2000-04-25T01:30:30.125Z from [3165615030, 536870912]', () => {
-			expect( oscRegular.getDateFromTimeTagArray( [3165615030, 536870912] ).toISOString() ).toEqual( '2000-04-25T01:30:30.125Z' )
+
+		test( 'dateFromTimeTag 2000-04-25T01:30:30.125Z from [3165615030, 536870912]', () => {
+			expect( dateFromTimeTag( [3165615030, 536870912] ).toISOString() ).toEqual( '2000-04-25T01:30:30.125Z' )
 		} )
 	} )
-	describe( 'getTimeTagFromUnknownType', () => {
+
+	describe( 'makeTimeTag (good)', () => {
 		test.each( [
 			{ input : new Date( Date.UTC( 2000, 3, 25, 1, 30, 30, 125 ) ), output : [3165615030, 536870912] },
 			{ input : 956626230.125, output : [3165615030, 536870912] },
-			{ input : [3165615030, 536870912], output : [3165615030, 536870912] },
+			{ input : [3165615030, 536870912] as OSCTimeTag, output : [3165615030, 536870912] },
 		] )( 'get value $output from $input', ( {input, output} ) => {
-			expect( oscRegular.getTimeTagArrayFromUnknownType( input ) ).toEqual( output )
+			expect( makeTimeTag( input ) ).toEqual( output )
 		} )
 	} )
-	describe( 'direct functions', () => {
-		test( 'getTimeTagBufferFromTimestamp', () => {
-			expect( oscRegular.getTimeTagBufferFromTimestamp( 956626230.125 ) ).toEqual( getTimeTagBuffer() )
-		} )
-		test( 'getTimeTagBufferFromDate', () => {
-			expect( oscRegular.getTimeTagBufferFromDate( new Date( Date.UTC( 2000, 3, 25, 1, 30, 30, 125 ) ) ) ).toEqual( getTimeTagBuffer() )
-		} )
-		test( 'getTimeTagBufferFromDelta', () => {
-			expect( oscRegular.getTimeTagBufferFromDelta(
-				125 / 1000,
-				( new Date( Date.UTC( 2000, 3, 25, 1, 30, 30, 0 ) ) ).getTime()
-			) ).toEqual( getTimeTagBuffer() )
-		} )
-		test( 'getTimeTagBufferFromDelta (random)', () => {
-			expect( oscRegular.getTimeTagBufferFromDelta(
-				125 / 1000
-			) ).toEqual( expect.any( Buffer ) )
-		} )
+
+	test( 'current makeTimeTag()', () => {
+		expect( () => makeTimeTag() ).not.toThrow()
 	} )
+
+	test( 'bad makeTimeTag() delta', () => {
+		// @ts-expect-error testing fun
+		expect( () => makeTimeTag( '+13 13' ) ).toThrow( 'compute delta' )
+	} )
+	
+	test( 'diffTimeTagMS', () => {
+		const now   = new Date()
+
+		const nowTT = makeTimeTag( now )
+		const minTT = makeTimeTag( ( new Date( now.getTime() - 3240 ) ) )
+
+		expect( diffTimeTagMS( minTT, nowTT ) ).toBeCloseTo( 3240 )
+		expect( diffTimeTag( minTT, nowTT ) ).toBeCloseTo( 3.24, 2 )
+	} )
+
+	test( 'makeTimeTag (delta)', () => {
+		const now   = new Date()
+
+		const nowTT = makeTimeTag( now )
+		const futTT = makeTimeTag( '+500' )
+
+		expect( diffTimeTagMS( futTT, nowTT ) ).toBeGreaterThan( -510 )
+		expect( diffTimeTagMS( futTT, nowTT ) ).toBeLessThan( -490 )
+		expect( diffTimeTag( futTT, nowTT ) ).toBeCloseTo( -0.50, 1 )
+	} )
+
+	test( 'makeTimeTag (immediate)', () => {
+		const instant = makeTimeTag( OSCTimeTagImmediate )
+
+		expect( instant[0] ).toEqual( 0 )
+		expect( instant[1] ).toEqual( 1 )
+		const result = encodeBuffer( { type : 'timetag', value : instant }, help.regularMode )
+		expect( result.buffer[0] ).toEqual( 0 )
+		expect( result.buffer[1] ).toEqual( 0 )
+		expect( result.buffer[2] ).toEqual( 0 )
+		expect( result.buffer[3] ).toEqual( 0 )
+		expect( result.buffer[4] ).toEqual( 0 )
+		expect( result.buffer[5] ).toEqual( 0 )
+		expect( result.buffer[6] ).toEqual( 0 )
+		expect( result.buffer[7] ).toEqual( 1 )
+	} )
+
+	test( 'dateFromTimeTag (non array)', () => {
+		// @ts-expect-error testing errors.
+		expect( () => dateFromTimeTag( 'hi' ) ).toThrow( OSCDecodeError )
+	} )
+
+	test( 'dateFromTimeTag (long array)', () => {
+		// @ts-expect-error testing errors.
+		expect( () => dateFromTimeTag( [1, 1, 1] ) ).toThrow( OSCDecodeError )
+	} )
+
+	test( 'dateFromTimeTag (bad array)', () => {
+		// @ts-expect-error testing errors.
+		expect( () => dateFromTimeTag( [1, 'hi'] ) ).toThrow( OSCDecodeError )
+		// @ts-expect-error testing errors.
+		expect( () => dateFromTimeTag( ['hi', 1] ) ).toThrow( OSCDecodeError )
+	} )
+	
 	describe( 'encodeBufferChunk', () => {
 		test.each( [
 			//['name', 'value', 'Passes non-strict']
@@ -88,41 +130,33 @@ describe( 'type :: TIMETAG', () => {
 		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		] )( 'Test with $value ($humanName)', ( {humanName, value} ) => {
 			// @ts-expect-error testing errors.
-			expect( () => oscRegular.encodeBufferChunk( 't', value ) ).toThrow( TypeError )
-		} )
-
-		test.each( [
-			[new Date( 2000, 3, 25, 1, 30, 30, 125 ), 8],
-			[956640630.125, 8],
-			[[3165615030, 536870912], 8],
-		] )( 'Test expected length %s -> %i', ( a, b ) => {
-			// @ts-expect-error testing errors.
-			expect( oscRegular.encodeBufferChunk( 't', a ).length ).toEqual( b )
+			expect( () => encodeBuffer( { type : 'timetag', value : value }, help.regularMode ) ).toThrow( OSCEncodeError )
 		} )
 	} )
+
 	describe( 'decodeBufferChunk', () => {
 		test( 'good timetag', () => {
-			const expected = getSimpleExpected( { type : 'timetag', value : [3165615030, 536870912] } )
-			expect( oscRegular.decodeBufferChunk( 't', getTimeTagBuffer() ) ).toEqual( expected )
+			const expected = help.getSimpleExpected( { type : 'timetag', value : [3165615030, 536870912] } )
+			expect( decodeBuffer( 't', getTimeTagBuffer(), help.regularMode ) ).toEqual( expected )
 		} )
 		test( 'non-buffer', () => {
 			const input    = 'hello'
 			// @ts-expect-error testing errors.
-			expect( () => oscRegular.decodeBufferChunk( 't', input ) ).toThrow( TypeError )
+			expect( () => decodeBuffer( 't', input, help.regularMode ) ).toThrow( OSCDecodeError )
 		} )
 		test( 'insufficiently padded buffer', () => {
 			const input    = Buffer.alloc( 7 )
-			expect( () => oscRegular.decodeBufferChunk( 't', input ) ).toThrow( RangeError )
+			expect( () => decodeBuffer( 't', input, help.regularMode ) ).toThrow( OSCDecodeError )
 		} )
 		test( 'timetag pair (buffer leftover)', () => {
 			const input = Buffer.alloc( 12 )
 			input.writeUInt32BE( 3165615030 )
 			input.writeUInt32BE( 536870912, 4 )
 			input.write( 'bye', 8 )
-			const expected = getSimpleExpected( { type : 'timetag', value : [3165615030, 536870912] }, false )
-			const result = oscRegular.decodeBufferChunk( 't', input )
+			const expected = help.getSimpleExpected( { type : 'timetag', value : [3165615030, 536870912] }, false )
+			const result = decodeBuffer( 't', input, help.regularMode )
 			expect( result ).toEqual( expected )
-			expect( result[1].length ).toEqual( 4 )
+			expect( result.remain.length ).toEqual( 4 )
 		} )
 	} )
 } )

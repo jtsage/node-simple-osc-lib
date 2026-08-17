@@ -9,14 +9,10 @@
 /// <reference types="node" />
 /// <reference types="jest" />
 
-import * as osc from '../src/index'
-
-const getSimpleExpected = ( value : osc.OSCArg, emptyBuffer = true ) => {
-	return [
-		value,
-		emptyBuffer ? Buffer.alloc( 0 ) : expect.any( Buffer ),
-	]
-}
+import * as help from './helpers'
+import { encodeBuffer } from '../src/encode'
+import { decodeBuffer } from '../src/decode'
+import { OSCDecodeError, OSCEncodeError } from '../src/types'
 
 const makeCharBuffer = ( value : string ) => {
 	const buffer = Buffer.alloc( 4 )
@@ -24,7 +20,6 @@ const makeCharBuffer = ( value : string ) => {
 	return buffer
 }
 
-const oscRegular = new osc.simpleOscLib()
 
 describe( 'type :: CHAR', () => {
 	describe( 'encodeBufferChunk', () => {
@@ -41,7 +36,7 @@ describe( 'type :: CHAR', () => {
 		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		] )( 'Test with $value ($humanName)', ( {humanName, value} ) => {
 			// @ts-expect-error checking errors.
-			expect( () => oscRegular.encodeBufferChunk( 'c', value ) ).toThrow( TypeError )
+			expect( () => encodeBuffer( { type : 'char', value : value }, help.regularMode ) ).toThrow( OSCEncodeError )
 		} )
 
 		test.each( [
@@ -49,36 +44,36 @@ describe( 'type :: CHAR', () => {
 			['d', 4],
 			['X', 4],
 		] )( 'Test expected length %s -> %i', ( a, b ) => {
-			expect( oscRegular.encodeBufferChunk( 'c', a ).length ).toEqual( b )
+			expect( encodeBuffer( { type : 'char', value : a }, help.regularMode ).buffer.length ).toEqual( b )
 		} )
 	} )
 	describe( 'decodeBufferChunk', () => {
 		test( 'good char', () => {
 			const input    = makeCharBuffer( 'A' )
-			const expected = getSimpleExpected( { type : 'char', value : 'A' } )
-			expect( oscRegular.decodeBufferChunk( 'c', input ) ).toEqual( expected )
+			const expected = help.getSimpleExpected( { type : 'char', value : 'A' } )
+			expect( decodeBuffer( 'c', input, help.regularMode ) ).toEqual( expected )
 		} )
 		test( 'non-ASCII char', () => {
 			const input    = makeCharBuffer( '❤️' )
-			expect( () => oscRegular.decodeBufferChunk( 'c', input ) ).toThrow( TypeError )
+			expect( () => decodeBuffer( 'c', input, help.regularMode ) ).toThrow( OSCDecodeError )
 		} )
 		test( 'non-buffer', () => {
 			const input    = 'hello'
 			// @ts-expect-error checking errors.
-			expect( () => oscRegular.decodeBufferChunk( 'c', input ) ).toThrow( TypeError )
+			expect( () => decodeBuffer( 'c', input, help.regularMode ) ).toThrow( OSCDecodeError )
 		} )
 		test( 'insufficiently padded buffer', () => {
 			const input    = Buffer.alloc( 3 )
-			expect( () => oscRegular.decodeBufferChunk( 'c', input ) ).toThrow( RangeError )
+			expect( () => decodeBuffer( 'c', input, help.regularMode ) ).toThrow( OSCDecodeError )
 		} )
 		test( 'char pair (buffer leftover)', () => {
 			const input = Buffer.alloc( 8 )
 			input.writeUint32BE( 'A'.charCodeAt( 0 ) )
 			input.write( 'bye', 4 )
-			const expected = getSimpleExpected( { type : 'char', value : 'A' }, false )
-			const result = oscRegular.decodeBufferChunk( 'c', input )
+			const expected = help.getSimpleExpected( { type : 'char', value : 'A' }, false )
+			const result = decodeBuffer( 'c', input, help.regularMode )
 			expect( result ).toEqual( expected )
-			expect( result[1].length ).toEqual( 4 )
+			expect( result.remain.length ).toEqual( 4 )
 		} )
 	} )
 } )

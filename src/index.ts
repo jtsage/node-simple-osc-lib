@@ -10,13 +10,16 @@
 
 import { makeTimeTag } from './encode'
 import { OSCMessage } from './message'
-import { OSCOptionsDefault, OSCArguments, OSCColor, OSCDecodeError, OSCEncodeError, OSCError, OSCOptions, OSCTimeTag, OSCTimeTagDelta, OSCKnownTypes } from './types'
+import { OSCOptionsDefault, OSCArguments, OSCColor, OSCDecodeError, OSCEncodeError, OSCError, OSCOptions, OSCTimeTag, OSCTimeTagDelta, OSCKnownTypes, OSCTimeTagImmediate } from './types'
 
 export { OSCOptionsDefault }
 
 export const NULL = '\u0000'
 
 export class simpleOSC {
+	/**
+	 * Version of OSC supported
+	 */
 	oscVersion = '1.1'
 	options : OSCOptions
 
@@ -24,10 +27,19 @@ export class simpleOSC {
 		this.options = { ...OSCOptionsDefault, ...options }
 	}
 
+	/**
+	 * Types supported by implementation (single character un-separated)
+	 */
 	get typeList() {
 		return OSCKnownTypes.join( '' )
 	}
 
+	/**
+	 * Create a new OSC message
+	 * @param address - address to send to
+	 * @param args - arguments (or none) to send
+	 * @returns OSCMessage of type 'message'
+	 */
 	newMessage( address : string, args : OSCArguments[] = [] ) {
 		return OSCMessage.newMessage(
 			{
@@ -38,16 +50,29 @@ export class simpleOSC {
 		)
 	}
 
-	newBundle( msgs : OSCMessage[] = [], timeTag ? : OSCTimeTag | number | Date | OSCTimeTagDelta | undefined ) {
+	/**
+	 * Create an OSC Bundle object
+	 * @param msgs - OSCMessages or pre-encoded buffers to include in bundle
+	 * @param timeTag - TimeTag castable object, or false for "right now"
+	 * @returns OSCMessage of type bundle
+	 */
+	newBundle( msgs : Array<Buffer<ArrayBufferLike> | OSCMessage> = [], timeTag ? : false | OSCTimeTag | number | Date | OSCTimeTagDelta | undefined ) {
+		const passedTimeTag = timeTag === false ? OSCTimeTagImmediate : timeTag
+
 		return OSCMessage.newBundle(
 			{
-				timeTag : timeTag,
+				timeTag : passedTimeTag,
 				msgs    : msgs,
 			},
 			this.options
 		)
 	}
 
+	/**
+	 * Create new OSCMessage from buffer data
+	 * @param b - Byte Buffer of data
+	 * @returns OSCMessage of type bundle or message
+	 */
 	fromBuffer( b : Buffer<ArrayBufferLike> ) {
 		return OSCMessage.fromBuffer( b, this.options )
 	}
@@ -67,6 +92,12 @@ export class simpleOSC {
 	 *     .string('world')
 	 *     .b(buffer)
 	 *     .blob(buffer)
+	 *     .any('most javascript types, with limitations')
+	 *     .any(12.0) // added as integer (not float)
+	 *     .any(12.2) // added as float
+	 *     .any('a')  // added as string (not char)
+	 *     .any(Symbol('a'))  // sent as string 'a'
+	 *     .any(Infinity) // sent as bang (I)
 	 * ```
 	 * 
 	 * To get a transmittable buffer, call `myMessage.toBuffer()`
@@ -75,12 +106,31 @@ export class simpleOSC {
 	 * @param address - address to send to
 	 * @returns oscBuilder instance
 	 * @example
-	 * const myBuffer = oscLib.messageBuilder('/hello').integer(10).float(2.0).string('world').toBuffer()
+	 * const myBuffer = oscLib.messageBuilder('/hello').integer(10).float(2.0).string('world').buffer
 	 */
 	messageBuilder( address : string ) {
 		return new OSCBuilder( address, this.options )
 	}
 
+	/**
+	 * Guess the OSC type from the supplied data.
+	 * 
+	 * Handles perfectly
+	 *  - BigInt()
+	 *  - Symbol()
+	 *  - Buffer
+	 *  - boolean true/false
+	 *  - null
+	 * 
+	 * Handles with some inference
+	 *  - Strings - single character strings are still strings, strings starting with a slash are addresses
+	 *  - Numbers - 12 and 12.0 are integers, 12.2 is a float. Infinity (or beyond MAX_NUMBER) is a bang
+	 *  - Arrays
+	 *    - 2 element numeric arrays are assumed to be a time tag
+	 *    - 4 element numeric arrays are assumed to be a color
+	 * @param v - Any valid OSC type value
+	 * @returns OSCArgument of correct type, with limitations
+	 */
 	autoType( v : OSCArguments['value'] ) {
 		return autoType( v )
 	}
@@ -222,7 +272,11 @@ const autoType = (
 
 }
 
-
+/**
+ * Convert a time tag to a native Data object
+ * @param tag - OSC time tag array
+ * @returns Native Date object
+ */
 export const dateFromTimeTag = ( tag : OSCTimeTag ) => {
 	if ( !Array.isArray( tag ) || tag.length !== 2 || typeof tag[0] !== 'number' || typeof tag[1] !== 'number' ) {
 		throw new OSCDecodeError( 'timetag array format incorrect' )
@@ -237,10 +291,22 @@ export const dateFromTimeTag = ( tag : OSCTimeTag ) => {
 	return returnDate
 }
 
+/**
+ * Compare TimeTag to "now" in milliseconds
+ * @param end - OSC Time tag to compare
+ * @param now - "now" value
+ * @returns milliseconds as number
+ */
 export const diffTimeTagMS = ( end : OSCTimeTag, now ? : OSCTimeTag ) => {
 	return diffTimeTag( end, now ) * 1000
 }
 
+/**
+ * Compare TimeTag to "now" in seconds
+ * @param end - OSC Time tag to compare
+ * @param now - "now" value
+ * @returns seconds as number (float)
+ */
 export const diffTimeTag = ( end : OSCTimeTag, now ? : OSCTimeTag ) => {
 	const nowTag = ( typeof now === 'undefined' ) ? makeTimeTag() : now
 
@@ -250,12 +316,10 @@ export const diffTimeTag = ( end : OSCTimeTag, now ? : OSCTimeTag ) => {
 }
 
 /**
- * Format a buffer for console.log()
- * @param buffer_in - buffer
- * @param replacementCharacter - Character to replace nulls in buffer
- * @param fourByteMarkerCharacter - Character to delineate 4-byte blocks in buffer (or '')
- * @param skipSize - skip size of buffer output
- * @returns printable string
+ * Format a buffer for console output
+ * @param buffer_in - buffer of data
+ * @param param1 - Options
+ * @returns string representation
  */
 export const printBuffer = (
 	buffer_in : Buffer,

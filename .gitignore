@@ -5,3 +5,4 @@ coverage/*
 build/osc-coverage.hbs
 dist/*
 /dist
+/docs

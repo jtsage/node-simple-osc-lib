@@ -1,3 +1,13 @@
+/*      _                 _                                  _ _ _     
+ *     (_)               | |                                | (_) |    
+ *  ___ _ _ __ ___  _ __ | | ___ ______ ___  ___  ___ ______| |_| |__  
+ * / __| | '_ ` _ \| '_ \| |/ _ \______/ _ \/ __|/ __|______| | | '_ \ 
+ * \__ \ | | | | | | |_) | |  __/     | (_) \__ \ (__       | | | |_) |
+ * |___/_|_| |_| |_| .__/|_|\___|      \___/|___/\___|      |_|_|_.__/ 
+ *     | |                                                 
+ *     |_|   Simple OSC Communication Library *
+ *           Shared Types */
+
 /**
  * Options for oscLIb
  * 
@@ -17,14 +27,30 @@ export const OSCOptionsDefault : OSCOptions = {
 	stringAsSymbol : false,
 }
 
-export type callbackProcessor = ( message : OSCMessageInterface ) => unknown
-
+/**
+ * OSC Color - 4 element numeric array (0-255) (4-byte)
+ */
 export type OSCColor   = [ number, number, number, number ]
+
+/**
+ * OSC Midi - 4 Byte
+ */
 export type OSCMidi    = [ number, number, number, number ]
+
+/**
+ * OSC Time Tag - 8 byte.
+ */
 export type OSCTimeTag = [ number, number ]
+
+/**
+ * Time Tag Delta type - e.g. '+50' for 50ms in the future
+ */
 export type OSCTimeTagDelta = `+${number}`
 
-export const OSCTimeTagImmediate : OSCTimeTag = [0, 1] // "Process Bundle Immediately"
+/**
+ * Special time tag, means "process immediately"
+ */
+export const OSCTimeTagImmediate : OSCTimeTag = [0, 1]
 
 export type OSCArguments =
 	| { type : 'address';  value : string }
@@ -45,7 +71,7 @@ export type OSCArguments =
 	| { type : 'timetag';  value : OSCTimeTag }
 	| { type : 'true';     value : null }
 
-const OSCArgumentStringMap = Object.freeze( {
+export const OSCArgumentStringMap = Object.freeze( {
 	'address'  : 'a',
 	'array'    : null,
 	'bang'     : 'I',
@@ -66,7 +92,7 @@ const OSCArgumentStringMap = Object.freeze( {
 } )
 
 // Duplicate to make typescript behave. Omit array types '[' and ']'
-const OSCArgumentCharMap = Object.freeze( {
+export const OSCArgumentCharMap = Object.freeze( {
 	a : 'address',
 	b : 'blob',
 	c : 'char',
@@ -85,6 +111,7 @@ const OSCArgumentCharMap = Object.freeze( {
 	T : 'true',
 } )
 
+/** @internal */
 export const OSCKnownTypes = Object.keys( OSCArgumentCharMap ).sort()
 
 export const OSCArgumentCharToString = ( index : OSCArgumentsShort ) : OSCArgumentsHuman => {
@@ -103,9 +130,10 @@ export const OSCArgumentStringToChar = ( index : OSCArgumentsHuman ) : OSCArgume
 	throw new OSCError( 'type does not exist' )
 }
 
-type OSCArgumentsHuman = keyof typeof OSCArgumentStringMap
+export type OSCArgumentsHuman = keyof typeof OSCArgumentStringMap
 export type OSCArgumentsShort = keyof typeof OSCArgumentCharMap
 
+/** @internal */
 export type OSCTypeListTypes = OSCArgumentsShort | ']' | '['
 
 export type BufferDecodeResult = {
@@ -119,6 +147,10 @@ export type BufferEncodeResult = {
 	buffer   : Buffer<ArrayBufferLike>
 }
 
+export type OSCMatchResult = {
+	address : string,
+	matches : string[]
+}
 
 export class OSCError extends Error {
 	constructor( message : string, opts ? : ErrorOptions ) {

@@ -1,14 +1,33 @@
+/*      _                 _                                  _ _ _     
+ *     (_)               | |                                | (_) |    
+ *  ___ _ _ __ ___  _ __ | | ___ ______ ___  ___  ___ ______| |_| |__  
+ * / __| | '_ ` _ \| '_ \| |/ _ \______/ _ \/ __|/ __|______| | | '_ \ 
+ * \__ \ | | | | | | |_) | |  __/     | (_) \__ \ (__       | | | |_) |
+ * |___/_|_| |_| |_| .__/|_|\___|      \___/|___/\___|      |_|_|_.__/ 
+ *     | |                                                 
+ *     |_|   Simple OSC Communication Library *
+ *           OSC Message Class */
+
 import { encodeBuffer, makeTimeTag } from './encode'
-import { OSCOptionsDefault, OSCArguments, OSCArgumentsShort, OSCBundleOptions, OSCDecodeError, OSCError, OSCMessageInterface, OSCMessageOptions, OSCMessageType, OSCOptions, OSCTimeTag, OSCTypeListTypes, OSCMessageTypeBundle, OSCMessageTypeMessage } from './types'
+import { OSCOptionsDefault, OSCArguments, OSCArgumentsShort, OSCBundleOptions, OSCDecodeError, OSCError, OSCMessageInterface, OSCMessageOptions, OSCMessageType, OSCOptions, OSCTimeTag, OSCTypeListTypes, OSCMessageTypeBundle, OSCMessageTypeMessage, OSCMatchResult } from './types'
 import { decodeBuffer } from './decode'
 
 // MARK: OSCMessage Class
+/**
+ * OSCMessage Class
+ * 
+ * Main type for OSC Messages
+ */
 export class OSCMessage implements OSCMessageInterface {
 	type    : OSCMessageType
 	args    : OSCArguments[] = []
 	msgs    : Array<OSCMessageInterface | Buffer> = []
+	/** @internal */
 	options : OSCOptions
 
+	/**
+	 * @internal 
+	 */
 	constructor(
 		key : symbol,
 		type : OSCMessageType,
@@ -25,18 +44,46 @@ export class OSCMessage implements OSCMessageInterface {
 		this.msgs = msgs
 	}
 
+	/**
+	 * True if message is a bundle type
+	 */
 	get isBundle() {
 		return this.type.type === 'bundle'
 	}
 
+	/**
+	 * True if message is a regular (not bundle) type
+	 */
 	get isSingle() {
 		return this.type.type === 'message'
 	}
 
+	/**
+	 * Data buffer representation of the message
+	 */
 	get buffer() : Buffer<ArrayBufferLike> {
 		return buildMessage( this )
 	}
 
+	/**
+	 * Match an address with the give OSC Pattern
+	 * 
+	 * - ‘?’ in the OSC Address Pattern matches any single character
+	 * - ‘*’ in the OSC Address Pattern matches any sequence of zero or more characters
+	 * - A string of characters in square brackets (e.g., “[string]”) in the OSC Address Pattern matches any character in the string.
+	 * - Use "[a-z]" to match a range of characters
+	 * - A comma-separated list of strings enclosed in curly braces (e.g., “{foo,bar}”) in the OSC Address Pattern matches any of the strings in the list.
+	 * - Any other character in an OSC Address Pattern can match only the same character.
+	 * @param pattern - Pattern to match
+	 * @returns Array of zero or more matches, with capture groups
+	 */
+	match( pattern : string ) {
+		return matchMessages( this, pattern )
+	}
+
+	/**
+	 * @internal 
+	 */
 	toJSON() {
 		if ( this.isBundle ) {
 			const thisType = this.type as OSCMessageTypeBundle
@@ -56,10 +103,22 @@ export class OSCMessage implements OSCMessageInterface {
 		
 	}
 
+	/**
+	 * Read an OSC message from a data buffer
+	 * @param b - data buffer
+	 * @param options - OSCOptions overrides
+	 * @returns OSCMessage of either a message or bundle type
+	 */
 	static fromBuffer( b : Buffer<ArrayBufferLike>, options : Partial<OSCOptions> = {} ) {
 		return readPacket( b, options )
 	}
 	
+	/**
+	 * Create new OSC message of type message (not bundle)
+	 * @param message - OSC Message options. Must have an address, can have arguments
+	 * @param options - OSCOptions overrides
+	 * @returns OSCMessage of type message
+	 */
 	static newMessage( message : OSCMessageOptions, options : Partial<OSCOptions> = {} ) {
 		if ( typeof message.address !== 'string' || message.address === '' ) {
 			throw new OSCError( 'string address required' )
@@ -81,6 +140,12 @@ export class OSCMessage implements OSCMessageInterface {
 		)
 	}
 
+	/**
+	 * Create new OSC bundle
+	 * @param message - Bundle options, none required. Messages and timetag optional
+	 * @param options - OSCOptions overrides
+	 * @returns OSC Message of type bundle
+	 */
 	static newBundle( message : OSCBundleOptions, options : Partial<OSCOptions> = {} ) {
 		return new OSCMessage(
 			PRIVATE_KEY,
@@ -94,6 +159,68 @@ export class OSCMessage implements OSCMessageInterface {
 		)
 	}
 	
+}
+
+// MARK: matchMessages
+const matchMessages = ( msg : OSCMessageInterface, pattern : string ) : OSCMatchResult[] => {
+	const returnArray : OSCMatchResult[] = []
+
+	if ( typeof pattern !== 'string' || pattern.length === 0 ) {
+		throw new OSCError( 'must supply a pattern' )
+	}
+
+	const regExpPattern = pattern
+		.replaceAll( '.', '\\.' )
+		.replaceAll( /{(.+?)}/g, ( _, group1 ) => `(${group1.replaceAll( ',', '|' )})` )
+		.replaceAll( /\[(.+?)]/g, '([$1])' )
+		.replaceAll( '?', '(.)' )
+		.replaceAll( '*', '(.*)' )
+		.replaceAll( '\\', '\\\\' )
+
+	const regExpCompiled = new RegExp( regExpPattern )
+
+	if ( msg.isSingle ) {
+		const results = matchMessage( msg, regExpCompiled )
+		if ( results !== null ) {
+			returnArray.push( results )
+		}
+	} else if ( msg.isBundle ) {
+		returnArray.push( ...matchBundle( msg, regExpCompiled ) )
+	}
+
+	return returnArray
+}
+
+// MARK: matchBundle
+const matchBundle = ( msg : OSCMessageInterface, compiledPattern : RegExp ) : OSCMatchResult[] => {
+	const returnArray : OSCMatchResult[] = []
+
+	for ( const message of msg.msgs ) {
+		if ( Buffer.isBuffer( message ) ) {
+			continue
+		} else if ( message.isBundle ) {
+			returnArray.push( ...matchBundle( message, compiledPattern ) )
+		} else if ( message.isSingle ) {
+			const results = matchMessage( message, compiledPattern )
+			if ( results !== null ) {
+				returnArray.push( results )
+			}
+		}
+	}
+	return returnArray
+}
+
+// MARK: matchMessage
+const matchMessage = ( msg : OSCMessageInterface, compiledPattern : RegExp ) : null | OSCMatchResult => {
+	const address = ( msg.type as OSCMessageTypeMessage ).address
+	const matches = compiledPattern.exec( address )
+
+	return ( matches === null ) ?
+		null :
+		{
+			address : matches[0],
+			matches : matches.slice( 1 ),
+		}
 }
 
 // MARK: buildMessage

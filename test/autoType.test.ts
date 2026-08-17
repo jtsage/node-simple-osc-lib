@@ -5,7 +5,7 @@
  * \__ \ | | | | | | |_) | |  __/     | (_) \__ \ (__       | | | |_) |
  * |___/_|_| |_| |_| .__/|_|\___|      \___/|___/\___|      |_|_|_.__/ 
  *     | |                                                 
- *     |_|   Test Suite - messageBuilder */
+ *     |_|   Test Suite - autoType */
 /// <reference types="node" />
 /// <reference types="jest" />
 

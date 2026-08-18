@@ -7,7 +7,7 @@
  *     | |                                                 
  *     |_|   Simple OSC Communication Library *
  *           Buffer Encoders */
-import { OSCArgumentsShort, OSCArguments, OSCOptions, OSCEncodeError, BufferEncodeResult, OSCTimeTag, OSCArgumentStringToChar, OSCError, OSCTimeTagDelta } from './types'
+import { OSCArgumentsShort, OSCArguments, OSCOptions, OSCEncodeError, BufferEncodeResult, OSCTimeTag, OSCArgumentStringToChar, OSCError, OSCTimeTagCastable } from './types'
 
 type encodeFunction = (
 	v       : OSCArguments['value'],
@@ -244,9 +244,12 @@ const encoders : Record<OSCArgumentsShort, encodeFunction> = {
  * @param v - value castable to a time tag
  * @returns 2 value numeric array
  */
-export const makeTimeTag = ( v ? : OSCTimeTag | number | Date | OSCTimeTagDelta ) : OSCTimeTag => {
-	if ( typeof v === 'undefined' ) {
+export const makeTimeTag = ( v ? : OSCTimeTagCastable ) : OSCTimeTag => {
+	
+	if ( typeof v === 'undefined' || v === false ) {
 		return timeTagFromSeconds( ( ( new Date() ).getTime() ) / 1000 )
+	} else if ( v === true ) {
+		return [0, 1] // do it right now!
 	} else if ( Array.isArray( v ) && v.length === 2 && typeof v[0] === 'number' && typeof v[1] === 'number' ) {
 		return v
 	} else if ( v instanceof Date ) { // specific date supplied

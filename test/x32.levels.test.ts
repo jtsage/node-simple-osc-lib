@@ -9,7 +9,7 @@
 /// <reference types="node" />
 /// <reference types="jest" />
 
-import * as osc_x32 from '../src/x32'
+import { X32FaderUpdate, X32Error } from '../src/x32/types'
 
 const knownLevels : [number, string][] = [
 	[0.0000, '-oo dB'],
@@ -57,38 +57,38 @@ describe( 'level conversion operates as expected', () => {
 		if ( ! b ) {
 			test( `float2db with ${typeof a} (${JSON.stringify( a )}) throws`, () => {
 				// @ts-expect-error checking errors.
-				expect( () => osc_x32.float2dB( a ) ).toThrow( TypeError )
+				expect( () => X32FaderUpdate.float2dB( a ) ).toThrow( X32Error )
 			} )
 		} else {
 			test( `float2db with ${typeof a} does not throw`, () => {
 				// @ts-expect-error checking errors.
-				expect( () => osc_x32.float2dB( a ) ).not.toThrow()
+				expect( () => X32FaderUpdate.float2dB( a ) ).not.toThrow()
 			} )
 		}
 
 		if ( ! c ) {
 			test( `dB2Float with ${typeof a} (${JSON.stringify( a )}) throws`, () => {
 				// @ts-expect-error checking errors.
-				expect( () => osc_x32.dB2Float( a ) ).toThrow( TypeError )
+				expect( () => X32FaderUpdate.dB2Float( a ) ).toThrow( X32Error )
 			} )
 		} else {
 			test( `dB2Float with ${typeof a} does not throw`, () => {
 				// @ts-expect-error checking errors.
-				expect( () => osc_x32.dB2Float( a ) ).not.toThrow()
+				expect( () => X32FaderUpdate.dB2Float( a ) ).not.toThrow()
 			} )
 		}
 	} )
 	
 	describe.each( knownLevels )( '%f <--> %s', ( a, b ) => {
 		test( `${a} <float> -> ${b}`, () => {
-			expect( osc_x32.float2dB( a ) ).toEqual( b )
+			expect( X32FaderUpdate.float2dB( a ) ).toEqual( b )
 		} )
 		test( `${b} <string> -> ${a}`, () => {
-			expect( osc_x32.dB2Float( b ) ).toBeCloseTo( a )
+			expect( X32FaderUpdate.dB2Float( b ) ).toBeCloseTo( a )
 		} )
 		const dbFloat = b === '-oo dB' ? -90.0 : parseFloat( b.replace( ' dB', '' ) )
 		test( `${b} <float> -> ${a}`, () => {
-			expect( osc_x32.dB2Float( dbFloat ) ).toBeCloseTo( a )
+			expect( X32FaderUpdate.dB2Float( dbFloat ) ).toBeCloseTo( a )
 		} )
 	} )
 } )

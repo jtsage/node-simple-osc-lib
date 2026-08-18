@@ -10,7 +10,7 @@
 
 import { makeTimeTag } from './encode'
 import { OSCMessage } from './message'
-import { OSCOptionsDefault, OSCArguments, OSCColor, OSCDecodeError, OSCEncodeError, OSCError, OSCOptions, OSCTimeTag, OSCTimeTagDelta, OSCKnownTypes, OSCTimeTagImmediate } from './types'
+import { OSCOptionsDefault, OSCArguments, OSCColor, OSCDecodeError, OSCEncodeError, OSCError, OSCOptions, OSCTimeTag, OSCKnownTypes, OSCTimeTagCastable } from './types'
 
 export { OSCOptionsDefault }
 
@@ -42,28 +42,33 @@ export class simpleOSC {
 	 */
 	newMessage( address : string, args : OSCArguments[] = [] ) {
 		return OSCMessage.newMessage(
-			{
-				address : address,
-				args    : args,
-			},
+			address,
+			args,
 			this.options
 		)
 	}
 
 	/**
 	 * Create an OSC Bundle object
+	 * 
+	 * Special values for timetag
+	 *  - undefined or false : now()
+	 *  - true : [0,1] (immediate processing)
+	 *  - '+###' : ### milliseconds in the future
+	 * 
 	 * @param msgs - OSCMessages or pre-encoded buffers to include in bundle
-	 * @param timeTag - TimeTag castable object, or false for "right now"
+	 * @param timeTag - TimeTag castable object
 	 * @returns OSCMessage of type bundle
 	 */
-	newBundle( msgs : Array<Buffer<ArrayBufferLike> | OSCMessage> = [], timeTag ? : false | OSCTimeTag | number | Date | OSCTimeTagDelta | undefined ) {
-		const passedTimeTag = timeTag === false ? OSCTimeTagImmediate : timeTag
+	newBundle(
+		msgs : Array<Buffer<ArrayBufferLike> | OSCMessage> = [],
+		timeTag ? : OSCTimeTagCastable
+	) {
+
 
 		return OSCMessage.newBundle(
-			{
-				timeTag : passedTimeTag,
-				msgs    : msgs,
-			},
+			msgs,
+			timeTag,
 			this.options
 		)
 	}
@@ -100,9 +105,10 @@ export class simpleOSC {
 	 *     .any(Infinity) // sent as bang (I)
 	 * ```
 	 * 
-	 * To get a transmittable buffer, call `myMessage.toBuffer()`
+	 * To get a transmittable buffer, call `myMessage.buffer`
 	 * 
 	 * To get a human readable version of the buffer, call `myMessage.toString()`
+	 * 
 	 * @param address - address to send to
 	 * @returns oscBuilder instance
 	 * @example
@@ -136,21 +142,20 @@ export class simpleOSC {
 	}
 }
 
+/** @internal */
 class OSCBuilder {
 	#message : OSCMessage
 	options  : OSCOptions
 
-	constructor( address : string, options : Partial<OSCOptions> = {} ) {
+	constructor( address : string, options : OSCOptions ) {
 		if ( typeof address !== 'string' || address.length === 0 ) {
 			throw new OSCError( 'address required' )
 		}
-		this.options = { ...OSCOptionsDefault, ...options }
+		this.options = options
 
 		this.#message = OSCMessage.newMessage(
-			{
-				address : address,
-				args    : [],
-			},
+			address,
+			[],
 			this.options
 		)
 	}

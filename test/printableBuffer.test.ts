@@ -50,11 +50,14 @@ const testMessages = [
 
 import { printBuffer } from '../src'
 import { OSCMessage } from '../src/message'
-import { OSCMessageOptions } from '../src/types'
+import { OSCArguments } from '../src/types'
 
 describe( 'printableBuffer', () => {
 	describe.each( testMessages )( 'Test $message.address', ( {message, resultBare, resultDefault, resultNoBar, resultTilde} ) => {
-		const thisBuffer = OSCMessage.newMessage( message as OSCMessageOptions ).buffer
+		const thisBuffer = OSCMessage.newMessage(
+			message.address,
+			message.args as OSCArguments[]
+		).buffer
 		test( `Default value == ${resultDefault}`, () => {
 			expect( printBuffer( thisBuffer ) ).toEqual( resultDefault )
 		} )

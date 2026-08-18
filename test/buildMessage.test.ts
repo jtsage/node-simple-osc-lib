@@ -9,53 +9,51 @@
 /// <reference types="node" />
 /// <reference types="jest" />
 
-import * as help                                       from './helpers'
-import { OSCMessage }                                  from '../src/message'
-import { NULL }                                        from '../src'
-import { OSCEncodeError, OSCError, OSCMessageOptions } from '../src/types'
+import * as help                                  from './helpers'
+import { OSCMessage }                             from '../src/message'
+import { NULL }                                   from '../src'
+import { OSCArguments, OSCEncodeError, OSCError } from '../src/types'
 
+const twoStrings : OSCArguments[] = [
+	{ type : 'string', value : 'hi' },
+	{ type : 'string', value : 'there' },
+]
 describe( 'buildMessage Output', () => {
 
 	test( 'arguments are optional', () => {
-		// @ts-expect-error error type, but expected input
-		const oscMessage = OSCMessage.newMessage( {
-			address : '/hello',
-		}, help.regularMode )
+		const oscMessage = OSCMessage.newMessage(
+			'/hello'
+		)
 
 		const expected = Buffer.from( `/hello${NULL}${NULL}` )
 		expect( oscMessage.buffer ).toEqual( expected )
 	} )
 
 	test( 'two strings', () => {
-		const oscMessage = OSCMessage.newMessage( {
-			address : '/hello',
-			args    : [
-				{ type : 'string', value : 'hi' },
-				{ type : 'string', value : 'there' },
-			],
-		}, help.regularMode )
+		const oscMessage = OSCMessage.newMessage(
+			'/hello',
+			twoStrings
+		)
 
 		const expected = Buffer.from( `/hello${NULL}${NULL},ss${NULL}hi${NULL}${NULL}there${NULL}${NULL}${NULL}` )
 		expect( oscMessage.buffer ).toEqual( expected )
 	} )
 
 	test( 'two strings (symbol mode)', () => {
-		const oscMessage = OSCMessage.newMessage( {
-			address : '/hello',
-			args    : [
-				{ type : 'string', value : 'hi' },
-				{ type : 'string', value : 'there' },
-			],
-		}, help.symbolMode )
+		const oscMessage = OSCMessage.newMessage(
+			'/hello',
+			twoStrings,
+			help.symbolMode
+		)
 
 		const expected = Buffer.from( `/hello${NULL}${NULL},SS${NULL}hi${NULL}${NULL}there${NULL}${NULL}${NULL}` )
 		expect( oscMessage.buffer ).toEqual( expected )
 	} )
 
 	test( 'two strings with nested array (bang)', () => {
-		const oscMessage = OSCMessage.newMessage( {
-			address : '/hello',
-			args    : [
+		const oscMessage = OSCMessage.newMessage(
+			'/hello',
+			[
 				{
 					type  : 'array',
 					value : [
@@ -67,108 +65,94 @@ describe( 'buildMessage Output', () => {
 						}
 					],
 				},
-				{ type : 'string', value : 'hi' },
-				{ type : 'string', value : 'there' },
-			],
-		}, help.regularMode )
+				...twoStrings,
+			]
+		)
 
 		const expected = Buffer.from( `/hello${NULL}${NULL},[[I]]ss${NULL}${NULL}${NULL}${NULL}hi${NULL}${NULL}there${NULL}${NULL}${NULL}` )
 		expect( oscMessage.buffer ).toEqual( expected )
 	} )
 
 	test( 'two strings with nested string', () => {
-		const oscMessage = OSCMessage.newMessage( {
-			address : '/hello',
-			args    : [
+		const oscMessage = OSCMessage.newMessage(
+			'/hello',
+			[
 				{
 					type  : 'array',
 					value : [
 						{ type : 'string', value : 'goodbye' }
 					] },
-				{ type : 'string', value : 'hi' },
-				{ type : 'string', value : 'there' },
-			],
-		}, help.regularMode )
+				...twoStrings,
+			]
+		)
 
 		const expected = Buffer.from( `/hello${NULL}${NULL},[s]ss${NULL}${NULL}goodbye${NULL}hi${NULL}${NULL}there${NULL}${NULL}${NULL}` )
 		expect( oscMessage.buffer ).toEqual( expected )
 	} )
 
 	test( 'two strings with nested garbage (fail)', () => {
-		const oscMessage = OSCMessage.newMessage( {
-			address : '/hello',
-			args    : [
+		const oscMessage = OSCMessage.newMessage(
+			'/hello',
+			[
 				// @ts-expect-error checking error
 				[['hello']],
-				{ type : 'string', value : 'hi' },
-				{ type : 'string', value : 'there' },
-			],
-		}, help.regularMode )
+				...twoStrings,
+			]
+		)
 
 		expect( () => oscMessage.buffer ).toThrow( OSCEncodeError )
 	} )
 
 	test( 'strict mode fails with non slash address', () => {
-		const oscMessage = OSCMessage.newMessage( {
-			address : 'hello',
-			args    : [
-				{ type : 'string', value : 'hi' },
-				{ type : 'string', value : 'there' },
-			],
-		}, help.strictMode )
+		const oscMessage = OSCMessage.newMessage(
+			'hello',
+			twoStrings,
+			help.strictMode
+		)
 
 		expect( () => oscMessage.buffer ).toThrow( OSCEncodeError )
 	} )
 
 	test( 'address is required (empty)', () => {
 		expect( () => {
-			OSCMessage.newMessage( {
-				address : '',
-				args    : [
-					{ type : 'string', value : 'hi' },
-					{ type : 'string', value : 'there' },
-				],
-			}, help.regularMode )
+			OSCMessage.newMessage(
+				'',
+				twoStrings
+			)
 		} ).toThrow( OSCError )
 	} )
 
 	test( 'address is required (missing)', () => {
 		expect( () => {
-			// @ts-expect-error testing errors
-			OSCMessage.newMessage( {
-				args    : [
-					{ type : 'string', value : 'hi' },
-					{ type : 'string', value : 'there' },
-				],
-			}, help.regularMode )
+			OSCMessage.newMessage(
+				// @ts-expect-error testing errors
+				null,
+				twoStrings
+			)
 		} ).toThrow( OSCError )
 	} )
 
 	test( 'address is ascii-only', () => {
-		const oscMessage = OSCMessage.newMessage( {
+		const oscMessage = OSCMessage.newMessage(
 			/* cspell:disable-next-line */
-			address : '/Résumé',
-			args    : [
-				{ type : 'string', value : 'hi' },
-				{ type : 'string', value : 'there' },
-			],
-		} )
+			'/Résumé',
+			twoStrings
+		)
 		expect( () => oscMessage.buffer ).toThrow( OSCEncodeError )
 	} )
 
 	test( 'arguments must be an array', () => {
-		expect( () => OSCMessage.newMessage( {
-			address : 'hello',
+		expect( () => OSCMessage.newMessage(
+			'hello',
 			// @ts-expect-error testing error.
-			args    : 'hello there',
-		} ) ).toThrow( OSCError )
+			'hello there'
+		) ).toThrow( OSCError )
 	} )
 
 	test( 'arguments must still be an array', () => {
-		const oscMessage = OSCMessage.newMessage( {
-			address : '/hello',
-			args    : [],
-		}, help.regularMode )
+		const oscMessage = OSCMessage.newMessage(
+			'/hello'
+		)
 
 		// @ts-expect-error testing fun.
 		oscMessage.args = 'hello there'
@@ -177,25 +161,25 @@ describe( 'buildMessage Output', () => {
 	} )
 
 	test( 'arguments must be correct type signature', () => {
-		const oscMessage = OSCMessage.newMessage( {
-			address : 'hello',
-			args    : [
+		const oscMessage = OSCMessage.newMessage(
+			'hello',
+			[
 				//@ts-expect-error checking errors.
 				{ type : 'string', blah : 'hello' }
-			],
-		} )
+			]
+		)
 
 		expect( () => oscMessage.buffer ).toThrow( OSCEncodeError )
 	} )
 
 	test( 'arguments must be correct type signature', () => {
-		const oscMessage = OSCMessage.newMessage( {
-			address : 'hello',
-			args    : [
+		const oscMessage = OSCMessage.newMessage(
+			'hello',
+			[
 				//@ts-expect-error checking errors.
 				{ blah : 'string', value : 'hello' }
-			],
-		} )
+			]
+		)
 
 		expect( () => oscMessage.buffer ).toThrow( OSCEncodeError )
 	} )
@@ -211,11 +195,12 @@ describe( 'buildMessage Output', () => {
 			['/bus/08/config/name', 'HEAD', 'string', 32],
 			['/dca/1/config/name', 'TESTER', 'string', 32],
 		] )( 'build osc buffer (%s) [%s:%s] and check size (%i bytes)', ( a, b, c, expected ) => {
-			const thisMessage = {
-				address : a,
-				args    : [{type : c, value : b}],
-			}
-			const thisBuild = OSCMessage.newMessage( thisMessage as OSCMessageOptions )
+			const thisBuild = OSCMessage.newMessage(
+				a,
+				[
+					{ type : c, value : b } as OSCArguments
+				]
+			)
 
 			expect( thisBuild.buffer.length ).toEqual( expected )
 		} )
@@ -223,13 +208,13 @@ describe( 'buildMessage Output', () => {
 
 	test( 'messing with the object fails', () => {
 		// Don't do this. This should never happen.
-		const oscMessage = OSCMessage.newMessage( {
-			address : 'hello',
-			args    : [
+		const oscMessage = OSCMessage.newMessage(
+			'hello',
+			[
 				//@ts-expect-error checking errors.
 				{ blah : 'string', value : 'hello' }
-			],
-		} )
+			]
+		)
 
 		// @ts-expect-error Checking errors.
 		oscMessage.type.type = 'hello'
@@ -239,18 +224,18 @@ describe( 'buildMessage Output', () => {
 
 	test( 'messing with the object fails', () => {
 		// Don't do this. This should never happen.
-		const oscMessage = OSCMessage.newMessage( {
-			address : 'hello',
-			args    : [
+		const oscMessage = OSCMessage.newMessage(
+			'hello',
+			[
 				//@ts-expect-error checking errors.
 				{ blah : 'string', value : 'hello' }
-			],
-		} )
+			]
+		)
 
 		// @ts-expect-error Checking errors.
 		oscMessage.type.type = 'hello'
 		Object.defineProperty( oscMessage, 'isBundle', {
-			value        : true,
+			value        : () => true,
 			writable     : false,
 			configurable : true,
 		} )
@@ -260,18 +245,18 @@ describe( 'buildMessage Output', () => {
 
 	test( 'messing with the object fails', () => {
 		// Don't do this. This should never happen.
-		const oscMessage = OSCMessage.newMessage( {
-			address : 'hello',
-			args    : [
+		const oscMessage = OSCMessage.newMessage(
+			'hello',
+			[
 				//@ts-expect-error checking errors.
 				{ blah : 'string', value : 'hello' }
-			],
-		} )
+			]
+		)
 
 		// @ts-expect-error Checking errors.
 		oscMessage.type.type = 'hello'
 		Object.defineProperty( oscMessage, 'isSingle', {
-			value        : true,
+			value        : () => true,
 			writable     : false,
 			configurable : true,
 		} )
@@ -285,13 +270,10 @@ describe( 'buildMessage Output', () => {
 	} )
 
 	test( 'two strings serialize', () => {
-		const oscMessage = OSCMessage.newMessage( {
-			address : '/hello',
-			args    : [
-				{ type : 'string', value : 'hi' },
-				{ type : 'string', value : 'there' },
-			],
-		}, help.regularMode )
+		const oscMessage = OSCMessage.newMessage(
+			'/hello',
+			twoStrings
+		)
 
 		const expected = '{"address":"/hello","elements":[{"type":"string","value":"hi"},{"type":"string","value":"there"}],"type":"message"}'
 		expect( JSON.stringify( oscMessage ) ).toEqual( expected )

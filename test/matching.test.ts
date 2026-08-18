@@ -95,7 +95,7 @@ describe( 'pattern matching', () => {
 		const cueBundle = oscLib.newBundle( cues, false )
 
 		// would be 3, but the 2 pre-encoded buffers are skipped in this context.
-		expect( cueBundle.match( '/-show/showfile/{scene|snippet|cue}/*/name' ) ).toHaveLength( 1 )
+		expect( cueBundle.match( '/-show/showfile/{scene,snippet,cue}/*/name' ) ).toHaveLength( 1 )
 	} )
 
 	test( 'Match bundle of bundles', () => {

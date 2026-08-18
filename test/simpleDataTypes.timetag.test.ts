@@ -12,7 +12,7 @@
 import * as help from './helpers'
 import { encodeBuffer, makeTimeTag } from '../src/encode'
 import { decodeBuffer } from '../src/decode'
-import { OSCDecodeError, OSCEncodeError, OSCError, OSCTimeTag, OSCTimeTagImmediate } from '../src/types'
+import { OSCDecodeError, OSCEncodeError, OSCError, OSCTimeTag } from '../src/types'
 import { dateFromTimeTag, diffTimeTag, diffTimeTagMS } from '../src'
 
 const getTimeTagBuffer = () => {
@@ -84,7 +84,7 @@ describe( 'type :: TIMETAG', () => {
 	} )
 
 	test( 'makeTimeTag (immediate)', () => {
-		const instant = makeTimeTag( OSCTimeTagImmediate )
+		const instant = makeTimeTag( true )
 
 		expect( instant[0] ).toEqual( 0 )
 		expect( instant[1] ).toEqual( 1 )

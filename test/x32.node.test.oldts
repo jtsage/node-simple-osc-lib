@@ -9,35 +9,6 @@
 /// <reference types="node" />
 /// <reference types="jest" />
 
-import * as osc from '../src/index'
-import * as osc_x32 from '../src/x32'
-import * as x32 from '../src/lib/x32_preprocessors'
-
-const x32Pre = new osc_x32.x32PreProcessor( 'all' )
-
-const oscX32 = new osc.simpleOscLib( {
-	strictMode   : true,
-	preprocessor : ( msg ) => x32Pre.readMessage( msg as osc_x32.X32MessageInterface ),
-} )
-
-const normalizedName = ( faderName : string, stringIndex : string ) => ( {
-	index  : parseInt( stringIndex ),
-	name   : faderName,
-	zIndex : stringIndex,
-} )
-const normalizedMix = ( isOn : boolean, level : string, stringIndex : string ) => ( {
-	index : parseInt( stringIndex ),
-	isOn  : {
-		text : isOn ? 'ON': 'OFF',
-		bool : isOn,
-		int  : Number( isOn ),
-	},
-	level : {
-		db   : `${level} dB`,
-		float : expect.any( Number ),
-	},
-	zIndex : stringIndex,
-} )
 
 const knownNodeMessages = [
 	{
@@ -183,33 +154,3 @@ const knownNodeMessages = [
 		testName  : 'showSnippet',
 	},
 ]
-
-describe.each( knownNodeMessages )( 'Test node message ($arg) ($testName)', ( {arg, msgResult, result, testName} ) => {
-	const decodedMessage = x32Pre.processNodeMessage( arg )
-
-	test( `subtype ${testName}`, () => {
-		expect( decodedMessage.props.subtype ).toEqual( testName )
-	} )
-
-	test( `osc address ${msgResult.address}`, () => {
-		expect( decodedMessage.address ).toEqual( msgResult.address )
-	} )
-
-	test( `osc arg length ${msgResult.argLength}`, () => {
-		expect( decodedMessage.args.length ).toEqual( msgResult.argLength )
-	} )
-
-	test( 'props result as expected', () => {
-		expect( x32.node[testName].props( decodedMessage ) ).toEqual( result )
-	} )
-
-	const builtMessage  = oscX32.buildMessage( { address : 'node', args : [{ type : 'string', value : arg }]} )
-	const returnMessage = oscX32.readMessage( builtMessage ) as osc_x32.X32MessageInterface
-
-	test( 'roundtrip processed', () => {
-		expect( returnMessage.wasProcessed ).toEqual( true )
-	} )
-	test( 'roundtrip props result as expected', () => {
-		expect( returnMessage.props ).toEqual( {...result, subtype : testName} )
-	} )
-} )

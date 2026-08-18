@@ -9,42 +9,6 @@
 /// <reference types="node" />
 /// <reference types="jest" />
 
-import * as osc from '../src/index'
-import * as osc_x32 from '../src/x32'
-import * as x32 from '../src/lib/x32_preprocessors'
-
-const x32Pre = new osc_x32.x32PreProcessor( 'all' )
-
-const oscX32 = new osc.simpleOscLib( {
-	strictMode   : true,
-	preprocessor : ( msg ) => x32Pre.readMessage( msg as osc_x32.X32MessageInterface ),
-} )
-
-
-const normalizedName = ( faderName : string, stringIndex : string ) => ( {
-	index  : parseInt( stringIndex ),
-	name   : faderName,
-	zIndex : stringIndex,
-} )
-
-const normalizeMute = ( mute : boolean, fader : string ) => ( {
-	index   : parseInt( fader ),
-	isOn    : {
-		bool : mute,
-		int  : Number( mute ),
-		text : mute ? 'ON' : 'OFF',
-	},
-	zIndex  : fader,
-} )
-
-const normalizeLevel = ( level : number, fader : string ) => ( {
-	index   : parseInt( fader ),
-	level   : {
-		float : expect.closeTo( level ),
-		db    : expect.any( String ),
-	},
-	zIndex  : fader,
-} )
 
 const knownMessages = [
 	{
@@ -265,60 +229,3 @@ const knownMessages = [
 		testName : 'showCueDirty',
 	},
 ]
-
-describe( 'read standard x32 messages', () => {
-	describe.each( knownMessages )( 'test $testName :: $message.address', ( {message, testName, result} ) => {
-		test( 'regex works', () => {
-			expect( x32.regular[testName].regEx.test( message.address ) ).toEqual( true )
-		} )
-		test( 'props result as expected', () => {
-			expect( x32.regular[testName].props( message ) ).toEqual( result )
-		} )
-		let builtMessage : Buffer
-		let returnMessage : osc_x32.X32MessageInterface
-		test( 'build and return message', () => {
-			// const oscMessage = new osc.OSCMessage(message.address, message.args)
-			builtMessage  = oscX32.buildMessage( message as osc.OSCMessage )
-			returnMessage = oscX32.readMessage( builtMessage ) as osc_x32.X32MessageInterface
-		} )
-
-		test( 'roundtrip processed', () => {
-			expect( returnMessage.wasProcessed ).toEqual( true )
-		} )
-		test( 'roundtrip props result as expected', () => {
-			expect( returnMessage.props ).toEqual( {...result, subtype : testName} )
-		} )
-	} )
-} )
-
-
-test( 'roundtrip unprocessed standard x32 message', () => {
-	const thisMessage = {
-		address : '/-show/prepos',
-		args    : [{ type : 'integer', value : 2}],
-	}
-
-	const builtMessage  = oscX32.buildMessage( thisMessage )
-	const returnMessage = oscX32.readMessage( builtMessage ) as osc_x32.X32MessageInterface
-
-	expect( returnMessage.wasProcessed ).toEqual( false )
-	expect( returnMessage.props ).not.toBeDefined()
-
-} )
-
-test( 'skip malformed ocs message (null)', () => {
-	// @ts-expect-error checking errors.
-	expect( x32Pre.readMessage( null ) ).toEqual( null )
-} )
-test( 'skip malformed ocs message (string)', () => {
-	// @ts-expect-error checking errors.
-	expect( x32Pre.readMessage( 'hi' ) ).toEqual( 'hi' )
-} )
-test( 'skip malformed ocs message (no address)', () => {
-	// @ts-expect-error checking errors.
-	expect( x32Pre.readMessage( { hi : 'bye' } ) ).toEqual( { hi : 'bye' } )
-} )
-test( 'skip malformed ocs message (empty address)', () => {
-	// @ts-expect-error checking errors.
-	expect( x32Pre.readMessage( { address : '' } ) ).toEqual( { address : '' } )
-} )

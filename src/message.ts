@@ -9,7 +9,7 @@
  *           OSC Message Class */
 
 import { encodeBuffer, makeTimeTag } from './encode'
-import { OSCOptionsDefault, OSCArguments, OSCArgumentsShort, OSCBundleOptions, OSCDecodeError, OSCError, OSCMessageInterface, OSCMessageOptions, OSCMessageType, OSCOptions, OSCTimeTag, OSCTypeListTypes, OSCMessageTypeBundle, OSCMessageTypeMessage, OSCMatchResult } from './types'
+import { OSCOptionsDefault, OSCArguments, OSCArgumentsShort, OSCDecodeError, OSCError, OSCMessageInterface, OSCOptions, OSCTimeTag, OSCTypeListTypes, OSCMessageTypeBundle, OSCMessageTypeMessage, OSCMatchResult, OSCTimeTagCastable, OSCMessageInterfaceMessage, OSCMessageInterfaceBundle } from './types'
 import { decodeBuffer } from './decode'
 
 // MARK: OSCMessage Class
@@ -19,7 +19,7 @@ import { decodeBuffer } from './decode'
  * Main type for OSC Messages
  */
 export class OSCMessage implements OSCMessageInterface {
-	type    : OSCMessageType
+	type    : OSCMessageTypeBundle | OSCMessageTypeMessage
 	args    : OSCArguments[] = []
 	msgs    : Array<OSCMessageInterface | Buffer> = []
 	/** @internal */
@@ -30,7 +30,7 @@ export class OSCMessage implements OSCMessageInterface {
 	 */
 	constructor(
 		key : symbol,
-		type : OSCMessageType,
+		type : OSCMessageTypeBundle | OSCMessageTypeMessage,
 		args : OSCArguments[] = [],
 		msgs : Array<OSCMessageInterface | Buffer> = [],
 		options : Partial<OSCOptions> = {}
@@ -47,14 +47,14 @@ export class OSCMessage implements OSCMessageInterface {
 	/**
 	 * True if message is a bundle type
 	 */
-	get isBundle() {
+	isBundle() : this is { type : OSCMessageTypeBundle } {
 		return this.type.type === 'bundle'
 	}
 
 	/**
 	 * True if message is a regular (not bundle) type
 	 */
-	get isSingle() {
+	isSingle() : this is { type : OSCMessageTypeMessage } {
 		return this.type.type === 'message'
 	}
 
@@ -72,12 +72,12 @@ export class OSCMessage implements OSCMessageInterface {
 	 * - ‘*’ in the OSC Address Pattern matches any sequence of zero or more characters
 	 * - A string of characters in square brackets (e.g., “[string]”) in the OSC Address Pattern matches any character in the string.
 	 * - Use "[a-z]" to match a range of characters
-	 * - A comma-separated list of strings enclosed in curly braces (e.g., “{foo,bar}”) in the OSC Address Pattern matches any of the strings in the list.
+	 * - A comma-separated list of strings enclosed in curly braces (e.g., “\{foo,bar\}”) in the OSC Address Pattern matches any of the strings in the list.
 	 * - Any other character in an OSC Address Pattern can match only the same character.
-	 * @param pattern - Pattern to match
+	 * @param pattern - Pattern to match (or compiled RegExp)
 	 * @returns Array of zero or more matches, with capture groups
 	 */
-	match( pattern : string ) {
+	match( pattern : string | RegExp ) {
 		return matchMessages( this, pattern )
 	}
 
@@ -85,22 +85,19 @@ export class OSCMessage implements OSCMessageInterface {
 	 * @internal 
 	 */
 	toJSON() {
-		if ( this.isBundle ) {
-			const thisType = this.type as OSCMessageTypeBundle
+		if ( this.isBundle() ) {
 			return {
 				messages : this.msgs,
-				timeTag  : thisType.timeTag,
+				timeTag  : this.type.timeTag,
 				type     : 'bundle',
 			}
+		} else if ( this.isSingle() ) {
+			return {
+				address  : this.type.address,
+				elements : this.args,
+				type     : 'message',
+			}
 		}
-
-		const thisType = this.type as OSCMessageTypeMessage
-		return {
-			address  : thisType.address,
-			elements : this.args,
-			type     : 'message',
-		}
-		
 	}
 
 	/**
@@ -115,16 +112,21 @@ export class OSCMessage implements OSCMessageInterface {
 	
 	/**
 	 * Create new OSC message of type message (not bundle)
-	 * @param message - OSC Message options. Must have an address, can have arguments
+	 * @param address - non-empty string address
+	 * @param args - OSCArguments array
 	 * @param options - OSCOptions overrides
 	 * @returns OSCMessage of type message
 	 */
-	static newMessage( message : OSCMessageOptions, options : Partial<OSCOptions> = {} ) {
-		if ( typeof message.address !== 'string' || message.address === '' ) {
+	static newMessage(
+		address : string,
+		args    : OSCArguments[] = [],
+		options : Partial<OSCOptions> = {}
+	) : OSCMessageInterfaceMessage {
+		if ( typeof address !== 'string' || address === '' ) {
 			throw new OSCError( 'string address required' )
 		}
 
-		if ( ! ( typeof message.args === 'undefined' || Array.isArray( message.args ) ) ) {
+		if ( ! Array.isArray( args ) ) {
 			throw new OSCError( 'args must be an array if supplied' )
 		}
 
@@ -132,59 +134,73 @@ export class OSCMessage implements OSCMessageInterface {
 			PRIVATE_KEY,
 			{
 				type    : 'message',
-				address : message.address,
+				address : address,
 			},
-			message.args ?? [],
+			args,
 			[],
 			options
-		)
+		) as OSCMessageInterfaceMessage
 	}
 
 	/**
 	 * Create new OSC bundle
-	 * @param message - Bundle options, none required. Messages and timetag optional
+	 * 
+	 * Special values for timetag
+	 *  - undefined or false : now()
+	 *  - true : [0,1] (immediate processing)
+	 *  - '+###' : ### milliseconds in the future
+	 * @param msgs - Array of OSCMessageInterface or Buffer
+	 * @param timeTag - Value castable to OSCTimeTag
 	 * @param options - OSCOptions overrides
 	 * @returns OSC Message of type bundle
 	 */
-	static newBundle( message : OSCBundleOptions, options : Partial<OSCOptions> = {} ) {
+	static newBundle(
+		msgs    : Array<OSCMessageInterface | Buffer> = [],
+		timeTag : OSCTimeTagCastable = false,
+		options : Partial<OSCOptions> = {}
+	) : OSCMessageInterfaceBundle {
+
 		return new OSCMessage(
 			PRIVATE_KEY,
 			{
 				type    : 'bundle',
-				timeTag : makeTimeTag( message.timeTag ),
+				timeTag : makeTimeTag( timeTag ),
 			},
 			[],
-			message.msgs ?? [],
+			msgs,
 			options
-		)
+		) as OSCMessageInterfaceBundle
 	}
 	
 }
 
 // MARK: matchMessages
-const matchMessages = ( msg : OSCMessageInterface, pattern : string ) : OSCMatchResult[] => {
+const matchMessages = ( msg : OSCMessageInterface, pattern : string | RegExp ) : OSCMatchResult[] => {
 	const returnArray : OSCMatchResult[] = []
+	let regExpCompiled : RegExp
 
-	if ( typeof pattern !== 'string' || pattern.length === 0 ) {
+	if ( pattern instanceof RegExp ) {
+		regExpCompiled = pattern
+	} else if ( typeof pattern === 'string' && pattern.length !== 0 ) {
+		const regExpPattern = pattern
+			.replaceAll( '.', '\\.' )
+			.replaceAll( /{(.+?)}/g, ( _, group1 ) => `(${group1.replaceAll( ',', '|' )})` )
+			.replaceAll( /\[(.+?)]/g, '([$1])' )
+			.replaceAll( '?', '([^/])' )
+			.replaceAll( '*', '([^/]*)' )
+			.replaceAll( '\\', '\\\\' )
+
+		regExpCompiled = new RegExp( regExpPattern )
+	} else {
 		throw new OSCError( 'must supply a pattern' )
 	}
 
-	const regExpPattern = pattern
-		.replaceAll( '.', '\\.' )
-		.replaceAll( /{(.+?)}/g, ( _, group1 ) => `(${group1.replaceAll( ',', '|' )})` )
-		.replaceAll( /\[(.+?)]/g, '([$1])' )
-		.replaceAll( '?', '(.)' )
-		.replaceAll( '*', '(.*)' )
-		.replaceAll( '\\', '\\\\' )
-
-	const regExpCompiled = new RegExp( regExpPattern )
-
-	if ( msg.isSingle ) {
+	if ( msg.isSingle() ) {
 		const results = matchMessage( msg, regExpCompiled )
 		if ( results !== null ) {
 			returnArray.push( results )
 		}
-	} else if ( msg.isBundle ) {
+	} else if ( msg.isBundle() ) {
 		returnArray.push( ...matchBundle( msg, regExpCompiled ) )
 	}
 
@@ -192,27 +208,22 @@ const matchMessages = ( msg : OSCMessageInterface, pattern : string ) : OSCMatch
 }
 
 // MARK: matchBundle
-const matchBundle = ( msg : OSCMessageInterface, compiledPattern : RegExp ) : OSCMatchResult[] => {
+const matchBundle = ( msg : OSCMessageInterfaceBundle, compiledPattern : RegExp ) : OSCMatchResult[] => {
 	const returnArray : OSCMatchResult[] = []
 
 	for ( const message of msg.msgs ) {
 		if ( Buffer.isBuffer( message ) ) {
 			continue
-		} else if ( message.isBundle ) {
-			returnArray.push( ...matchBundle( message, compiledPattern ) )
-		} else if ( message.isSingle ) {
-			const results = matchMessage( message, compiledPattern )
-			if ( results !== null ) {
-				returnArray.push( results )
-			}
+		} else {
+			returnArray.push( ...matchMessages( message, compiledPattern ) )
 		}
 	}
 	return returnArray
 }
 
 // MARK: matchMessage
-const matchMessage = ( msg : OSCMessageInterface, compiledPattern : RegExp ) : null | OSCMatchResult => {
-	const address = ( msg.type as OSCMessageTypeMessage ).address
+const matchMessage = ( msg : OSCMessageInterfaceMessage, compiledPattern : RegExp ) : null | OSCMatchResult => {
+	const address = msg.type.address
 	const matches = compiledPattern.exec( address )
 
 	return ( matches === null ) ?
@@ -225,16 +236,16 @@ const matchMessage = ( msg : OSCMessageInterface, compiledPattern : RegExp ) : n
 
 // MARK: buildMessage
 const buildMessage = ( msg : OSCMessageInterface ) : Buffer<ArrayBufferLike> => {
-	if ( msg.isSingle ) {
+	if ( msg.isSingle() ) {
 		return buildSinglet( msg )
-	} else if ( msg.isBundle ) {
+	} else if ( msg.isBundle() ) {
 		return buildBundle( msg )
 	}
 	throw new OSCError( 'unknown message type for builder' )
 }
 
 // MARK: buildBundle
-const buildBundle = ( msg : OSCMessageInterface  ) => {
+const buildBundle = ( msg : OSCMessageInterfaceBundle  ) => {
 	if ( msg.type.type !== 'bundle' ) {
 		throw new OSCError( 'internal error - non bundle built as bundle' )
 	}
@@ -269,7 +280,7 @@ const buildBundle = ( msg : OSCMessageInterface  ) => {
 }
 
 // MARK: buildSinglet
-const buildSinglet = ( msg : OSCMessageInterface ) => {
+const buildSinglet = ( msg : OSCMessageInterfaceMessage ) => {
 	if ( msg.type.type !== 'message' ) {
 		throw new OSCError( 'internal error - non message built as message' )
 	}
@@ -416,7 +427,6 @@ const readMessage = ( buffer_in : Buffer<ArrayBufferLike>, options : OSCOptions 
 	const arrayStack : OSCArguments[][] = [[]]
 
 	for ( const [i, thisItem] of [...argListString].entries() ) {
-		// const thisItem = argListArray[i]
 		if ( i === 0 ) {
 			if ( thisItem === ',' ) {
 				continue

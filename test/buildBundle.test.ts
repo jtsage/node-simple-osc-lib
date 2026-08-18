@@ -11,129 +11,120 @@
 
 import { OSCMessage }  from '../src/message'
 import { diffTimeTag } from '../src'
-import { OSCDecodeError, OSCError, OSCTimeTagImmediate }    from '../src/types'
+import { OSCDecodeError, OSCError }    from '../src/types'
 
-const msg1 = OSCMessage.newMessage( {
-	address : '/hello',
-	args    : [
+const msg1 = OSCMessage.newMessage(
+	'/hello',
+	[
 		{ type : 'string', value : 'world' },
 		{ type : 'integer', value : 20 },
-	],
-} )
+	]
+)
 
-const msg2 = OSCMessage.newMessage( {
-	address : '/goodnight',
-	args    : [
+const msg2 = OSCMessage.newMessage(
+	'/goodnight',
+	[
 		{ type : 'string', value : 'moon' },
 		{ type : 'integer', value : 69 }
-	],
-} )
+	]
+)
 
 const bundleMsgPair = [msg1, msg2]
 
 describe( 'bundle testing', () => {
 	describe( 'building', () => {
 		test( 'build with no timetag succeeds with "now"', () => {
-			const oscBundle = OSCMessage.newBundle( {
-				msgs : bundleMsgPair,
-			} )
-			// @ts-expect-error testing fun
+			const oscBundle = OSCMessage.newBundle(
+				bundleMsgPair
+			)
+
 			expect( oscBundle.type.timeTag ).toHaveLength( 2 )
 			expect( oscBundle.buffer ).toHaveLength( 76 )
-			// @ts-expect-error testing fun
 			expect( diffTimeTag( oscBundle.type.timeTag ) ).toBeCloseTo( 0, 1 )
 		} )
 
 		test( 'build with buffers works', () => {
-			const oscBundle = OSCMessage.newBundle( {
-				msgs : [
+			const oscBundle = OSCMessage.newBundle(
+				[
 					msg1.buffer,
 					msg2.buffer
-				],
-			} )
-			// @ts-expect-error testing fun
+				]
+			)
+			
 			expect( oscBundle.type.timeTag ).toHaveLength( 2 )
 			expect( oscBundle.buffer ).toHaveLength( 76 )
-			// @ts-expect-error testing fun
 			expect( diffTimeTag( oscBundle.type.timeTag ) ).toBeCloseTo( 0, 1 )
 		} )
 
 		test( 'build with no messages fails', () => {
-			const oscBundle = OSCMessage.newBundle( {
-				msgs : [],
-			} )
-			// @ts-expect-error testing fun
+			const oscBundle = OSCMessage.newBundle( [] )
+
 			expect( oscBundle.type.timeTag ).toHaveLength( 2 )
 			expect( () => oscBundle.buffer ).toThrow( OSCError )
 		} )
 
 		test( 'build with no messages fails (pt 2)', () => {
-			// @ts-expect-error testing fun
-			const oscBundle = OSCMessage.newBundle( {} )
-			// @ts-expect-error testing fun
+			const oscBundle = OSCMessage.newBundle()
+
 			expect( oscBundle.type.timeTag ).toHaveLength( 2 )
 			expect( () => oscBundle.buffer ).toThrow( OSCError )
 		} )
 		
 		test( 'build with single message and delta works', () => {
-			const oscBundle = OSCMessage.newBundle( {
-				timeTag : '+500',
-				msgs    : [msg1],
-			} )
-			// @ts-expect-error testing fun
+			const oscBundle = OSCMessage.newBundle(
+				[msg1],
+				'+500'
+			)
+			
 			expect( oscBundle.type.timeTag ).toHaveLength( 2 )
 			expect( oscBundle.buffer ).toHaveLength( 44 )
-			// @ts-expect-error testing fun
 			expect( diffTimeTag( oscBundle.type.timeTag ) ).toBeLessThanOrEqual( -0.4 )
-			// @ts-expect-error testing fun
 			expect( diffTimeTag( oscBundle.type.timeTag ) ).toBeGreaterThanOrEqual( -0.6 )
 		} )
 
 		test( 'build with single message and date works', () => {
-			const oscBundle = OSCMessage.newBundle( {
-				timeTag : ( new Date() ),
-				msgs    : [msg1],
-			} )
-			// @ts-expect-error testing fun
+			const oscBundle = OSCMessage.newBundle(
+				[msg1],
+				( new Date() )
+			)
+			
 			expect( oscBundle.type.timeTag ).toHaveLength( 2 )
 			expect( oscBundle.buffer ).toHaveLength( 44 )
-			// @ts-expect-error testing fun
 			expect( diffTimeTag( oscBundle.type.timeTag ) ).toBeCloseTo( 0, 1 )
 		} )
 
 		test( 'build with bad message fails', () => {
-			const oscBundle = OSCMessage.newBundle( {
+			const oscBundle = OSCMessage.newBundle(
 				// @ts-expect-error testing fun
-				msgs    : ['hello'],
-			} )
-			// @ts-expect-error testing fun
+				['hello']
+			)
+
 			expect( oscBundle.type.timeTag ).toHaveLength( 2 )
 			expect( () => oscBundle.buffer ).toThrow( 'non OSC' )
 		} )
 
 		test( 'build with single message and seconds works', () => {
-			const oscBundle = OSCMessage.newBundle( {
-				timeTag : ( new Date() ).getTime() / 1000,
-				msgs    : [msg1],
-			} )
-			// @ts-expect-error testing fun
+			const oscBundle = OSCMessage.newBundle(
+				[msg1],
+				( new Date() ).getTime() / 1000
+			)
+
 			expect( oscBundle.type.timeTag ).toHaveLength( 2 )
 			expect( oscBundle.buffer ).toHaveLength( 44 )
-			// @ts-expect-error testing fun
 			expect( diffTimeTag( oscBundle.type.timeTag ) ).toBeCloseTo( 0, 1 )
 		} )
 
 
 		test( 'serialize nested works', () => {
-			const oscBundle = OSCMessage.newBundle( {
-				timeTag : OSCTimeTagImmediate,
-				msgs    : bundleMsgPair,
-			} )
+			const oscBundle = OSCMessage.newBundle(
+				bundleMsgPair,
+				true
+			)
 
-			const nestBundle = OSCMessage.newBundle( {
-				timeTag : OSCTimeTagImmediate,
-				msgs    : [oscBundle, msg1, msg2],
-			} )
+			const nestBundle = OSCMessage.newBundle(
+				[oscBundle, msg1, msg2],
+				true
+			)
 
 			expect( nestBundle.buffer ).toHaveLength( 156 )
 
@@ -165,41 +156,41 @@ describe( 'bundle testing', () => {
 			emptyBundle.writeUInt32BE( 2222, 8 )
 			emptyBundle.writeUInt32BE( 4444, 12 )
 			const result = OSCMessage.fromBuffer( emptyBundle )
-			expect( result.isBundle ).toEqual( false )
-			expect( result.isSingle ).toEqual( true )
+			expect( result.isBundle() ).toEqual( false )
+			expect( result.isSingle() ).toEqual( true )
 			// @ts-expect-error testing fun
 			expect( result.type.address ).toEqual( '#blundl' ) // cSpell:disable-line
 		} )
 
 		test( 'read with single message works (round-trip)', () => {
-			const thisBundle = OSCMessage.newBundle( {
-				timeTag : OSCTimeTagImmediate,
-				msgs    : [msg1],
-			} )
+			const thisBundle = OSCMessage.newBundle(
+				[msg1],
+				true
+			)
 			const thisBuffer = thisBundle.buffer
 			
 			expect( JSON.stringify( OSCMessage.fromBuffer( thisBuffer ) ) ).toEqual( JSON.stringify( thisBundle ) )
 		} )
 
 		test( 'read with multiple messages works (round-trip)', () => {
-			const thisBundle = OSCMessage.newBundle( {
-				timeTag : OSCTimeTagImmediate,
-				msgs    : [msg1, msg2],
-			} )
+			const thisBundle = OSCMessage.newBundle(
+				[msg1, msg2],
+				true
+			)
 			const thisBuffer = thisBundle.buffer
 			
 			expect( JSON.stringify( OSCMessage.fromBuffer( thisBuffer ) ) ).toEqual( JSON.stringify( thisBundle ) )
 		} )
 
 		test( 'read with nested bundle works (round-trip)', () => {
-			const thisBundle = OSCMessage.newBundle( {
-				timeTag : OSCTimeTagImmediate,
-				msgs    : [msg1, msg2],
-			} )
-			const thisNest = OSCMessage.newBundle( {
-				timeTag : OSCTimeTagImmediate,
-				msgs    : [thisBundle, msg1, msg2],
-			} )
+			const thisBundle = OSCMessage.newBundle(
+				[msg1, msg2],
+				true
+			)
+			const thisNest = OSCMessage.newBundle(
+				[thisBundle, msg1, msg2],
+				true
+			)
 			const thisBuffer = thisNest.buffer
 			
 			expect( JSON.stringify( OSCMessage.fromBuffer( thisBuffer ) ) ).toEqual( JSON.stringify( thisNest ) )

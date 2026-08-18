@@ -27,31 +27,22 @@ export const OSCOptionsDefault : OSCOptions = {
 	stringAsSymbol : false,
 }
 
-/**
- * OSC Color - 4 element numeric array (0-255) (4-byte)
- */
+/** OSC Color - 4 element numeric array (0-255) (4-byte) */
 export type OSCColor   = [ number, number, number, number ]
 
-/**
- * OSC Midi - 4 Byte
- */
+/** OSC Midi - 4 Byte */
 export type OSCMidi    = [ number, number, number, number ]
 
-/**
- * OSC Time Tag - 8 byte.
- */
+/** OSC Time Tag - 8 byte. */
 export type OSCTimeTag = [ number, number ]
 
-/**
- * Time Tag Delta type - e.g. '+50' for 50ms in the future
- */
+/** Time Tag Delta type - e.g. '+50' for 50ms in the future */
 export type OSCTimeTagDelta = `+${number}`
 
-/**
- * Special time tag, means "process immediately"
- */
-export const OSCTimeTagImmediate : OSCTimeTag = [0, 1]
+/** List of types castable to OSCTimeTag by makeTimeTag */
+export type OSCTimeTagCastable = OSCTimeTag | number | Date | OSCTimeTagDelta | undefined | boolean
 
+/** Supported OSC arguments */
 export type OSCArguments =
 	| { type : 'address';  value : string }
 	| { type : 'array';    value : OSCArguments[] }
@@ -71,6 +62,7 @@ export type OSCArguments =
 	| { type : 'timetag';  value : OSCTimeTag }
 	| { type : 'true';     value : null }
 
+/** Map human name to OSC argument character */
 export const OSCArgumentStringMap = Object.freeze( {
 	'address'  : 'a',
 	'array'    : null,
@@ -91,7 +83,7 @@ export const OSCArgumentStringMap = Object.freeze( {
 	'true'     : 'T',
 } )
 
-// Duplicate to make typescript behave. Omit array types '[' and ']'
+/** Map OSC character type to human name */
 export const OSCArgumentCharMap = Object.freeze( {
 	a : 'address',
 	b : 'blob',
@@ -114,6 +106,7 @@ export const OSCArgumentCharMap = Object.freeze( {
 /** @internal */
 export const OSCKnownTypes = Object.keys( OSCArgumentCharMap ).sort()
 
+/** @internal */
 export const OSCArgumentCharToString = ( index : OSCArgumentsShort ) : OSCArgumentsHuman => {
 	const value = OSCArgumentCharMap[index]
 	if ( typeof value !== 'undefined' ) {
@@ -122,6 +115,7 @@ export const OSCArgumentCharToString = ( index : OSCArgumentsShort ) : OSCArgume
 	throw new OSCError( 'type does not exist' )
 }
 
+/** @internal */
 export const OSCArgumentStringToChar = ( index : OSCArgumentsHuman ) : OSCArgumentsShort => {
 	const value = OSCArgumentStringMap[index]
 	if ( typeof value !== 'undefined' && value !== null ) {
@@ -130,46 +124,56 @@ export const OSCArgumentStringToChar = ( index : OSCArgumentsHuman ) : OSCArgume
 	throw new OSCError( 'type does not exist' )
 }
 
+/** Name of OSC arguments, human readable */
 export type OSCArgumentsHuman = keyof typeof OSCArgumentStringMap
+
+/** Name of OSC arguments, single character */
 export type OSCArgumentsShort = keyof typeof OSCArgumentCharMap
 
 /** @internal */
 export type OSCTypeListTypes = OSCArgumentsShort | ']' | '['
 
+/** Result of decodeBuffer operations */
 export type BufferDecodeResult = {
 	arg    : OSCArguments,
 	remain : Buffer<ArrayBufferLike>
 }
 
+/** Result of encodeBuffer operations. Original arg. */
 export type BufferEncodeResult = {
 	arg      : OSCArguments,
 	typeList : OSCTypeListTypes[]
 	buffer   : Buffer<ArrayBufferLike>
 }
 
+/** Positive result of OSC Address match */
 export type OSCMatchResult = {
 	address : string,
 	matches : string[]
 }
 
+/** General OSC Error */
 export class OSCError extends Error {
 	constructor( message : string, opts ? : ErrorOptions ) {
 		super( message, opts )
 	}
 }
 
+/** Error encountered when trying to encode buffer data */
 export class OSCDecodeError extends TypeError {
 	constructor( message : string, opts ? : ErrorOptions ) {
 		super( message, opts )
 	}
 }
 
+/** Error encountered when trying to decode buffer data */
 export class OSCEncodeError extends TypeError {
 	constructor( message : string, opts ? : ErrorOptions ) {
 		super( message, opts )
 	}
 }
 
+/** Options for OSC Operations */
 export type OSCOptions = {
 	asciiOnly      : boolean;
 	coerceStrings  : boolean;
@@ -178,37 +182,53 @@ export type OSCOptions = {
 	stringAsSymbol : boolean;
 }
 
+/** Message Type Message */
 export type OSCMessageTypeMessage = {
 	type    : 'message',
 	address : string
 }
 
+/** Bundle Type Message */
 export type OSCMessageTypeBundle = {
 	type    : 'bundle',
 	timeTag : OSCTimeTag
 }
 
-export type OSCMessageType =
-	| OSCMessageTypeMessage
-	| OSCMessageTypeBundle
-
-export type OSCMessageOptions = {
-	address : string
-	args    : OSCArguments[]
+/** Narrowed Message Type : Message */
+export interface OSCMessageInterfaceMessage extends OSCMessageInterface {
+	type : OSCMessageTypeMessage
 }
 
-export type OSCBundleOptions = {
-	timeTag ? : OSCTimeTag | number | Date | OSCTimeTagDelta | undefined
-	msgs      : Array<OSCMessageInterface | Buffer>
+/** Narrowed Message Type : Bundle */
+export interface OSCMessageInterfaceBundle extends OSCMessageInterface {
+	type : OSCMessageTypeBundle
 }
 
+/** OSC Message interface */
 export interface OSCMessageInterface {
-	type    : OSCMessageType
+	type    : OSCMessageTypeBundle | OSCMessageTypeMessage
 	args    : OSCArguments[]
 	msgs    : Array<OSCMessageInterface | Buffer>
 	options : OSCOptions
 
-	isBundle : boolean
-	isSingle : boolean
+	isBundle : () => this is { type : OSCMessageTypeBundle }
+	isSingle : () => this is { type : OSCMessageTypeMessage }
 	buffer   : Buffer<ArrayBufferLike>
+	match    : ( pattern : string | RegExp ) => OSCMatchResult[]
+	toJSON   : () => toJSONType
 }
+
+export type toJSONType =
+	{
+		messages   : ( OSCMessageInterface | Buffer<ArrayBufferLike> )[];
+		timeTag    : OSCTimeTag;
+		type       : string;
+		address ?  : never;
+		elements ? : never;
+	} | {
+		address    : string;
+		elements   : OSCArguments[];
+		type       : string;
+		messages ? : never;
+		timeTag ?  : never;
+	} | undefined

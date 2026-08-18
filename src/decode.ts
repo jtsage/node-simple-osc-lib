@@ -62,8 +62,11 @@ const decoders : Record<OSCArgumentsShort, decodeFunction> = {
 		if ( options.strictAddress && !stringAddress.startsWith( '/' ) ) {
 			throw new OSCDecodeError( 'address must start with a slash' )
 		}
-		addressArray.arg.type = 'address'
-		return addressArray
+
+		return decodeResult(
+			{ type : 'address', value : stringAddress },
+			addressArray.remain
+		)
 	},
 	b  : function( b, options ) {
 		if ( b.length < 8 ) {

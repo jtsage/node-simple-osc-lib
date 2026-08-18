@@ -397,12 +397,12 @@ const readBundle = ( buffer_in : Buffer<ArrayBufferLike>, options : OSCOptions )
 const readMessage = ( buffer_in : Buffer<ArrayBufferLike>, options : OSCOptions ) => {
 	const thisAddress_array = decodeBuffer( 'a', buffer_in, options )
 
-	if ( thisAddress_array.remain.length === 0 ) {
+	if ( thisAddress_array.remain.length === 0 && thisAddress_array.arg.type === 'address' ) {
 		const returnMessage = new OSCMessage(
 			PRIVATE_KEY,
 			{
 				type    : 'message',
-				address : thisAddress_array.arg.value as string,
+				address : thisAddress_array.arg.value,
 			},
 			[],
 			[],

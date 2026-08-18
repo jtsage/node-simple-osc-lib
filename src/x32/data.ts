@@ -8,7 +8,7 @@
  *     |_|   X32 Data */
 
 import { OSCMatchResult, OSCMessageInterfaceMessage } from '../types'
-import { X32FaderUpdateLevel, X32FaderUpdateMix, X32FaderUpdateMute, X32FaderUpdateName, X32Cue, X32DataRecord, X32FaderScope, X32Info, X32Scene, X32ShowModes, X32Snippet } from './types'
+import { X32FaderUpdateLevel, X32FaderUpdateMix, X32FaderUpdateMute, X32FaderUpdateName, X32Cue, X32DataRecord, X32Info, X32Scene, X32ShowModes, X32Snippet } from './types'
 
 type X32MatcherRecord = {
 	matcher   : ( scope : string ) => string,
@@ -18,7 +18,7 @@ type X32MatcherRecord = {
 	) => X32DataRecord
 }
 
-type X32Matchers = { [key : string] : X32MatcherRecord }
+type X32Matchers = { [K in X32ValidMatchers] : X32MatcherRecord }
 
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -38,14 +38,44 @@ function classFactory<T>(
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
+export type X32ValidMatchers =
+	| 'control'
+	| 'cueDirty'
+	| 'currentCue'
+	| 'dcaFaderReg'
+	| 'dcaMuteReg'
+	| 'dcaNode'
+	| 'faderReg'
+	| 'mixNode'
+	| 'muteReg'
+	| 'nameNode'
+	| 'nameReg'
+	| 'showDataNode'
+	| 'showName'
 
 export const matchers : X32Matchers = {
+	'dcaFaderReg' : {
+		matcher   : () => '/dca/*/fader',
+		processor : ( msg, match ) => classFactory( X32FaderUpdateLevel, [
+			'dca',
+			match.matches[0],
+			msg.args[0]?.value // level, float
+		] ),
+	},
+	'dcaMuteReg' : {
+		matcher   : () => '/dca/*/on',
+		processor : ( msg, match ) => classFactory( X32FaderUpdateMute, [
+			'dca',
+			match.matches[0],
+			msg.args[0]?.value // mute, 0 or 1
+		] ),
+	},
 	'faderReg' : {
 		matcher   : ( scope ) => `/{${scope}}/*/mix/fader`,
 		processor : ( msg, match ) => classFactory( X32FaderUpdateLevel, [
 			match.matches[0],
 			match.matches[1],
-			msg.args[0]?.value
+			msg.args[0]?.value // level, float
 		] ),
 	},
 	'muteReg' : {
@@ -53,70 +83,66 @@ export const matchers : X32Matchers = {
 		processor : ( msg, match ) => classFactory( X32FaderUpdateMute, [
 			match.matches[0],
 			match.matches[1],
-			msg.args[0]?.value
+			msg.args[0]?.value // mute, 0 or 1
 		] ),
 	},
 	'nameReg' : {
 		matcher   : ( scope ) => `/{${scope}}/*/config/name`,
-		processor : ( msg, match ) => new X32FaderUpdateName(
-			match.matches[0] as X32FaderScope,
-			match.matches[1] as string,
-			msg.args[0]!.value as string
-		),
+		processor : ( msg, match ) => classFactory( X32FaderUpdateName, [
+			match.matches[0],
+			match.matches[1],
+			msg.args[0]?.value // name, string
+		] ),
 	},
 
 	'dcaNode' : {
 		matcher   : () => '/dca/*',
-		processor : ( msg, match ) => new X32FaderUpdateMix(
+		processor : ( msg, match ) => classFactory( X32FaderUpdateMix, [
 			'dca',
-			match.matches[1] as string,
-			msg.args[0]!.value as 'ON' | 'OFF',
-			msg.args[1]!.value as string
-		),
+			match.matches[0],
+			msg.args[0]?.value, // mute, 'ON' or 'OFF'
+			msg.args[1]?.value  // level, in dB, no suffix.  e.g. '0.0'
+		] ),
 	},
 	'mixNode' : {
 		matcher   : ( scope ) => `/{${scope}}/*/mix`,
-		processor : ( msg, match ) => new X32FaderUpdateMix(
-			match.matches[0] as X32FaderScope,
-			match.matches[1] as string,
-			msg.args[0]!.value as 'ON' | 'OFF',
-			msg.args[1]!.value as string
-		),
+		processor : ( msg, match ) => classFactory( X32FaderUpdateMix, [
+			match.matches[0],
+			match.matches[1],
+			msg.args[0]?.value, // mute, 'ON' or 'OFF'
+			msg.args[1]?.value  // level, in dB, no suffix.  e.g. '0.0'
+		] ),
 	},
 	'nameNode' : {
 		matcher   : ( scope ) => `/{${scope}}/*/config`,
-		processor : ( msg, match ) => new X32FaderUpdateName(
-			match.matches[0] as X32FaderScope,
-			match.matches[1] as string,
-			msg.args[0]!.value as string
-		),
+		processor : ( msg, match ) => classFactory( X32FaderUpdateName, [
+			match.matches[0],
+			match.matches[1],
+			msg.args[0]?.value // name, string
+		] ),
 	},
 
 	'showDataNode' : {
 		matcher   : () => '/-show/showfile/{cue,scene,snippet}/*',
 		processor : ( msg, match ) => {
 			switch ( match.matches[0] as string ) {
-				case 'cue' : return new X32Cue(
-					match.matches[1] as string,
-					msg.args[0]!.value as number,
-					{
-						scene   : msg.args[3]!.value as number,
-						skip    : msg.args[2]!.value as number,
-						snippet : msg.args[4]!.value as number,
-						title   : msg.args[1]!.value as string,
-					}
-				)
-				case 'scene' : return new X32Scene(
-					match.matches[1] as string,
-					msg.args[0]!.value as string,
-					msg.args[1]!.value as string
-				)
-				case 'snippet' : return new X32Snippet(
-					match.matches[1] as string,
-					msg.args[0]!.value as string
-				)
-				default :
-					return null
+				case 'cue' : return classFactory( X32Cue, [
+					match.matches[1],
+					msg.args[0]?.value, // number
+					msg.args[1]?.value, // title
+					msg.args[2]?.value, // skip 0|1
+					msg.args[3]?.value, // scene or -1
+					msg.args[4]?.value  // snippet or -1
+				] )
+				case 'scene' : return classFactory( X32Scene, [
+					match.matches[1],
+					msg.args[0]?.value, // name
+					msg.args[1]?.value  // note
+				] )
+				default : return classFactory( X32Snippet, [
+					match.matches[1],
+					msg.args[0]?.value // name
+				] )
 			}
 		},
 	},
@@ -124,33 +150,33 @@ export const matchers : X32Matchers = {
 	'control' : {
 		matcher   : () => '/-prefs/show_control',
 		processor : ( msg ) => {
-			const arg = msg.args[0]!.value
+			const arg = msg.args[0]?.value
 
-			return new X32Info(
+			return classFactory( X32Info, [
 				'control',
-				typeof arg === 'number' ? X32ShowModes[arg as 0 | 1 | 2] :( arg as string )
-			)
+				typeof arg === 'number' ? X32ShowModes[arg as 0 | 1 | 2] : ( arg as string )
+			] )
 		},
 	},
 	'cueDirty' : {
 		matcher   : () => '/-show/showfile/{scene,snippet,cue}/*/name',
-		processor : () => new X32Info(
+		processor : ( _msg, match ) => classFactory( X32Info, [
 			'cueDirty',
-			null
-		),
+			match.matches[0]
+		] ),
 	},
 	'currentCue' : {
 		matcher   : () => '/-show/prepos/current',
-		processor : ( msg ) => new X32Info(
+		processor : ( msg ) => classFactory( X32Info, [
 			'currentCue',
-			msg.args[0]!.value as number
-		),
+			msg.args[0]?.value
+		] ),
 	},
 	'showName' : {
 		matcher   : () => '/-show/showfile/show',
-		processor : ( msg ) => new X32Info(
+		processor : ( msg ) => classFactory( X32Info, [
 			'showName',
-			msg.args[0]!.value as string
-		),
+			msg.args[0]?.value
+		] ),
 	},
 }

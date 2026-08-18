@@ -64,7 +64,7 @@ describe( 'data update classes operate as expected', () => {
 		} )
 		test( 'bad skip', () => {
 			// @ts-expect-error testing fun.
-			expect( () => new X32Cue( '001', '100', { skip : null } ) ).toThrow( X32Error )
+			expect( () => new X32Cue( '001', '100', 'hello', null ) ).toThrow( X32Error )
 		} )
 		test( 'empty', () => {
 			const x = new X32Cue( '001', '100' )
@@ -77,12 +77,8 @@ describe( 'data update classes operate as expected', () => {
 			expect( x.number ).toEqual( '1.0.0' )
 		} )
 		test( 'full', () => {
-			const x = new X32Cue( '021', '1234', {
-				scene   : '02',
-				skip    : '1',
-				snippet : 12,
-				title   : 'hello',
-			} )
+			// @ts-expect-error checking errors
+			const x = new X32Cue( '021', '1234', 'hello', '1', '02', 12 )
 			expect( x.index ).toEqual( 21 )
 			expect( x.zIndex ).toEqual( '021' )
 			expect( x.title ).toEqual( 'hello' )
@@ -92,12 +88,8 @@ describe( 'data update classes operate as expected', () => {
 			expect( x.number ).toEqual( '12.3.4' )
 		} )
 		test( 'full 2', () => {
-			const x = new X32Cue( '021', '1234', {
-				scene   : '02',
-				skip    : 1,
-				snippet : 12,
-				title   : 'hello',
-			} )
+			// @ts-expect-error checking errors
+			const x = new X32Cue( '021', '1234', 'hello', 1, '02', 12 )
 			expect( x.index ).toEqual( 21 )
 			expect( x.zIndex ).toEqual( '021' )
 			expect( x.title ).toEqual( 'hello' )

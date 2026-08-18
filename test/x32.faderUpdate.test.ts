@@ -50,6 +50,7 @@ describe( 'fader update classes operate as expected', () => {
 			const x = new X32FaderUpdate( 'main', 'm', 'name' )
 			expect( x.index ).toEqual( 2 )
 			expect( x.zIndex ).toEqual( '02' )
+			expect( x.scope ).toEqual( 'main' )
 		} )
 	} )
 	describe( 'mute class', () => {

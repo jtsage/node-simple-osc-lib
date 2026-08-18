@@ -190,7 +190,7 @@ const matchMessages = ( msg : OSCMessageInterface, pattern : string | RegExp ) :
 			.replaceAll( '*', '([^/]*)' )
 			.replaceAll( '\\', '\\\\' )
 
-		regExpCompiled = new RegExp( regExpPattern )
+		regExpCompiled = new RegExp( `^${regExpPattern}$` )
 	} else {
 		throw new OSCError( 'must supply a pattern' )
 	}

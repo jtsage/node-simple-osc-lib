@@ -138,6 +138,29 @@ describe( 'data read operate as expected', () => {
 		}
 	} )
 
+	test( 'dca mix', () => {
+		const engine = matchers.dcaNode
+		const node = makeNode( '/dca/2 OFF   -32.5' )
+		
+		const msg = converter( node, true )
+
+		const matcher = engine.matcher( scope )
+		expect( matcher ).toEqual( '/dca/*' )
+
+		const matches = msg.match( matcher )
+		expect( matches ).not.toBeNull()
+
+		if ( matches !== null ) {
+			const result = engine.processor( msg, matches[0] ) as X32FaderUpdateMix
+
+			expect( result ).toBeInstanceOf( X32FaderUpdateMix )
+			expect( result.index ).toEqual( 2 )
+			expect( result.scope ).toEqual( 'dca' )
+			expect( result.levelDb ).toEqual( '-32.5 dB' )
+			expect( result.onBool ).toEqual( false )
+		}
+	} )
+
 	test( 'node name', () => {
 		const engine = matchers.nameNode
 		const node = makeNode( '/bus/01/config "StgMon" 63 YEi' )
@@ -246,7 +269,7 @@ describe( 'data read operate as expected', () => {
 
 			expect( result ).toBeInstanceOf( X32Info )
 			expect( result.type ).toEqual( 'cueDirty' )
-			expect( result.value ).toEqual( null )
+			expect( result.value ).toEqual( 'snippet' )
 		}
 	} )
 

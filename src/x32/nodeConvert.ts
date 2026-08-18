@@ -7,9 +7,9 @@
  *     | |                                                 
  *     |_|   X32 Node Message Converter */
 
-import { OSCMessage } from '../message'
+import { OSCMessage }                               from '../message'
 import { OSCArguments, OSCMessageInterfaceMessage } from '../types'
-import { X32Error } from './types'
+import { X32Error }                                 from './types'
 
 export const converter = ( msg : OSCMessageInterfaceMessage, failHard = false ) : OSCMessageInterfaceMessage => {
 	if ( msg.type.address !== 'node' ) {

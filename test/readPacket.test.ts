@@ -117,8 +117,9 @@ test( 'pass on missing comma (non-strict)', () => {
 	const decoded = OSCMessage.fromBuffer( input )
 	// @ts-expect-error testing fun.
 	expect( decoded.type.address ).toEqual( '/hello' )
-	expect( decoded.args[0]!.value ).toEqual( 'hi' )
-	expect( decoded.args[1]!.value ).toEqual( 'there' )
+	expect( decoded.args ).toHaveLength( 2 )
+	expect( decoded.args[0].value ).toEqual( 'hi' )
+	expect( decoded.args[1].value ).toEqual( 'there' )
 } )
 
 test( 'fail on missing comma (strict)', () => {

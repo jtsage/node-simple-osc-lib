@@ -299,13 +299,6 @@ export class X32FaderUpdateMix extends X32FaderUpdate {
 	}
 }
 
-type X32CueArgs = {
-	scene   ? : number | string
-	skip    ? : boolean | string | number
-	snippet ? : number | string
-	title   ? : string
-}
-
 export class X32Snippet extends X32Data {
 	title : string
 
@@ -343,14 +336,12 @@ export class X32Cue extends X32Snippet {
 	snippet : number
 
 	constructor(
-		index  : number | string,
-		number : number | string,
-		{
-			scene   = -1,
-			skip    = false,
-			snippet = -1,
-			title   = '',
-		} : Partial<X32CueArgs> = {}
+		index   : number | string,
+		number  : number | string,
+		title   : string  = '',
+		skip    : boolean = false,
+		scene   : number  = -1,
+		snippet : number = -1
 	) {
 		const strNumber = typeof number === 'string' ? number : String( number )
 		if ( ! strNumber.match( /^\d{3,4}$/ ) ) {

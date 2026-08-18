@@ -7,29 +7,46 @@
  *     | |                                                 
  *     |_|   X32 Processor */
 
-import { OSCMessage } from '../message'
-import { matchers } from './data'
-import { converter } from './nodeConvert'
+import { OSCMessage }              from '../message'
+import { matchers, X32ValidMatchers }                from './data'
+import { converter }               from './nodeConvert'
 import { X32DataRecord, X32Error } from './types'
 
+/**
+ * X32 Processing Class
+ */
 export class X32Processor {
-	#useTests : string[] = []
+	#useTests : X32ValidMatchers[] = []
 	#scope    : string   = 'auxin,bus,mtx,ch,main,dca,fxrtn'
 	failHard  : boolean  = false
 
-	constructor( faderScope : string[] | null, useTests : string[] | null = null, failHard = false ) {
+	/**
+	 * Create a reusable class to process X32 messages
+	 * 
+	 * scope is one or more of 'auxin', 'bus', 'mtx', 'ch', 'main', 'dca', 'fxrtn'
+	 * useTest is one or more of 'faderReg', 'muteReg', 
+	 * @param faderScope - scope of faders to match for, array of strings, null for all
+	 * @param useTests - name of tests to use, null for all
+	 * @param failHard - fail with an thrown error, otherwise return null
+	 */
+	constructor( faderScope : string[] | null = null, useTests : string[] | null = null, failHard = false ) {
 		this.failHard = failHard
 		if ( Array.isArray( faderScope ) ) {
 			this.#scope = faderScope.join( ',' )
 		}
 		if ( ! Array.isArray( useTests ) ) {
-			this.#useTests = Object.keys( matchers )
+			this.#useTests = Object.keys( matchers ) as X32ValidMatchers[]
+		} else {
+			this.#useTests = useTests as X32ValidMatchers[]
 		}
 	}
 
 	process( msg : OSCMessage ) {
 		if ( !msg.isSingle() ) {
-			throw new Error( 'the X32 does not send bundles' )
+			if ( this.failHard ) {
+				throw new X32Error( 'the X32 does not send bundles' )
+			}
+			return null
 		}
 
 		let processMsg = msg
@@ -42,10 +59,7 @@ export class X32Processor {
 			const testItem = matchers[testKey]
 
 			if ( typeof testItem === 'undefined' ) {
-				if ( this.failHard ) {
-					throw new X32Error( 'invalid test specified' )
-				}
-				continue
+				throw new X32Error( 'invalid test specified' )
 			}
 
 			const matcherString = testItem.matcher( this.#scope )
@@ -57,6 +71,7 @@ export class X32Processor {
 
 			return testItem.processor( processMsg, msgMatches[0] )
 		}
+		return null
 	}
 
 	batch( msgBatch : OSCMessage[] ) : X32DataRecord[] {

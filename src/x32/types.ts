@@ -11,7 +11,7 @@ import { OSCError } from '../types'
 
 export const X32ShowModes = ['CUES', 'SCENES', 'SNIPPETS'] as const
 
-const X32FaderScopes = [
+export const X32FaderScopes = [
 	'auxin',
 	'bus',
 	'mtx',

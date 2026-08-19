@@ -9,10 +9,7 @@
 /// <reference types="node" />
 /// <reference types="jest" />
 
-import * as help from './helpers'
-import { encodeBuffer } from '../src/encode'
-import { decodeBuffer } from '../src/decode'
-import { OSCDecodeError, OSCEncodeError, OSCMidi } from '../src/types'
+import { OSCTypeMidi, OSCTypeError, OSCDecodeError, OSCType, OSCMidiArray } from '../src/type'
 
 const makeMidiBuffer = ( p : number, s : number, d1 : number, d2 : number ) => {
 	const buffer = Buffer.alloc( 4 )
@@ -47,60 +44,48 @@ describe( 'type :: MIDI', () => {
 		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		] )( 'Test with $value ($humanName)', ( {humanName, value} ) => {
 			// @ts-expect-error checking errors.
-			expect( () => encodeBuffer( { type : 'midi', value : value }, help.regularMode ) ).toThrow( OSCEncodeError )
+			expect( () => new OSCTypeMidi( value ) ).toThrow( OSCTypeError )
 		} )
 
 		test.each( [
 			[[255, 250, 127, 127], 4],
 			[[0, 130, 0, 127], 4],
 		] )( 'Test expected length %s -> %i', ( a, b ) => {
-			expect( encodeBuffer( { type : 'midi', value : a as OSCMidi }, help.regularMode ).buffer.length ).toEqual( b )
+			expect(
+				( new OSCTypeMidi( a as OSCMidiArray ) )
+					.buffer
+					.length
+			).toEqual( b )
 		} )
 
-		test( 'bad port byte', () => {
-			const input : OSCMidi = [-1, 130, 100, 50]
-			expect( () => encodeBuffer( { type : 'midi', value : input }, help.regularMode ).buffer.length ).toThrow( 'midi byte 1 out of range' )
-		} )
+		test( 'from arg object', () => {
+			const output = OSCType.fromObject( { type : 'midi', value : [0, 130, 0, 127] } )
+			const expected = makeMidiBuffer( 0, 130, 0, 127 )
 
-		test( 'bad status byte', () => {
-			const input : OSCMidi = [1, 0, 100, 50]
-			expect( () => encodeBuffer( { type : 'midi', value : input }, help.regularMode ).buffer.length ).toThrow( 'midi byte 2 (status) out of range' )
+			expect( output.value ).toEqual( [0, 130, 0, 127] )
+			expect( output.bufLen ).toEqual( 4 )
+			expect( output.type ).toEqual( 'midi' )
+			expect( output.typeChar ).toEqual( 'm' )
+			expect( output.buffer ).toEqual( expected )
+			expect( output ).toBeInstanceOf( OSCTypeMidi )
 		} )
-
-		test( 'bad data 1 byte', () => {
-			const input : OSCMidi = [1, 128, 200, 50]
-			expect( () => encodeBuffer( { type : 'midi', value : input }, help.regularMode ).buffer.length ).toThrow( 'midi byte 3 (data) out of range' )
-		} )
-
-		test( 'bad data 2 byte', () => {
-			const input : OSCMidi = [1, 128, 20, 500]
-			expect( () => encodeBuffer( { type : 'midi', value : input }, help.regularMode ).buffer.length ).toThrow( 'midi byte 4 (data) out of range' )
-		} )
+		
 	} )
 	describe( 'decodeBufferChunk', () => {
 		test( 'good midi', () => {
-			const input    = makeMidiBuffer( 1, 130, 100, 50 )
-			const expected = help.getSimpleExpected( { type : 'midi', value : [1, 130, 100, 50] } )
-			expect( decodeBuffer( 'm', input, help.regularMode ) ).toEqual( expected )
+			const input  = makeMidiBuffer( 1, 130, 100, 50 )
+			const output = OSCTypeMidi.fromBuffer( input )
+			expect( output.value ).toEqual( [1, 130, 100, 50] )
 		} )
 
 		test( 'non-buffer', () => {
 			const input    = 'hello'
 			// @ts-expect-error checking errors.
-			expect( () => decodeBuffer( 'm', input, help.regularMode ) ).toThrow( OSCDecodeError )
+			expect( () => OSCTypeMidi.fromBuffer( input ) ).toThrow( OSCDecodeError )
 		} )
 		test( 'insufficiently padded buffer', () => {
 			const input    = Buffer.alloc( 3 )
-			expect( () => decodeBuffer( 'm', input, help.regularMode ) ).toThrow( OSCDecodeError )
-		} )
-		test( 'char pair (buffer leftover)', () => {
-			const input = Buffer.alloc( 4 )
-			input.write( 'bye', 4 )
-			const color = makeMidiBuffer( 1, 130, 100, 50 )
-			const expected = help.getSimpleExpected( { type : 'midi', value : [1, 130, 100, 50] }, false )
-			const result = decodeBuffer( 'm', Buffer.concat( [color, input] ), help.regularMode )
-			expect( result ).toEqual( expected )
-			expect( result.remain.length ).toEqual( 4 )
+			expect( () => OSCTypeMidi.fromBuffer( input ) ).toThrow( OSCDecodeError )
 		} )
 	} )
 } )

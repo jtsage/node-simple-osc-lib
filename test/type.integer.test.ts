@@ -9,10 +9,7 @@
 /// <reference types="node" />
 /// <reference types="jest" />
 
-import * as help from './helpers'
-import { encodeBuffer } from '../src/encode'
-import { decodeBuffer } from '../src/decode'
-import { OSCDecodeError, OSCEncodeError } from '../src/types'
+import { OSCTypeInteger, OSCTypeError, OSCDecodeError, OSCType } from '../src/type'
 
 const makeIntegerBuffer = ( value : number ) => {
 	const buffer = Buffer.alloc( 4 )
@@ -34,7 +31,7 @@ describe( 'type :: INTEGER', () => {
 		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		] )( 'Test with $value ($humanName)', ( {humanName, value} ) => {
 			// @ts-expect-error checking errors.
-			expect( () => encodeBuffer( { type : 'integer', value : value }, help.regularMode ) ).toThrow( OSCEncodeError )
+			expect( () => new OSCTypeInteger( value ) ).toThrow( OSCTypeError )
 		} )
 
 		test.each( [
@@ -43,42 +40,61 @@ describe( 'type :: INTEGER', () => {
 			[486, 4],
 			[135435345, 4],
 		] )( 'Test expected length %s -> %i', ( a, b ) => {
-			expect( encodeBuffer( { type : 'integer', value : a }, help.regularMode ).buffer.length ).toEqual( b )
+			expect(
+				( new OSCTypeInteger( b ) )
+					.buffer
+					.length
+			).toEqual( b )
+		} )
+
+		test( 'from arg object', () => {
+			const output = OSCType.fromObject( { type : 'integer', value : 75 } )
+			const expected = makeIntegerBuffer( 75 )
+
+			expect( output.value ).toEqual( 75 )
+			expect( output.bufLen ).toEqual( 4 )
+			expect( output.type ).toEqual( 'integer' )
+			expect( output.typeChar ).toEqual( 'i' )
+			expect( output.buffer ).toEqual( expected )
+			expect( output ).toBeInstanceOf( OSCTypeInteger )
+		} )
+
+		test( 'from value', () => {
+			const output = OSCType.fromValue( 75 )
+			const expected = makeIntegerBuffer( 75 )
+
+			expect( output.value ).toEqual( 75 )
+			expect( output.bufLen ).toEqual( 4 )
+			expect( output.type ).toEqual( 'integer' )
+			expect( output.typeChar ).toEqual( 'i' )
+			expect( output.buffer ).toEqual( expected )
+			expect( output ).toBeInstanceOf( OSCTypeInteger )
 		} )
 	} )
 	describe( 'decodeBufferChunk', () => {
 		test( 'zero integer', () => {
-			const input    = makeIntegerBuffer( 0 )
-			const expected = help.getSimpleExpected( { type : 'integer', value : 0 } )
-			expect( decodeBuffer( 'i', input, help.regularMode ) ).toEqual( expected )
+			const input  = makeIntegerBuffer( 0 )
+			const output = OSCTypeInteger.fromBuffer( input )
+			expect( output.value ).toEqual( 0 )
 		} )
 		test( 'good positive integer', () => {
 			const input    = makeIntegerBuffer( 53 )
-			const expected = help.getSimpleExpected( { type : 'integer', value : 53 } )
-			expect( decodeBuffer( 'i', input, help.regularMode ) ).toEqual( expected )
+			const output = OSCTypeInteger.fromBuffer( input )
+			expect( output.value ).toEqual( 53 )
 		} )
 		test( 'good negative integer', () => {
 			const input    = makeIntegerBuffer( -32 )
-			const expected = help.getSimpleExpected( { type : 'integer', value : -32 } )
-			expect( decodeBuffer( 'i', input, help.regularMode ) ).toEqual( expected )
+			const output = OSCTypeInteger.fromBuffer( input )
+			expect( output.value ).toEqual( -32 )
 		} )
 		test( 'non-buffer', () => {
 			const input    = 'hello'
 			// @ts-expect-error checking errors.
-			expect( () => decodeBuffer( 'i', input, help.regularMode ) ).toThrow( OSCDecodeError )
+			expect( () => OSCTypeInteger.fromBuffer( input ) ).toThrow( OSCDecodeError )
 		} )
 		test( 'insufficiently padded buffer', () => {
 			const input    = Buffer.alloc( 3 )
-			expect( () => decodeBuffer( 'i', input, help.regularMode ) ).toThrow( OSCDecodeError )
-		} )
-		test( 'integer pair (buffer leftover)', () => {
-			const input = Buffer.alloc( 8 )
-			input.writeInt32BE( 384 )
-			input.write( 'bye', 4 )
-			const expected = help.getSimpleExpected( { type : 'integer', value : 384 }, false )
-			const result = decodeBuffer( 'i', input, help.regularMode )
-			expect( result ).toEqual( expected )
-			expect( result.remain.length ).toEqual( 4 )
+			expect( () => OSCTypeInteger.fromBuffer( input ) ).toThrow( OSCDecodeError )
 		} )
 	} )
 } )

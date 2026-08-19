@@ -9,10 +9,7 @@
 /// <reference types="node" />
 /// <reference types="jest" />
 
-import * as help from './helpers'
-import { encodeBuffer } from '../src/encode'
-import { decodeBuffer } from '../src/decode'
-import { OSCDecodeError, OSCEncodeError } from '../src/types'
+import { OSCTypeFloat, OSCTypeError, OSCDecodeError, OSCType } from '../src/type'
 
 const makeFloatBuffer = ( value : number ) => {
 	const buffer = Buffer.alloc( 4 )
@@ -32,7 +29,7 @@ describe( 'type :: FLOAT', () => {
 		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		] )( 'Test with $value ($humanName)', ( {humanName, value} ) => {
 			// @ts-expect-error checking errors.
-			expect( () => encodeBuffer( { type : 'float', value : value }, help.regularMode ) ).toThrow( OSCEncodeError )
+			expect( () => new OSCTypeFloat( value ) ).toThrow( OSCTypeError )
 		} )
 
 		test.each( [
@@ -40,37 +37,56 @@ describe( 'type :: FLOAT', () => {
 			[486.0, 4],
 			[135435345e-8, 4],
 		] )( 'Test expected length %s -> %i', ( a, b ) => {
-			expect( encodeBuffer( { type : 'float', value : a }, help.regularMode ).buffer.length ).toEqual( b )
+			expect(
+				( new OSCTypeFloat( a ) )
+					.buffer
+					.length
+			).toEqual( b )
+		} )
+
+		test( 'from arg object', () => {
+			const output = OSCType.fromObject( { type : 'float', value : 365.25 } )
+			const expected = makeFloatBuffer( 365.25 )
+
+			expect( output.value ).toEqual( 365.25 )
+			expect( output.bufLen ).toEqual( 4 )
+			expect( output.type ).toEqual( 'float' )
+			expect( output.typeChar ).toEqual( 'f' )
+			expect( output.buffer ).toEqual( expected )
+			expect( output ).toBeInstanceOf( OSCTypeFloat )
+		} )
+
+		test( 'from value', () => {
+			const output = OSCType.fromValue( 365.25 )
+			const expected = makeFloatBuffer( 365.25 )
+
+			expect( output.value ).toEqual( 365.25 )
+			expect( output.bufLen ).toEqual( 4 )
+			expect( output.type ).toEqual( 'float' )
+			expect( output.typeChar ).toEqual( 'f' )
+			expect( output.buffer ).toEqual( expected )
+			expect( output ).toBeInstanceOf( OSCTypeFloat )
 		} )
 	} )
 	describe( 'decodeBufferChunk', () => {
 		test( 'good positive float', () => {
-			const input    = makeFloatBuffer( 53.865 )
-			const expected = help.getSimpleExpected( { type : 'float', value :  53.865 } )
-			expect( decodeBuffer( 'f', input, help.regularMode ).arg.value ).toBeCloseTo( expected.arg.value as number )
+			const input  = makeFloatBuffer( 53.865 )
+			const output = OSCTypeFloat.fromBuffer( input )
+			expect( output.value ).toBeCloseTo( 53.865 )
 		} )
 		test( 'good negative float', () => {
 			const input    = makeFloatBuffer( -3265.4 )
-			const expected = help.getSimpleExpected( { type : 'float', value :  -3265.4 } )
-			expect( decodeBuffer( 'f', input, help.regularMode ).arg.value ).toBeCloseTo( expected.arg.value as number )
+			const output = OSCTypeFloat.fromBuffer( input )
+			expect( output.value ).toBeCloseTo( -3265.4 )
 		} )
 		test( 'non-buffer', () => {
 			const input    = 'hello'
 			// @ts-expect-error checking errors.
-			expect( () => decodeBuffer( 'f', input, help.regularMode ) ).toThrow( OSCDecodeError )
+			expect( () => OSCTypeFloat.fromBuffer( input ) ).toThrow( OSCDecodeError )
 		} )
 		test( 'insufficiently padded buffer', () => {
 			const input    = Buffer.alloc( 3 )
-			expect( () => decodeBuffer( 'f', input, help.regularMode ) ).toThrow( OSCDecodeError )
-		} )
-		test( 'float pair (buffer leftover)', () => {
-			const input = Buffer.alloc( 8 )
-			input.writeFloatBE( 384.6 )
-			input.write( 'bye', 4 )
-			const expected = help.getSimpleExpected( { type : 'float', value : 384.6 }, false )
-			const result = decodeBuffer( 'f', input, help.regularMode )
-			expect( result.arg.value ).toBeCloseTo( expected.arg.value as number )
-			expect( result.remain.length ).toEqual( 4 )
+			expect( () => OSCTypeFloat.fromBuffer( input ) ).toThrow( OSCDecodeError )
 		} )
 	} )
 } )

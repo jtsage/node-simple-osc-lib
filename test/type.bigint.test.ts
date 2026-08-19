@@ -10,10 +10,7 @@
 /// <reference types="node" />
 /// <reference types="jest" />
 
-import * as help from './helpers'
-import { encodeBuffer } from '../src/encode'
-import { decodeBuffer } from '../src/decode'
-import { OSCDecodeError, OSCEncodeError } from '../src/types'
+import { OSCTypeBigInt, OSCTypeError, OSCDecodeError, OSCType } from '../src/type'
 
 const makeBigIntegerBuffer = (value : bigint) => {
 	const buffer = Buffer.alloc(8)
@@ -22,9 +19,8 @@ const makeBigIntegerBuffer = (value : bigint) => {
 }
 
 describe('type :: BIGINT', () => {
-	describe('encodeBufferChunk', () => {
+	describe('new Class', () => {
 		test.each([
-			//['name', 'value', 'Passes non-strict']
 			{ humanName : 'string', value : 'hello'},
 			{ humanName : 'float', value : 69.69 },
 			{ humanName : 'integer', value : 69 },
@@ -33,9 +29,9 @@ describe('type :: BIGINT', () => {
 			{ humanName : 'null', value : null},
 			{ humanName : 'buffer', value : Buffer.alloc(4)},
 		// eslint-disable-next-line @typescript-eslint/no-unused-vars
-		])('Test with $value ($humanName)', ({humanName, value}) => {
+		])( 'Test with $value ($humanName)', ({humanName, value}) => {
 			// @ts-expect-error Testing errors.
-			expect(() => encodeBuffer( { type : 'bigint', value : value }, help.regularMode)).toThrow(OSCEncodeError)
+			expect(() => new OSCTypeBigInt( value ) ).toThrow(OSCTypeError)
 		})
 
 		test.each([
@@ -43,41 +39,61 @@ describe('type :: BIGINT', () => {
 			[BigInt(486), 8],
 			[BigInt(9007199254740991), 8],
 		])('Test expected length %s -> %i', (a, b) => {
-			expect(encodeBuffer( { type : 'bigint', value : a }, help.regularMode).buffer.length).toEqual(b)
+			expect(
+				( new OSCTypeBigInt( a ) )
+					.buffer
+					.length
+			).toEqual(b)
+		})
+
+		test('from arg object', () => {
+			const output = OSCType.fromObject( { type : 'bigint', value : BigInt(66) } )
+			const expected = makeBigIntegerBuffer(BigInt(66))
+
+			expect( output.value ).toEqual( BigInt(66) )
+			expect( output.bufLen ).toEqual( 8 )
+			expect( output.type ).toEqual( 'bigint' )
+			expect( output.typeChar ).toEqual( 'h' )
+			expect( output.buffer ).toEqual( expected )
+			expect( output ).toBeInstanceOf( OSCTypeBigInt )
+		})
+
+		test('from value', () => {
+			const output = OSCType.fromValue( BigInt(66) )
+			const expected = makeBigIntegerBuffer(BigInt(66))
+
+			expect( output.value ).toEqual( BigInt(66) )
+			expect( output.bufLen ).toEqual( 8 )
+			expect( output.type ).toEqual( 'bigint' )
+			expect( output.typeChar ).toEqual( 'h' )
+			expect( output.buffer ).toEqual( expected )
+			expect( output ).toBeInstanceOf( OSCTypeBigInt )
 		})
 	})
 	describe('decodeBufferChunk', () => {
 		test('good positive integer', () => {
 			const input    = makeBigIntegerBuffer(BigInt(53))
-			const expected = help.getSimpleExpected({ type : 'bigint', value : BigInt(53)})
-			expect(decodeBuffer('h', input, help.regularMode)).toEqual(expected)
+			const output   = OSCTypeBigInt.fromBuffer( input )
+
+			expect( output.value ).toEqual( BigInt(53) )
 		})
 
 		test('good negative integer', () => {
 			const input    = makeBigIntegerBuffer(BigInt(-9007199254740991))
-			const expected = help.getSimpleExpected({ type : 'bigint', value : BigInt(-9007199254740991)})
-			expect(decodeBuffer('h', input, help.regularMode)).toEqual(expected)
+			const output   = OSCTypeBigInt.fromBuffer( input )
+
+			expect( output.value ).toEqual( BigInt(-9007199254740991) )
 		})
 
 		test('non-buffer', () => {
 			const input    = 'hello'
 			// @ts-expect-error Testing errors.
-			expect(() => decodeBuffer('h', input, help.regularMode)).toThrow(OSCDecodeError)
+			expect(() => OSCTypeBigInt.fromBuffer( input ) ).toThrow(OSCDecodeError)
 		})
 
 		test('insufficiently padded buffer', () => {
 			const input    = Buffer.alloc(7)
-			expect(() => decodeBuffer('h', input, help.regularMode)).toThrow(OSCDecodeError)
-		})
-
-		test('bigint pair (buffer leftover)', () => {
-			const input = Buffer.alloc(12)
-			input.writeBigInt64BE(BigInt(384))
-			input.write('bye', 8)
-			const expected = help.getSimpleExpected({ type : 'bigint', value : BigInt(384) }, false )
-			const result = decodeBuffer('h', input, help.regularMode)
-			expect(result).toEqual(expected)
-			expect(result.remain.length).toEqual(4)
+			expect( () => OSCTypeBigInt.fromBuffer( input ) ).toThrow(OSCDecodeError)
 		})
 	})
 })

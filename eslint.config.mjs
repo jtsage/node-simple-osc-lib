@@ -47,6 +47,21 @@ export default defineConfig( [
 				},
 			}],
 
+			'@stylistic/curly-newline' : ['error', {
+				'ArrowFunctionExpression' : { 'multiline' : true },
+				'ClassBody'               : 'always',
+				'ForInStatement'          : 'always',
+				'ForOfStatement'          : { 'multiline' : true },
+				'ForStatement'            : 'always',
+				'FunctionDeclaration'     : { 'multiline' : true },
+				'FunctionExpression'      : { 'multiline' : true },
+				'IfStatementAlternative'  : 'always',
+				'IfStatementConsequent'   : 'always',
+				'SwitchCase'              : { 'multiline' : true },
+				'SwitchStatement'         : 'always',
+				'WhileStatement'          : { 'multiline' : true, 'minElements' : 3, 'consistent' : true },
+			}],
+
 			'@stylistic/comma-dangle' : [
 				'error',
 				{
@@ -81,6 +96,7 @@ export default defineConfig( [
 						{ blankLine : 'always', prev : '*', next : 'method' },
 					],
 				},
+				{ exceptAfterSingleLine : true }
 			],
 			'@stylistic/no-trailing-spaces' : [
 				'error',
@@ -133,10 +149,9 @@ export default defineConfig( [
 			
 			'@stylistic/array-bracket-spacing'          : ['error', 'never'],
 			'@stylistic/arrow-parens'                   : 'error',
-			'@stylistic/brace-style'                    : 'error',
+			'@stylistic/brace-style'                    : ['error', '1tbs', { 'allowSingleLine' : true }],
 			'@stylistic/comma-spacing'                  : 'error',
 			'@stylistic/computed-property-spacing'      : ['error', 'never'],
-			'@stylistic/curly-newline'                  : ['error', 'always'],
 			'@stylistic/function-call-argument-newline' : ['error', 'consistent'],
 			'@stylistic/function-call-spacing'          : 'error',
 			'@stylistic/keyword-spacing'                : 'error',

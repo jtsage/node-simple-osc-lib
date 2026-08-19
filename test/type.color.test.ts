@@ -9,10 +9,7 @@
 /// <reference types="node" />
 /// <reference types="jest" />
 
-import * as help from './helpers'
-import { encodeBuffer } from '../src/encode'
-import { decodeBuffer } from '../src/decode'
-import { OSCColor, OSCDecodeError, OSCEncodeError } from '../src/types'
+import { OSCTypeColor, OSCTypeError, OSCType, OSCDecodeError, OSCColorArray } from '../src/type'
 
 const makeColorBuffer = ( r : number, g : number, b : number, a : number ) => {
 	const buffer = Buffer.alloc( 4 )
@@ -37,43 +34,53 @@ describe( 'type :: COLOR', () => {
 			{ humanName : 'non numeric array', value : ['a', 'b', 'c', 'd']},
 			{ humanName : 'out-of-bounds array (high)', value : [365, 0, 0, 0]},
 			{ humanName : 'out-of-bounds array (low)', value : [-2, 0, 0, 0]},
+			{ humanName : 'out-of-bounds array (non-int)', value : [12.4, 0, 0, 0]},
 			{ humanName : 'null', value : null},
 		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		] )( 'Test with $value ($humanName)', ( {humanName, value} ) => {
 			// @ts-expect-error checking errors.
-			expect( () => encodeBuffer( { type : 'color', value : value }, help.regularMode ) ).toThrow( OSCEncodeError )
+			expect( () => new OSCTypeColor( value ) ).toThrow( OSCTypeError )
 		} )
 
 		test.each( [
 			[[255, 255, 255, 255], 4],
 			[[0, 0, 0, 255], 4],
 		] )( 'Test expected length %s -> %i', ( a, b ) => {
-			expect( encodeBuffer( { type : 'color', value : a as OSCColor }, help.regularMode ).buffer.length ).toEqual( b )
+			expect(
+				( new OSCTypeColor( a as OSCColorArray ) )
+					.buffer
+					.length
+			).toEqual( b )
+		} )
+
+		test( 'from arg object', () => {
+			const color : OSCColorArray = [23, 45, 250, 0]
+			const output = OSCType.fromObject( { type : 'color', value : color } )
+			const expected = makeColorBuffer( ...color )
+
+			expect( output.value ).toEqual( color )
+			expect( output.bufLen ).toEqual( 4 )
+			expect( output.type ).toEqual( 'color' )
+			expect( output.typeChar ).toEqual( 'r' )
+			expect( output.buffer ).toEqual( expected )
+			expect( output ).toBeInstanceOf( OSCTypeColor )
 		} )
 	} )
 	describe( 'decodeBufferChunk', () => {
 		test( 'good color', () => {
-			const input    = makeColorBuffer( 255, 125, 100, 255 )
-			const expected = help.getSimpleExpected( { type : 'color', value : [255, 125, 100, 255] } )
-			expect( decodeBuffer( 'r', input, help.regularMode ) ).toEqual( expected )
+			const input  = makeColorBuffer( 255, 125, 100, 255 )
+			const output = OSCTypeColor.fromBuffer( input )
+
+			expect( output.value ).toEqual( [255, 125, 100, 255] )
 		} )
 		test( 'non-buffer', () => {
 			const input    = 'hello'
 			// @ts-expect-error checking errors.
-			expect( () => decodeBuffer( 'r', input, help.regularMode ) ).toThrow( OSCDecodeError )
+			expect( () => OSCTypeColor.fromBuffer( input ) ).toThrow( OSCDecodeError )
 		} )
 		test( 'insufficiently padded buffer', () => {
 			const input    = Buffer.alloc( 3 )
-			expect( () => decodeBuffer( 'r', input, help.regularMode ) ).toThrow( OSCDecodeError )
-		} )
-		test( 'char pair (buffer leftover)', () => {
-			const input = Buffer.alloc( 4 )
-			input.write( 'bye', 4 )
-			const color = makeColorBuffer( 255, 125, 100, 255 )
-			const expected = help.getSimpleExpected( { type : 'color', value : [255, 125, 100, 255] }, false )
-			const result = decodeBuffer( 'r', Buffer.concat( [color, input] ), help.regularMode )
-			expect( result ).toEqual( expected )
-			expect( result.remain.length ).toEqual( 4 )
+			expect( () => OSCTypeColor.fromBuffer( input ) ).toThrow( OSCDecodeError )
 		} )
 	} )
 } )

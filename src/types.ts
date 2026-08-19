@@ -154,23 +154,17 @@ export type OSCMatchResult = {
 
 /** General OSC Error */
 export class OSCError extends Error {
-	constructor( message : string, opts ? : ErrorOptions ) {
-		super( message, opts )
-	}
+	constructor( message : string, opts ? : ErrorOptions ) { super( message, opts ) }
 }
 
 /** Error encountered when trying to encode buffer data */
 export class OSCDecodeError extends TypeError {
-	constructor( message : string, opts ? : ErrorOptions ) {
-		super( message, opts )
-	}
+	constructor( message : string, opts ? : ErrorOptions ) { super( message, opts ) }
 }
 
 /** Error encountered when trying to decode buffer data */
 export class OSCEncodeError extends TypeError {
-	constructor( message : string, opts ? : ErrorOptions ) {
-		super( message, opts )
-	}
+	constructor( message : string, opts ? : ErrorOptions ) { super( message, opts ) }
 }
 
 /** Options for OSC Operations */

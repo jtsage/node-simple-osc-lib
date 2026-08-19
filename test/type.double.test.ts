@@ -9,10 +9,7 @@
 /// <reference types="node" />
 /// <reference types="jest" />
 
-import * as help from './helpers'
-import { encodeBuffer } from '../src/encode'
-import { decodeBuffer } from '../src/decode'
-import { OSCDecodeError, OSCEncodeError } from '../src/types'
+import { OSCTypeDouble, OSCTypeError, OSCDecodeError, OSCType } from '../src/type'
 
 const makeDoubleBuffer = ( value : number ) => {
 	const buffer = Buffer.alloc( 8 )
@@ -31,45 +28,63 @@ describe( 'type :: DOUBLE', () => {
 		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		] )( 'Test with $value ($humanName)', ( {humanName, value} ) => {
 			// @ts-expect-error checking errors.
-			expect( () => encodeBuffer( { type : 'double', value : value }, help.regularMode ) ).toThrow( OSCEncodeError )
+			expect( () => new OSCTypeDouble( value ) ).toThrow( OSCTypeError )
 		} )
 
 		test.each( [
 			[12.6, 8],
 			[486.0, 8],
 			[135435345e-8, 8],
+			[Infinity, 8]
 		] )( 'Test expected length %s -> %i', ( a, b ) => {
-			expect( encodeBuffer( { type : 'double', value : a }, help.regularMode ).buffer.length ).toEqual( b )
+			expect(
+				( new OSCTypeDouble( a ) )
+					.buffer
+					.length
+			).toEqual( b )
+		} )
+
+		test( 'from arg object', () => {
+			const output = OSCType.fromObject( { type : 'double', value : 365.25 } )
+			const expected = makeDoubleBuffer( 365.25 )
+
+			expect( output.value ).toEqual( 365.25 )
+			expect( output.bufLen ).toEqual( 8 )
+			expect( output.type ).toEqual( 'double' )
+			expect( output.typeChar ).toEqual( 'd' )
+			expect( output.buffer ).toEqual( expected )
+			expect( output ).toBeInstanceOf( OSCTypeDouble )
 		} )
 	} )
 	describe( 'decodeBufferChunk', () => {
+		test( 'good zero', () => {
+			const input  = makeDoubleBuffer( 0 )
+			const output = OSCTypeDouble.fromBuffer( input )
+			expect( output.value ).toEqual( 0 )
+		} )
+		test( 'infinity', () => {
+			const input  = makeDoubleBuffer( Infinity )
+			const output = OSCTypeDouble.fromBuffer( input )
+			expect( output.value ).toEqual( Infinity )
+		} )
 		test( 'good positive double', () => {
-			const input    = makeDoubleBuffer( 53.865 )
-			const expected = help.getSimpleExpected( { type : 'double', value : 53.865 } )
-			expect( decodeBuffer( 'd', input, help.regularMode ) ).toEqual( expected )
+			const input  = makeDoubleBuffer( 53.865 )
+			const output = OSCTypeDouble.fromBuffer( input )
+			expect( output.value ).toEqual( 53.865 )
 		} )
 		test( 'good negative double', () => {
-			const input    = makeDoubleBuffer( -3265.4 )
-			const expected = help.getSimpleExpected( { type : 'double', value : -3265.4 } )
-			expect( decodeBuffer( 'd', input, help.regularMode ) ).toEqual( expected )
+			const input  = makeDoubleBuffer( -3265.4 )
+			const output = OSCTypeDouble.fromBuffer( input )
+			expect( output.value ).toEqual( -3265.4 )
 		} )
 		test( 'non-buffer', () => {
 			const input    = 'hello'
 			// @ts-expect-error checking errors.
-			expect( () => decodeBuffer( 'd', input, help.regularMode ) ).toThrow( OSCDecodeError )
+			expect( () => OSCTypeDouble.fromBuffer( input ) ).toThrow( OSCDecodeError )
 		} )
 		test( 'insufficiently padded buffer', () => {
 			const input    = Buffer.alloc( 7 )
-			expect( () => decodeBuffer( 'd', input, help.regularMode ) ).toThrow( OSCDecodeError )
-		} )
-		test( 'double pair (buffer leftover)', () => {
-			const input = Buffer.alloc( 12 )
-			input.writeDoubleBE( 384.6 )
-			input.write( 'bye', 8 )
-			const expected = help.getSimpleExpected( { type : 'double', value : 384.6 }, false )
-			const result = decodeBuffer( 'd', input, help.regularMode )
-			expect( result ).toEqual( expected )
-			expect( result.remain.length ).toEqual( 4 )
+			expect( () => OSCTypeDouble.fromBuffer( input ) ).toThrow( OSCDecodeError )
 		} )
 	} )
 } )

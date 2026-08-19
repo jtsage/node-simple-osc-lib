@@ -65,10 +65,12 @@ describe( 'type :: INTEGER', () => {
 
 			expect( output.value ).toEqual( 75 )
 			expect( output.bufLen ).toEqual( 4 )
+			expect( output.debug ).toEqual( '.i4.' )
 			expect( output.type ).toEqual( 'integer' )
 			expect( output.typeChar ).toEqual( 'i' )
 			expect( output.buffer ).toEqual( expected )
 			expect( output ).toBeInstanceOf( OSCTypeInteger )
+			expect( output.toJSON() ).toEqual( { type : 'integer', value : 75 } )
 		} )
 	} )
 	describe( 'decodeBufferChunk', () => {

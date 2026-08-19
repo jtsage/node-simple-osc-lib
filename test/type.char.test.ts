@@ -54,9 +54,11 @@ describe( 'type :: CHAR', () => {
 			expect( output.value ).toEqual( 'a' )
 			expect( output.bufLen ).toEqual( 4 )
 			expect( output.type ).toEqual( 'char' )
+			expect( output.debug ).toEqual( 'c::a' )
 			expect( output.typeChar ).toEqual( 'c' )
 			expect( output.buffer ).toEqual( expected )
 			expect( output ).toBeInstanceOf( OSCTypeChar )
+			expect( output.toJSON() ).toEqual( { type : 'char', value : 'a' } )
 		} )
 	} )
 	describe( 'decodeBufferChunk', () => {

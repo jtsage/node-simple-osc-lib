@@ -65,8 +65,10 @@ describe( 'type :: MIDI', () => {
 			expect( output.value ).toEqual( [0, 130, 0, 127] )
 			expect( output.bufLen ).toEqual( 4 )
 			expect( output.type ).toEqual( 'midi' )
+			expect( output.debug ).toEqual( '.m4.' )
 			expect( output.typeChar ).toEqual( 'm' )
 			expect( output.buffer ).toEqual( expected )
+			expect( output.toJSON() ).toEqual( { type : 'midi', value : [0, 130, 0, 127] } )
 			expect( output ).toBeInstanceOf( OSCTypeMidi )
 		} )
 		

@@ -1,4 +1,3 @@
-/* eslint-disable @stylistic/space-in-parens */
 /*      _                 _                                  _ _ _     
  *     (_)               | |                                | (_) |    
  *  ___ _ _ __ ___  _ __ | | ___ ______ ___  ___  ___ ______| |_| |__  
@@ -12,9 +11,9 @@
 
 import { OSCTypeBlob, OSCTypeError, OSCType } from '../src/type'
 
-describe('type :: BLOB', () => {
-	describe('encodeBufferChunk', () => {
-		test.each([
+describe( 'type :: BLOB', () => {
+	describe( 'encodeBufferChunk', () => {
+		test.each( [
 			//['name', 'value', 'Passes non-strict']
 			{ humanName : 'string', value : 'hello'},
 			{ humanName : 'number', value : 72},
@@ -24,28 +23,28 @@ describe('type :: BLOB', () => {
 			{ humanName : 'array', value : ['a', 'b']},
 			{ humanName : 'null', value : null},
 		// eslint-disable-next-line @typescript-eslint/no-unused-vars
-		])('Test with $value ($humanName)', ({humanName, value}) => {
+		] )( 'Test with $value ($humanName)', ( {humanName, value} ) => {
 			// @ts-expect-error checking errors.
-			expect(() =>  new OSCTypeBlob( value ) ).toThrow(OSCTypeError)
-		})
+			expect( () =>  new OSCTypeBlob( value ) ).toThrow( OSCTypeError )
+		} )
 
-		test.each([
+		test.each( [
 			// Buffer size to 4-byte, plus 4 for size field
-			[Buffer.from('b'), 8],
-			[Buffer.from('by'), 8],
-			[Buffer.from('bye'), 8],
-			[Buffer.from('head'), 12],
-			[Buffer.from('headless'), 16],
-		])('Test expected length %s -> %i', (a, b) => {
+			[Buffer.from( 'b' ), 8],
+			[Buffer.from( 'by' ), 8],
+			[Buffer.from( 'bye' ), 8],
+			[Buffer.from( 'head' ), 12],
+			[Buffer.from( 'headless' ), 16],
+		] )( 'Test expected length %s -> %i', ( a, b ) => {
 			expect(
 				( new OSCTypeBlob( a ) )
 					.buffer
 					.length
-			).toEqual(b)
-		})
+			).toEqual( b )
+		} )
 
-		test('from arg object', () => {
-			const input = Buffer.from('head')
+		test( 'from arg object', () => {
+			const input = Buffer.from( 'head' )
 			const output = OSCType.fromObject( { type : 'blob', value : input } )
 
 			expect( output.value ).toEqual( input )
@@ -53,17 +52,19 @@ describe('type :: BLOB', () => {
 			expect( output.type ).toEqual( 'blob' )
 			expect( output.typeChar ).toEqual( 'b' )
 			expect( output ).toBeInstanceOf( OSCTypeBlob )
-		})
+			expect( output.toJSON() ).toEqual( { type : 'blob', value : input } )
+		} )
 
-		test('from value', () => {
-			const input = Buffer.from('head')
+		test( 'from value', () => {
+			const input = Buffer.from( 'head' )
 			const output = OSCType.fromValue( input )
 
 			expect( output.value ).toEqual( input )
 			expect( output.bufLen ).toEqual( 4 )
+			expect( output.debug ).toEqual( '-b-4-' )
 			expect( output.type ).toEqual( 'blob' )
 			expect( output.typeChar ).toEqual( 'b' )
 			expect( output ).toBeInstanceOf( OSCTypeBlob )
-		})
-	})
-})
+		} )
+	} )
+} )

@@ -62,8 +62,10 @@ describe( 'type :: COLOR', () => {
 			expect( output.bufLen ).toEqual( 4 )
 			expect( output.type ).toEqual( 'color' )
 			expect( output.typeChar ).toEqual( 'r' )
+			expect( output.debug ).toEqual( '.r4.' )
 			expect( output.buffer ).toEqual( expected )
 			expect( output ).toBeInstanceOf( OSCTypeColor )
+			expect( output.toJSON() ).toEqual( { type : 'color', value : color } )
 		} )
 	} )
 	describe( 'decodeBufferChunk', () => {

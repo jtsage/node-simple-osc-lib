@@ -1,5 +1,7 @@
 
 
+const TWO_POW_32 = 4294967296
+const UNIX_EPOCH = 2208988800
 
 /** OSC Color - 4 element numeric array (0-255) (4-byte) */
 export type OSCColorArray   = [ number, number, number, number ]
@@ -9,6 +11,12 @@ export type OSCMidiArray    = [ number, number, number, number ]
 
 /** OSC Time Tag - 8 byte. */
 export type OSCTimeTagArray = [ number, number ]
+/** Time Tag Delta type - e.g. '+50' for 50ms in the future */
+export type OSCTimeTagDelta = `+${number}`
+/** List of types castable to OSCTimeTag by OSCTimeTag.fromValue */
+export type OSCTimeTagCastable = OSCTimeTagArray | OSCTimeTagDelta | number | Date | boolean | null | undefined
+
+
 
 /** Supported OSC arguments */
 export type OSCArgObject =
@@ -30,24 +38,40 @@ export type OSCArgObject =
 
 
 interface OSCTypeInterface {
+	buffer   : Buffer<ArrayBufferLike>
+	bufLen   : number
+	debug    : string
 	type     : string
 	typeChar : string
 	value    : unknown
-	buffer   : Buffer<ArrayBufferLike>
-	bufLen   : number
+	toJSON   : unknown
 }
 
 
 
+// MARK: OSCArg (parent class)
+export class OSCArg {
+	/* istanbul ignore next */
+	get type() : unknown { return null }
+	/* istanbul ignore next */
+	get value() : unknown { return null }
 
-class OSCArg {
+	
 	constructor() {
 		if ( new.target === OSCArg ) {
 			throw new OSCTypeError( 'Cannot instantiate OSCArg directly. It is for type checking only.' )
 		}
 	}
+
+	toJSON() {
+		return {
+			type  : this.type,
+			value : this.value,
+		}
+	}
 }
 
+// MARK: OSCType
 export class OSCType {
 	constructor() { throw new OSCTypeError( 'use fromObject or fromValue method' ) }
 
@@ -121,6 +145,7 @@ export class OSCType {
 }
 
 
+// MARK: OSCTypeBang
 /** Bang - 'bang', 'I', 0-byte null value */
 export class OSCTypeBang extends OSCArg implements OSCTypeInterface {
 	get bufLen()   { return 0 }
@@ -128,8 +153,10 @@ export class OSCTypeBang extends OSCArg implements OSCTypeInterface {
 	get type()     { return 'bang' }
 	get typeChar() { return 'I' }
 	get buffer()   { return Buffer.alloc( 0 ) }
+	get debug()    { return '' }
 }
 
+// MARK: OSCTypeBigInt
 /** Big Integer - 'bigint', 'h', 8-byte */
 export class OSCTypeBigInt extends OSCArg implements OSCTypeInterface {
 	#value ! : bigint
@@ -144,6 +171,7 @@ export class OSCTypeBigInt extends OSCArg implements OSCTypeInterface {
 	}
 
 	get bufLen()   { return 8 }
+	get debug()    { return '..h..8..'}
 	get value()    { return this.#value }
 	get type()     { return 'bigint' }
 	get typeChar() { return 'h' }
@@ -163,6 +191,7 @@ export class OSCTypeBigInt extends OSCArg implements OSCTypeInterface {
 	}
 }
 
+// MARK: OSCTypeBlob
 /** Blob (Buffer) - 'blob', 'b', variable-size (4-byte block) */
 export class OSCTypeBlob extends OSCArg implements OSCTypeInterface {
 	#value ! : Buffer<ArrayBufferLike>
@@ -178,6 +207,7 @@ export class OSCTypeBlob extends OSCArg implements OSCTypeInterface {
 
 	get bufLen()   { return this.#value.length }
 	get value()    { return this.#value }
+	get debug()    { return `-b-${this.bufLen}-`}
 	get type()     { return 'blob' }
 	get typeChar() { return 'b' }
 
@@ -193,6 +223,7 @@ export class OSCTypeBlob extends OSCArg implements OSCTypeInterface {
 	}
 }
 
+// MARK: OSCTypeChar
 /** Character - 'char', 'c', 4-byte */
 export class OSCTypeChar extends OSCArg implements OSCTypeInterface {
 	#value ! : string
@@ -208,6 +239,7 @@ export class OSCTypeChar extends OSCArg implements OSCTypeInterface {
 
 	get bufLen()   { return 4 }
 	get value()    { return this.#value }
+	get debug()    { return `c::${this.#value}`}
 	get type()     { return 'char' }
 	get typeChar() { return 'c' }
 
@@ -226,6 +258,7 @@ export class OSCTypeChar extends OSCArg implements OSCTypeInterface {
 	}
 }
 
+// MARK: OSCTypeColor
 /** Color - 'color', 'r', 4-byte, 4 element array [R,G,B,A] */
 export class OSCTypeColor extends OSCArg implements OSCTypeInterface {
 	#value ! : OSCColorArray
@@ -247,6 +280,7 @@ export class OSCTypeColor extends OSCArg implements OSCTypeInterface {
 	}
 
 	get bufLen()   { return 4 }
+	get debug()    { return '.r4.'}
 	get value()    { return this.#value }
 	get type()     { return 'color' }
 	get typeChar() { return 'r' }
@@ -274,6 +308,7 @@ export class OSCTypeColor extends OSCArg implements OSCTypeInterface {
 	}
 }
 
+// MARK: OSCTypeDouble
 /** Double - 'double', 'd', 8-byte, double-precision floating point */
 export class OSCTypeDouble extends OSCArg implements OSCTypeInterface {
 	#value ! : number
@@ -288,6 +323,7 @@ export class OSCTypeDouble extends OSCArg implements OSCTypeInterface {
 	}
 
 	get bufLen()   { return 8 }
+	get debug()    { return '..d..8..'}
 	get value()    { return this.#value }
 	get type()     { return 'double' }
 	get typeChar() { return 'd' }
@@ -307,15 +343,18 @@ export class OSCTypeDouble extends OSCArg implements OSCTypeInterface {
 	}
 }
 
+// MARK: OSCTypeFalse
 /** False - 'false', 'F', 0-byte null value */
 export class OSCTypeFalse extends OSCArg implements OSCTypeInterface {
 	get bufLen()   { return 0 }
+	get debug()    { return ''}
 	get value()    { return null }
 	get type()     { return 'false' }
 	get typeChar() { return 'F' }
 	get buffer()   { return Buffer.alloc( 0 ) }
 }
 
+// MARK: OSCTypeFloat
 /** Float - 'float', 'f', 4-byte */
 export class OSCTypeFloat extends OSCArg implements OSCTypeInterface {
 	#value ! : number
@@ -330,6 +369,7 @@ export class OSCTypeFloat extends OSCArg implements OSCTypeInterface {
 	}
 
 	get bufLen()   { return 4 }
+	get debug()    { return '.f4.'}
 	get value()    { return this.#value }
 	get type()     { return 'float' }
 	get typeChar() { return 'f' }
@@ -349,6 +389,7 @@ export class OSCTypeFloat extends OSCArg implements OSCTypeInterface {
 	}
 }
 
+// MARK: OSCTypeInteger
 /** Integer - 'integer', 'i', 4-byte */
 export class OSCTypeInteger extends OSCArg implements OSCTypeInterface {
 	#value ! : number
@@ -363,6 +404,7 @@ export class OSCTypeInteger extends OSCArg implements OSCTypeInterface {
 	}
 
 	get bufLen()   { return 4 }
+	get debug()    { return '.i4.'}
 	get value()    { return this.#value }
 	get type()     { return 'integer' }
 	get typeChar() { return 'i' }
@@ -382,6 +424,7 @@ export class OSCTypeInteger extends OSCArg implements OSCTypeInterface {
 	}
 }
 
+// MARK: OSCTypeMidi
 /** MIDI - 'midi', 'm', 4-byte, 4 element array */
 export class OSCTypeMidi extends OSCArg implements OSCTypeInterface {
 	#value ! : OSCMidiArray
@@ -416,6 +459,7 @@ export class OSCTypeMidi extends OSCArg implements OSCTypeInterface {
 	}
 
 	get bufLen()   { return 4 }
+	get debug()    { return '.m4.'}
 	get value()    { return this.#value }
 	get type()     { return 'midi' }
 	get typeChar() { return 'm' }
@@ -443,15 +487,18 @@ export class OSCTypeMidi extends OSCArg implements OSCTypeInterface {
 	}
 }
 
+// MARK: OSCTypeNull
 /** Null - 'null', 'N', 0-byte null value */
 export class OSCTypeNull extends OSCArg implements OSCTypeInterface {
 	get bufLen()   { return 0 }
+	get debug()    { return ''}
 	get value()    { return null }
 	get type()     { return 'null' }
 	get typeChar() { return 'N' }
 	get buffer()   { return Buffer.alloc( 0 ) }
 }
 
+// MARK: OSCTypeString
 /** String - 'string', 's', unknown, 4-byte block */
 export class OSCTypeString extends OSCArg implements OSCTypeInterface {
 	#value ! : string
@@ -471,6 +518,26 @@ export class OSCTypeString extends OSCArg implements OSCTypeInterface {
 			throw new OSCTypeError( 'strings must be ASCII only' )
 		}
 		this.#value = v
+	}
+
+	get debug() {
+		// eslint-disable-next-line no-control-regex
+		const x = this.#value.replaceAll( /[^\x00-\x7F]/gu, ( match ) => {
+			const thisLen = Buffer.byteLength( match )
+			return ''.padEnd( thisLen, '¿' )
+		} )
+		const parts = []
+		for ( let i = 0; i < Math.ceil( x.length / 4 ); i++ ) {
+			parts.push( x.slice( 4 * i, ( 4 * i ) + 4 ) )
+		}
+
+		const lastIdx = parts.length - 1
+		parts[lastIdx] = ( parts[lastIdx] || '' ).padEnd( 4, '\u2022' )
+		if ( parts[parts.length - 1]?.[3] !== '\u2022' ) {
+			parts.push( '\u2022\u2022\u2022\u2022' )
+		}
+
+		return parts.join( '\xA6' )
 	}
 
 	get bufLen()   { return Buffer.byteLength( this.#value ) }
@@ -495,21 +562,183 @@ export class OSCTypeString extends OSCArg implements OSCTypeInterface {
 	}
 }
 
+// MARK: OSCTypeSymbol
 /** Symbol - 'symbol', 'S', unknown 4-byte padded */
 export class OSCTypeSymbol extends OSCTypeString implements OSCTypeInterface {
 	get type()     { return 'symbol' }
 	get typeChar() { return 'S' }
+
+	static fromBuffer( b : Buffer<ArrayBufferLike> ) {
+		if ( !Buffer.isBuffer( b ) ) {
+			throw new OSCDecodeError( 'buffer expected' )
+		}
+		const v = b.toString( 'utf8' )
+		return new OSCTypeSymbol( v.replace( /\0+$/, '' ) )
+	}
 }
 
+// MARK: OSCTypeTrue
 /** True - 'true', 'T', 0-byte null value */
 export class OSCTypeTrue extends OSCArg implements OSCTypeInterface {
 	get bufLen()   { return 0 }
+	get debug()    { return ''}
 	get value()    { return null }
 	get type()     { return 'true' }
 	get typeChar() { return 'T' }
 	get buffer()   { return Buffer.alloc( 0 ) }
 }
 
+// MARK: OSCTimeTag
+/** TimeTag - 'timetag', 't', 8-byte time tag.  Not a member of OSCArg, this is a special value type */
+export class OSCTimeTag implements OSCTypeInterface {
+	#value ! : OSCTimeTagArray
+
+	constructor( v : OSCTimeTagArray ) { this.value  = v }
+
+	set value( v : OSCTimeTagArray ) {
+		if ( !Array.isArray( v ) || typeof v[0] !== 'number' || typeof v[1] !== 'number' ) {
+			throw new OSCTypeError( 'expected time tag array' )
+		}
+		this.#value = v
+	}
+
+	get bufLen()   { return 8 }
+	get debug()    { return '[t4][t4]'}
+	get value()    { return this.#value }
+	get type()     { return 'timetag' }
+	get typeChar() { return 't' }
+
+	toJSON() { return this.value }
+
+	get buffer() {
+		const buffer_out   = Buffer.alloc( 8 )
+
+		buffer_out.writeUInt32BE( this.#value[0] )
+		buffer_out.writeUInt32BE( this.#value[1], 4 )
+
+		return buffer_out
+	}
+
+	toISOString() { return this.asDate.toISOString() }
+
+	get asDate() {
+		const seconds    = this.#value[0] - UNIX_EPOCH
+		const fractional = parseFloat( this.#value[1].toString() ) / TWO_POW_32
+		const returnDate = new Date()
+	
+		returnDate.setTime( ( seconds * 1000 ) + ( fractional * 1000 ) )
+	
+		return returnDate
+	}
+
+	sinceNow( now ? : Date ) {
+		const nowTime = ( typeof now === 'undefined' || ! ( now instanceof Date ) ) ?
+			( new Date() ).getTime() :
+			now.getTime()
+
+		return nowTime - this.asDate.getTime()
+	}
+
+	static #timeTagFromSeconds( v : number ) : OSCTimeTagArray {
+		const unixSeconds = Math.floor( v )
+		const fracSeconds = v - unixSeconds
+		
+		return [
+			unixSeconds + UNIX_EPOCH,
+			Math.round( TWO_POW_32 * fracSeconds )
+		]
+	}
+
+	static fromValue( v ? : OSCTimeTagCastable ) {
+		if ( typeof v === 'undefined' || v === false || v === null ) {
+			return new OSCTimeTag( OSCTimeTag.#timeTagFromSeconds( ( ( new Date() ).getTime() ) / 1000 ) )
+		} else if ( v === true ) {
+			return new OSCTimeTag( [0, 1] )// do it right now!
+		} else if ( Array.isArray( v ) ) {
+			return new OSCTimeTag( v )
+		} else if ( v instanceof Date ) { // specific date supplied
+			return new OSCTimeTag( OSCTimeTag.#timeTagFromSeconds( v.getTime() / 1000 ) )
+		} else if ( typeof v === 'number' ) { // raw seconds supplied
+			return new OSCTimeTag( OSCTimeTag.#timeTagFromSeconds( v ) )
+		} else if ( typeof v === 'string' && v.startsWith( '+' ) ) { // delta
+			const num = parseInt( v.slice( 1 ) )
+			if ( num.toString() !== v.slice( 1 ) ) {
+				throw new OSCTypeError( `unable to compute delta from value ${v} - must be +[ms]` )
+			}
+			return new OSCTimeTag( OSCTimeTag.#timeTagFromSeconds( ( ( ( new Date() ).getTime() ) + num ) / 1000 ) )
+		}
+		throw new OSCTypeError( `unable to get timetag from supplied value ${v}` )
+	}
+	
+	static fromBuffer( b : Buffer<ArrayBufferLike> ) {
+		if ( !Buffer.isBuffer( b ) || b.length !== 8 ) {
+			throw new OSCDecodeError( 'buffer expected' )
+		}
+		const number1 = b.readUInt32BE()
+		const number2 = b.readUInt32BE( 4 )
+		
+		return new OSCTimeTag( [number1, number2] )
+	}
+}
+
+// MARK: OSCTypeAddress
+/** Address - 'address', 'a', unknown, 4-byte block */
+export class OSCAddress implements OSCTypeInterface {
+	#value ! : string
+
+	constructor( v : string ) { this.value  = v }
+
+	set value( v : string ) {
+		if ( typeof v !== 'string' || v === '' ) {
+			throw new OSCTypeError( 'expected string' )
+		}
+		if ( ! ( /^[\w!"$%&'()+-./:;<=>@^`|~]*$/ ).test( v ) ) {
+			throw new OSCTypeError( 'address has invalid characters' )
+		}
+		this.#value = v
+	}
+
+	get debug() {
+		const parts = []
+		for ( let i = 0; i < Math.ceil( this.#value.length / 4 ); i++ ) {
+			parts.push( this.#value.slice( 4 * i, ( 4 * i ) + 4 ) )
+		}
+
+		const lastIdx = parts.length - 1
+		parts[lastIdx] = ( parts[lastIdx] || '' ).padEnd( 4, '\u2022' )
+		if ( parts[parts.length - 1]?.[3] !== '\u2022' ) {
+			parts.push( '\u2022\u2022\u2022\u2022' )
+		}
+
+		return parts.join( '\xA6' )
+	}
+
+	get bufLen()   { return Buffer.byteLength( this.#value ) }
+	get value()    { return this.#value }
+	get type()     { return 'address' }
+	get typeChar() { return 'a' }
+
+	toJSON() { return this.#value }
+
+	get buffer() {
+		const strByteLength = this.bufLen
+		const bufferLength  = ( 4 - ( strByteLength % 4 ) ) + strByteLength
+		const buffer        = Buffer.alloc( bufferLength )
+		buffer.write( this.#value )
+		return buffer
+	}
+
+	static fromBuffer( b : Buffer<ArrayBufferLike> ) {
+		if ( !Buffer.isBuffer( b ) ) {
+			throw new OSCDecodeError( 'buffer expected' )
+		}
+		const v = b.toString( 'utf8' )
+
+		return new OSCAddress( v.replace( /\0+$/, '' ) )
+	}
+}
+
+// MARK: Error Classes
 /** Error encountered when trying to encode buffer data */
 export class OSCDecodeError extends TypeError {
 	constructor( message : string, opts ? : ErrorOptions ) { super( message, opts ) }

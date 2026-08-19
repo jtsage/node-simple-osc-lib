@@ -52,8 +52,10 @@ describe( 'type :: FLOAT', () => {
 			expect( output.bufLen ).toEqual( 4 )
 			expect( output.type ).toEqual( 'float' )
 			expect( output.typeChar ).toEqual( 'f' )
+			expect( output.debug ).toEqual( '.f4.' )
 			expect( output.buffer ).toEqual( expected )
 			expect( output ).toBeInstanceOf( OSCTypeFloat )
+			expect( output.toJSON() ).toEqual( { type : 'float', value : 365.25 } )
 		} )
 
 		test( 'from value', () => {

@@ -52,8 +52,10 @@ describe( 'type :: DOUBLE', () => {
 			expect( output.bufLen ).toEqual( 8 )
 			expect( output.type ).toEqual( 'double' )
 			expect( output.typeChar ).toEqual( 'd' )
+			expect( output.debug ).toEqual( '..d..8..' )
 			expect( output.buffer ).toEqual( expected )
 			expect( output ).toBeInstanceOf( OSCTypeDouble )
+			expect( output.toJSON() ).toEqual( { type : 'double', value : 365.25 } )
 		} )
 	} )
 	describe( 'decodeBufferChunk', () => {

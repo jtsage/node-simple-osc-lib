@@ -30,8 +30,10 @@ describe( 'argument-less types', () => {
 		expect( input.bufLen ).toEqual( 0 )
 		expect( input.buffer ).toHaveLength( 0 )
 		expect( input.type ).toEqual( 'true' )
+		expect( input.debug ).toEqual( '' )
 		expect( input.typeChar ).toEqual( 'T' )
 		expect( input.value ).toEqual( null )
+		expect( input.toJSON() ).toEqual( { type : 'true', value : null } )
 	} )
 
 	test( 'false from object', () => {
@@ -41,6 +43,7 @@ describe( 'argument-less types', () => {
 		expect( input.bufLen ).toEqual( 0 )
 		expect( input.buffer ).toHaveLength( 0 )
 		expect( input.type ).toEqual( 'false' )
+		expect( input.debug ).toEqual( '' )
 		expect( input.typeChar ).toEqual( 'F' )
 		expect( input.value ).toEqual( null )
 	} )
@@ -52,8 +55,10 @@ describe( 'argument-less types', () => {
 		expect( input.bufLen ).toEqual( 0 )
 		expect( input.buffer ).toHaveLength( 0 )
 		expect( input.type ).toEqual( 'false' )
+		expect( input.debug ).toEqual( '' )
 		expect( input.typeChar ).toEqual( 'F' )
 		expect( input.value ).toEqual( null )
+		expect( input.toJSON() ).toEqual( { type : 'false', value : null } )
 	} )
 
 	test( 'null from object', () => {
@@ -64,6 +69,7 @@ describe( 'argument-less types', () => {
 		expect( input.buffer ).toHaveLength( 0 )
 		expect( input.type ).toEqual( 'null' )
 		expect( input.typeChar ).toEqual( 'N' )
+		expect( input.debug ).toEqual( '' )
 		expect( input.value ).toEqual( null )
 	} )
 
@@ -74,8 +80,10 @@ describe( 'argument-less types', () => {
 		expect( input.bufLen ).toEqual( 0 )
 		expect( input.buffer ).toHaveLength( 0 )
 		expect( input.type ).toEqual( 'null' )
+		expect( input.debug ).toEqual( '' )
 		expect( input.typeChar ).toEqual( 'N' )
 		expect( input.value ).toEqual( null )
+		expect( input.toJSON() ).toEqual( { type : 'null', value : null } )
 	} )
 
 	test( 'bang from value', () => {
@@ -83,6 +91,7 @@ describe( 'argument-less types', () => {
 
 		expect( input ).toBeInstanceOf( OSCTypeBang )
 		expect( input.bufLen ).toEqual( 0 )
+		expect( input.debug ).toEqual( '' )
 		expect( input.buffer ).toHaveLength( 0 )
 		expect( input.type ).toEqual( 'bang' )
 		expect( input.typeChar ).toEqual( 'I' )
@@ -96,8 +105,10 @@ describe( 'argument-less types', () => {
 		expect( input.bufLen ).toEqual( 0 )
 		expect( input.buffer ).toHaveLength( 0 )
 		expect( input.type ).toEqual( 'bang' )
+		expect( input.debug ).toEqual( '' )
 		expect( input.typeChar ).toEqual( 'I' )
 		expect( input.value ).toEqual( null )
+		expect( input.toJSON() ).toEqual( { type : 'bang', value : null } )
 	} )
 } )
 

@@ -64,17 +64,20 @@ describe( 'type :: STRING', () => {
 			expect( output.bufLen ).toEqual( 5 )
 			expect( output.type ).toEqual( 'string' )
 			expect( output.typeChar ).toEqual( 's' )
+			expect( output.debug ).toEqual( 'hell¦o•••' )
+			expect( output.toJSON() ).toEqual( { type : 'string', value : 'hello' } )
 			expect( output.buffer ).toEqual( expected )
 			expect( output ).toBeInstanceOf( OSCTypeString )
 		} )
 
 		test( 'from arg object (sym)', () => {
-			const output = OSCType.fromObject( { type : 'symbol', value : 'hello' } )
-			const expected = stringBuffer( 8, 'hello' )
+			const output = OSCType.fromObject( { type : 'symbol', value : 'hell' } )
+			const expected = stringBuffer( 8, 'hell' )
 
-			expect( output.value ).toEqual( 'hello' )
-			expect( output.bufLen ).toEqual( 5 )
+			expect( output.value ).toEqual( 'hell' )
+			expect( output.bufLen ).toEqual( 4 )
 			expect( output.type ).toEqual( 'symbol' )
+			expect( output.debug ).toEqual( 'hell¦••••' )
 			expect( output.typeChar ).toEqual( 'S' )
 			expect( output.buffer ).toEqual( expected )
 			expect( output ).toBeInstanceOf( OSCTypeString )
@@ -122,14 +125,18 @@ describe( 'type :: STRING', () => {
 			expect( output.value ).toEqual( 'hello' )
 		} )
 		test( 'unicode string', () => {
+			// Yes, it's a 6 byte char. Length of 12, cause we can't end on a non-null
 			const input  = stringBuffer( 12, 'he❤️' )
 			const output = OSCTypeString.fromBuffer( input )
 			expect( output.value ).toEqual( 'he❤️' )
+			expect( output.debug ).toEqual( 'he¿¿¦¿¿¿¿¦••••' )
 		} )
 		test( 'non-buffer', () => {
 			const input  = 'hello'
 			// @ts-expect-error testing fun.
 			expect( () => OSCTypeString.fromBuffer( input ) ).toThrow( OSCDecodeError )
+			// @ts-expect-error testing fun.
+			expect( () => OSCTypeSymbol.fromBuffer( input ) ).toThrow( OSCDecodeError )
 		} )
 		test( 'empty string', () => {
 			const input  = stringBuffer( 4, '' )

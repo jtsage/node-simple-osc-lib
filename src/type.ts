@@ -65,7 +65,7 @@ export type OSCArgObject =
 	| { type : 'true';       value : null }
 
 /** OSCType[Type] Interface */
-interface OSCTypeInterface {
+export interface OSCTypeInterface {
 	buffer   : Buffer<ArrayBufferLike>
 	bufLen   : number
 	debug    : string

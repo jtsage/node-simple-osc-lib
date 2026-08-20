@@ -1,6 +1,6 @@
 {
-	// "entryPointStrategy": "expand",
-	// "entryPoints": ["src/*"],
-	"entryPoints": ["src/index.ts", "src/type.ts", "src/message.ts"],
+	"entryPointStrategy": "expand",
+	"entryPoints": ["src/*"],
+	// "entryPoints": ["src/index.ts"],//, "src/type.ts", "src/message.ts", "src/bundle.ts"],
 	"excludeInternal": true
 }

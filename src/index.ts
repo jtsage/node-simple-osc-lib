@@ -22,6 +22,12 @@ export class OSCPacket {
 		)
 	}
 
+	/**
+	 * Read a data packet to a OSC message or bundle
+	 * @param buffer_in - data buffer
+	 * @param strict - force checking for 4-byte blocking
+	 * @returns OSCMessage or OSCBundle
+	 */
 	static fromBuffer( buffer_in : Buffer<ArrayBufferLike>, strict = false ) {
 		if ( ! Buffer.isBuffer( buffer_in ) || buffer_in.length === 0 ) {
 			throw new OSCDecodeError( 'buffer expected' )

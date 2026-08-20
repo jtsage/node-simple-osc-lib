@@ -8,28 +8,21 @@ Here we implement the OSC 1.1 specification.  OSC is a transport-independent pro
 
 This package was heavily influenced by the [osc-min](https://github.com/russellmcc/node-osc-min) API
 
-## Differences from osc-min
-
-+ no support for the message translation stuff
-+ no support for parameter guessing in oscBuildMessage() or oscBuildBundle()
-+ added `c` and `r` data types
-+ zero-dependency package
-
 ## Input types
 
-+ `s` :: `string` - string value (String padded to 32 bit block with nulls)
-+ `f` :: `float` - numeric value (FloatBE - 32 bits)
-+ `d` :: `double` - numeric value (DoubleBE - 64 bits)
-+ `i` :: `integer` - numeric value (Int32BE - 32 bits)
 + `b` :: `blob` - node.js Buffer value (Buffer padded to 32 bit block with nulls)
-+ `T` :: `true` - no value (0 bits)
-+ `F` :: `false` - no value (0 bits)
-+ `N` :: `null` - no value (0 bits)
-+ `I` :: `bang` - no value (0 bits)
-+ `r` :: `color` - rgbA as an array [R(0-255),G,B,A] (4 x UInt8 - 32 bits)
 + `c` :: `char` - Character (Int32BE - 32 bits)
-+ `t` :: `timetag` - numeric value (pair of UInt32BE - 64 bits)
-+ `A` :: `address` - non-stander string value, with special processing to ensure a valid osc address string (String padded to 32 bit block with nulls)
++ `d` :: `double` - numeric value (DoubleBE - 64 bits)
++ `F` :: `false` - no value (0 bits)
++ `f` :: `float` - numeric value (FloatBE - 32 bits)
++ `h` :: `bigint` - big integer
++ `I` :: `bang` - no value (0 bits)
++ `i` :: `integer` - numeric value (Int32BE - 32 bits)
++ `m` :: `midi` - 4-byte midi array
++ `N` :: `null` - no value (0 bits)
++ `r` :: `color` - rgbA as an array [R(0-255),G,B,A] (4 x UInt8 - 32 bits)
++ `s` :: `string` - string value (String padded to 32 bit block with nulls)
++ `T` :: `true` - no value (0 bits)
 
 Note that `type` is always a string - i.e. `"true"` rather than `true`.
 
@@ -37,62 +30,49 @@ Note that `type` is always a string - i.e. `"true"` rather than `true`.
 
 ### Options
 
-+ __asciiOnly__ _false_ Prevent non-ASCII characters in strings
-+ __blockCharacter__ _"&#xA6;"_ Character to delineate 4-byte blocks in debug output (or '')
-+ __coerceStrings__ _false_ For string type, coerce input if non-string found.
-+ __debugCharacter__ _"&bull;"_, Character to replace nulls in debug output
-+ __preprocessor__ _\<function>_ osc-message processor
-+ __strictAddress__ _false_ Require leading slash (address is __always__ asciiOnly)
-+ __strictMode__ _false_ Use strict mode elsewhere
-
-```javascript
-const osc     = require('simple-osc-lib')
-
-const oscRegular = new osc.simpleOscLib( /* options */)
-```
+Packet, Message, and Bundles support a `strict` mode when reading `.fromBuffer()` that will fail on buffers that are not 4-byte padded. simple-osc-lib always creates strict packets.
 
 ### Build an OSC Single Message Buffer for sending
 
 ```javascript
-const buffer = oscRegular.buildMessage({
-    address : '/hello',
-    args    : [
+const buffer = new OSCMessage(
+    '/hello',
+    [
         { type : 'string', value : 'hi' },
-        { type : 'string', value : 'there' },
+        OSCType.fromValue( 'there' ),
     ],
-})
+)
 ```
 
 ### Build an OSC Bundle Buffer for sending
 
 ```javascript
-const oscMessage1 = { address : '/hello', args : [...] }
-const oscMessage2 = { address : '/goodbye', args : [...] }
+const oscMessage1 = new OSCMessage( '/hello' )
+const oscMessage2 = new OSCMessage( '/goodbye' )
 
 // Generate a timetag half a second into the future
 const timeTag = oscRegular.getTimeTagBufferFromDelta(0.5)
 
-const buffer = oscRegular.buildBundle({
-    timetag : timeTag,
-    elements : [oscMessage1, oscMessage2],
-})
+const bundle = new OSCBundle(
+    [ oscMessage1, oscMessage2],
+    '+50'
+)
 ```
 
 ### Decode an OSC Packet from receiving
 
 ```javascript
-const oscMessage = oscRegular.readPacket(buffer)
+const oscMessage = OSCPacket.fromBuffer(buffer)
 ```
 
 Single message
 
 ```javascript
 {
-    type    : osc-message,
-    address : /goodbye,
+    address : '/goodbye',
     args: [
-        { type : 'string', value : 'cruel' },
-        { type : 'string', value : 'world' }
+        OSCTypeString().value = 'cruel',
+        OSCTypeString().value = 'world',
     ]
 }
 ```
@@ -101,26 +81,8 @@ Bundle (note that bundles can be nested)
 
 ```javascript
 {
-    type     : 'osc-bundle',
-    timetag  : [ /* date Object */ ],
-    elements : [ /* zero or more osc-messages or osc-bundles */ ]
-}
-```
-
-## Return arguments
-
-The type list above gives the text representation of what will appear in the `type` field of the `osc-message`. Additionally, arrays will be nested as such
-
-```javascript
-{
-    type    : osc-message,
-    address : /goodbye,
-    args: [
-        { type : 'array',  value : [
-            { type : 'string', value : 'cruel' },
-            { type : 'string', value : 'world' },
-        ]},
-    ]
+    timetag  : OSCTimeTag.asDate, // Date object
+    messages : [ /* zero or more osc-messages or osc-bundles */ ]
 }
 ```
 
@@ -128,239 +90,12 @@ The type list above gives the text representation of what will appear in the `ty
 
 This package provides no pre-processing for timetags - they are returned as found, in all circumstances.  The OSC 1.1 spec does not clarify the proper handling of timetags in the past, as different implementations do different things with them. A timetag in the past may mean the bundle should be discarded, or it may mean it should be acted on immediately - this behavior is left to your preference. Please do not assume a received timetag refers to a future event.
 
-## Overriding default options
-
-Options are set when initializing the class - they can be accessed or changed at any time by accessing the `options` key.
-
-+ __asciiOnly__ - Limit strings to ASCII characters.
-+ __blockCharacter__ - Character to delineate 4-byte blocks in debug output (or '')
-+ __debugCharacter__ - Character to replace NULLs in debug output.
-+ __preprocessor__ - osc-message processor, take a single argument of an osc-message.  Only run on individual messages.
-+ __strictAddress__ - Use strict address mode (all string rules, must begin with slash).
-+ __strictMode__ - Use strict mode.
-
-By default, no strict mode options are enabled.
-
-The preprocessor can be used as a callback for each message received.  See section below for an example
-
-> "The code is more what you'd call 'guidelines' than actual rules."
-> _--– Barbossa, Pirates of the Caribbean_
-
-## Main Class
-## Return Classes
-
-## X32 Pre-Processing
-
-The X32 version of the oscMessage processor adds some additional data, found in the `props` key.
-
-Additionally the `wasProcessed` will be set true if the message was covered.
-
-The following example enables all current X32 extra processing - if you are only interesting in a subset you can set to only process what you care about.
-
-### Example
-
 ```javascript
-const osc     = require('simple-osc-lib')
-const osc_x32 = require('simple-osc-lib/x32') // X32 specific processing (optional)
-
-// 'all', or a single entry 'dca*', or an array of entries ['dca*', 'bus*', 'show*']
-// see source file for full listing
-const x32Pre = new osc_x32.x32PreProcessor('all')
-
-const oscRegular = new osc.simpleOscLib({
-    preprocessor : (msg) => x32Pre.readMessage(msg),
-})
-```
-
-### Standard OSC Messages by subtype
-
-+ __showCurrent__ :: /-show/prepos/current
-+ __showMode__ :: /-prefs/show_control
-+ __auxLevel__ :: /auxin/[##]/mix/fader
-+ __auxMute__ :: /auxin/[##]/mix/on
-+ __auxName__ :: /auxin/[##]/config/name
-+ __busLevel__ :: /bus/[##]/mix/fader
-+ __busMute__ :: /bus/[##]/mix/on
-+ __busName__ :: /bus/[##]/config/name
-+ __chanLevel__ :: /ch/[##]/mix/fader
-+ __chanMute__ :: /ch/[##]/mix/on
-+ __chanName__ :: /ch/[##]/config/name
-+ __dcaLevel__ :: /dca/[#]/fader
-+ __dcaMute__ :: /dca/[#]/on
-+ __dcaName__ :: /dca/[#]/config/name
-+ __mainLevel__ :: /main/st/mix/fader
-+ __mainMute__ :: /main/st/mix/on
-+ __mainName__ :: /main/st/config/name
-+ __monoLevel__ :: /main/m/mix/fader
-+ __monoMute__ :: /main/m/mix/on
-+ __monoName__ :: /main/m/config/name
-+ __mtxLevel__ :: /mtx/[##]/mix/fader
-+ __mtxMute__ :: /mtx/[##]/mix/on
-+ __mtxName__ :: /mtx/[##]/config/name
-+ __showCueDirty__ :: /-show/showfile/cue/[###]//
-+ __showSceneDirty__ :: /-show/showfile/scene/[###]/name
-+ __showSnippetDirty__ :: /-show/showfile/snippet/[###]/name
-
-### `node` OSC Messages by subtype
-
-+ __auxMix__ :: node /auxin/[##]/mix
-+ __auxName__ :: node /auxin/[##]/config
-+ __busMix__ :: node /bus/[##]/mix
-+ __busName__ :: node /bus/[##]/config
-+ __dcaMix__ :: node /dca/[#]
-+ __dcaName__ :: node /dca/[#]/config
-+ __chanMix__ :: node /ch/[##]/mix
-+ __chanName__ :: node /ch/[##]/config
-+ __mtxMix__ :: node /mtx/[##]/mix
-+ __mtxName__ :: node /mtx/[##]/config
-+ __mainMix__ :: node /main/st/mix
-+ __mainName__ :: node /main/st/config
-+ __monoMix__ :: node /main/m/mix
-+ __monoName__ :: node /main/m/config
-+ __showCurrent__ :: node /-show/prepos/current
-+ __showMode__ :: node /-prefs/show_control
-+ __showName__ :: node /-show/showfile/show
-+ __showCue__ :: node /-show/showfile/cue/[###]
-+ __showScene__ :: node /-show/showfile/scene/[###]
-+ __showSnippet__ :: node /-show/showfile/snippet/[###]
-
-## X32 Class
-
-### Example Post-Process - Faders
-
-These items will exist in the returned osc-message under the `props` key.  The `props.subtype` rule will be the name of the operation matched.
-
-```javascript
-const all = {
-    index   : 1, 
-    subtype : 'someLevel', // operation name
-    zIndex : '01', // fader text index, 1-8 for dca, 01-?? for all else
-}
-
-const someLevel = {
-    ...all,
-    level   : {
-        float : 0.75,
-        db    : '0 dB',
-    },
-}
-
-const someMute = {
-    ..all,
-    isOn    : {
-        bool : false,
-        int  : 0,
-        text : 'OFF',
-    }
-}
-
-const someName = {
-    ...all,
-    name : 'NAME',
-}
-
-const someMix = {
-    ...all,
-    ...someMute,
-    ...someLevel,
+if ( oscBundle.timeTag.sinceNow() < 100 ) {
+    // Less than 100ms ago.
+    // Positive values are "## milliseconds ago"
+    // Negative values are "## milliseconds in the future"
 }
 ```
 
-### Example Post-Process - Show Control
-
-These items will exist in the returned osc-message under the `props` key.  The `props.subtype` rule will be the name of the operation matched.
-
-```javascript
-
-const showMode = {
-    index   : 0,
-    name    : 'CUES',
-}
-
-const showCue = {
-    cueNumber  : '1.0.0',
-    cueScene   : -1,
-    cueSkip    : false,
-    cueSnippet : -1,
-    index      : 1,
-    name       : 'Cue Name',
-}
-
-const showScene = {
-    index      : 1,
-    name       : 'Scene Name',
-    note       : 'Scene Note',
-}
-
-const showSnippet = {
-    index      : 1,
-    name       : 'Snippet Name',
-},
-
-// showCueDirty, showSceneDirty and showSnippetDirty
-// all have empty properties.
-```
-
-## OSC Redirection
-
-You can use the `redirectMessage()` function to redirect OSC messages without processing the arguments.  This is particularly useful if you need to deal with unknown types.  By default, the original address is included as the first argument of type string
-
-```js
-const newBuffer = oscLib.redirectMessage(originalBuffer, '/newTown')
-```
-
-It also takes a callback - this example rewrites the first argument, an integer to be the square of that integer, and includes the original address as a second argument.  Any additional original arguments would be discarded.  Not included in this sample is error checking
-
-```js
-// square the first argument which is an integer, add the address to the end
-function redirectCallback (bufferNewAddress, bufferOldAddress, argList, argBuffer) {
-    // Arguments:
-    //  - bufferNewAddress is an 4-byte padded buffer from the address you provided
-    //                     with all of the usual error checking.
-    //
-    //  - bufferOldAddress is a 4-byte padded buffer from the original address.
-    //
-    //                     Note: this is re-encoded from text, so the usual error checking
-    //                     on the original address will take place.  If for some reason
-    //                     you need this to not occur, consider using the low-level
-    //                     functions directly.
-    //
-    //  - argList          is an Array of the original argument list.  It is not checked for
-    //                     array nesting errors *or* valid type definitions. The leading comma
-    //                     from the input buffer is stripped, but in strict mode a lack of that
-    //                     comma will throw an error.
-    //
-    //  - argBuffer        the original unaltered argument buffer. In practice, this is the 
-    //                     message packet minus `bufferOldAddress` and a 4-byte padded buffer from
-    //                     the original argument list.
-
-
-    // really, we should check that the first item of argList is "i", the integer
-    // type, and run catch blocks on both this decodeBufferChunk() and the
-    // below encodeBufferChunk()
-
-    const firstArgument = oscLib.decodeBufferChunk('i', argBuffer)
-
-
-    // return a valid OSC buffer.  simple-osc-lib does not look at this value
-    // during the redirectMessage process, so you could fail to return a buffer
-    // or return nothing at all.
-    //
-    // This function could potentially be used for out-of-band processing to read
-    // and act on message packets that simple-osc-lib doesn't understand, or you
-    // wish to handle yourself.
-
-    return Buffer.concat([
-        bufferNewAddress,
-        oscLib.encodeBufferChunk('s', ',is'),
-        oscLib.encodeBufferChunk('i', firstArgument.value * firstArgument.value),
-        bufferOldAddress
-    ])
-}
-
-const newBuffer = oscLib.redirectMessage(originalBuffer, '/newTown', redirectCallback)
-```
-
-This function could potentially be used for out-of-band processing to read and act on message packets that simple-osc-lib doesn't understand, or you wish to handle yourself - although it does do error checking on the original address. For help in handling the message completely on your own, you will need to look at `.decodeBufferChunk()` and `.encodeBufferChunk()`
-
-&copy; 2024 J.T.Sage - ISC License
+&copy; 2026 J.T.Sage - ISC License

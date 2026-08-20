@@ -9,8 +9,7 @@
 /// <reference types="node" />
 /// <reference types="jest" />
 
-import { OSCType, OSCMessage, OSCMessageArgs } from '../src'
-import { OSCTypeError } from '../src/type'
+import { OSCType, OSCMessage, OSCMessageArg, OSCTypeError } from '../src'
 
 const NULL = '\u0000'
 
@@ -30,6 +29,30 @@ describe( 'buildMessage Output', () => {
 		expect( oscMessage.buffer ).toEqual( expected )
 	} )
 
+	test( 'add an argument', () => {
+		const oscMessage = new OSCMessage(
+			'/hello'
+		)
+
+		oscMessage.args.push(
+			OSCType.fromValue( ']' ),
+			OSCType.fromValue( ']' ),
+			twoStrings[0],
+			{ type : 'string', value : 'there' }
+		)
+		// @ts-expect-error testing fun.
+		expect( () => oscMessage.args.push( 'hi' ) ).toThrow( 'unknown argument type' )
+		// @ts-expect-error testing fun.
+		expect( () => oscMessage.args.unshift( 'hi' ) ).toThrow( 'unknown argument type' )
+		oscMessage.args.unshift(
+			{ type : 'bang', value : null },
+			OSCType.fromValue( '[' ),
+			OSCType.fromValue( '[' )
+		)
+		const expected = Buffer.from( `/hello${NULL}${NULL},[[I]]ss${NULL}${NULL}${NULL}${NULL}hi${NULL}${NULL}there${NULL}${NULL}${NULL}` )
+		expect( oscMessage.buffer ).toEqual( expected )
+	} )
+
 	test( 'two strings', () => {
 		const oscMessage = new OSCMessage(
 			'/hello',
@@ -44,11 +67,11 @@ describe( 'buildMessage Output', () => {
 		const oscMessage = new OSCMessage(
 			'/hello',
 			[
-				[
-					[
-						OSCType.fromObject( { type : 'bang', value : null } )
-					],
-				],
+				OSCType.fromValue( '[' ),
+				OSCType.fromValue( '[' ),
+				OSCType.fromObject( { type : 'bang', value : null } ),
+				OSCType.fromValue( ']' ),
+				OSCType.fromValue( ']' ),
 				...twoStrings,
 			]
 		)
@@ -61,15 +84,27 @@ describe( 'buildMessage Output', () => {
 		const oscMessage = new OSCMessage(
 			'/hello',
 			[
-				[
-					OSCType.fromObject( { type : 'string', value : 'goodbye' } )
-				],
+				OSCType.fromValue( '[' ),
+				OSCType.fromObject( { type : 'string', value : 'goodbye' } ),
+				OSCType.fromValue( ']' ),
 				...twoStrings,
 			]
 		)
 
 		const expected = Buffer.from( `/hello${NULL}${NULL},[s]ss${NULL}${NULL}goodbye${NULL}hi${NULL}${NULL}there${NULL}${NULL}${NULL}` )
 		expect( oscMessage.buffer ).toEqual( expected )
+	} )
+
+	test( 'two strings with nested string (wrong, fail)', () => {
+		const oscMessage = new OSCMessage(
+			'/hello',
+			[
+				OSCType.fromObject( { type : 'string', value : 'goodbye' } ),
+				OSCType.fromValue( ']' ),
+				...twoStrings,
+			]
+		)
+		expect( () => oscMessage.buffer ).toThrow( OSCTypeError )
 	} )
 
 	test( 'two strings with nested garbage (fail)', () => {
@@ -143,7 +178,7 @@ describe( 'buildMessage Output', () => {
 			const thisBuild = new OSCMessage(
 				a,
 				[
-					{ type : c, value : b } as OSCMessageArgs
+					{ type : c, value : b } as OSCMessageArg
 				]
 			)
 
@@ -164,14 +199,14 @@ describe( 'buildMessage Output', () => {
 		const oscMessage = new OSCMessage(
 			'/hello',
 			[
-				[
-					OSCType.fromObject( { type : 'bang', value : null } )
-				],
+				OSCType.fromValue( '[' ),
+				OSCType.fromObject( { type : 'bang', value : null } ),
+				OSCType.fromValue( ']' ),
 				...twoStrings
 			]
 		)
 
-		const expected = '{"address":"/hello","elements":[[{"type":"bang","value":null}],{"type":"string","value":"hi"},{"type":"string","value":"there"}],"type":"message"}'
+		const expected = '{"address":"/hello","elements":[{"type":"arrayOpen","value":null},{"type":"bang","value":null},{"type":"arrayClose","value":null},{"type":"string","value":"hi"},{"type":"string","value":"there"}],"type":"message"}'
 		const debugString = '/hel¦lo••¦,[I]¦ss••¦hi••¦ther¦e•••' // cSpell:disable-line
 		expect( JSON.stringify( oscMessage ) ).toEqual( expected )
 		expect( oscMessage.debug ).toEqual( debugString )

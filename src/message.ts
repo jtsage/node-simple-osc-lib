@@ -10,22 +10,42 @@
 
 import * as type from './type'
 
-type OSCMessageArg = type.OSCArgument | type.OSCArgObject
-export type OSCMessageArgs = OSCMessageArg | OSCMessageArgs[]
+export type OSCMessageArg = type.OSCArgument | type.OSCArgObject
 
 export class OSCMessage {
 	#address ! : type.OSCAddress
-	#args      : type.OSCArguments[] = []
+	#args      : type.OSCArgument[] = new ArgStackArray()
 
-	constructor( address : string, args ? : OSCMessageArgs[]  ) {
+	// MARK: constructor
+	/**
+	 * Create an OSC Message
+	 * @param address - Address string, ascii only
+	 * @param args - array of OSCArguments, nesting accepted
+	 */
+	constructor( address : string, args ? : OSCMessageArg[]  ) {
 		this.address = address
 		if ( typeof args !== 'undefined' ) {
 			this.args = args
 		}
 	}
 
-	match( pattern : string | RegExp ) { return this.#address.match( pattern ) }
+	// MARK: match
+	/**
+	 * Match this message address against an OSC match pattern
+	 * @param pattern - Pattern to match, following the 1.0 spec, or a pre-compiled RegExp
+	 * @returns OSCMatchResult structure
+	 */
+	match( pattern : string | RegExp ) {
+		const result = this.#address.match( pattern )
+		return result === null ? null :
+			{
+				args : this.#args,
+				...result,
+			}
+	}
 
+	// MARK: toJSON
+	/** For JSON.stringify() */
 	toJSON() {
 		return {
 			address  : this.address,
@@ -34,6 +54,8 @@ export class OSCMessage {
 		}
 	}
 
+	// MARK: debug
+	/** Get a debug string of the buffer representation */
 	get debug() {
 		const strings = []
 
@@ -42,56 +64,57 @@ export class OSCMessage {
 		if ( this.#args.length !== 0 ) {
 			const result = this.#argBuffer( this.#args, true )
 			const argList = new type.OSCTypeString( `,${result.types.join( '' )}` )
-			strings.push( argList.debug, ...result.debugs )
+			strings.push( argList.debug, ...result.debugs.filter( ( i ) => i !== '' ) )
 		}
 
 		return strings.join( '\xA6' )
 	}
 
+	// MARK: argList
+	/** Get all arguments as a simple list */
+	get argList() {
+		return this.#args.filter( ( item ) => ! (
+			item instanceof type.OSCTypeArrayOpen ||
+			item instanceof type.OSCTypeArrayClose
+		) )
+	}
+
+	// MARK: args
+	/** OSC Message arguments */
 	get args() { return this.#args }
-	set args( v : OSCMessageArgs[] ) {
+	set args( v : OSCMessageArg[] ) {
 		this.#args.length = 0
 		if ( ! Array.isArray( v ) ) {
 			throw new type.OSCTypeError( 'argument array expected' )
 		}
-		this.#args = v.map( ( item ) => this.#addArg( item ) )
+		
+		( this.#args as OSCMessageArg[] ).push( ...v )
 	}
 
-	#addArg( v : OSCMessageArgs ) : type.OSCArguments {
-		if ( Array.isArray( v ) ) {
-			return v.map( ( item ) => this.#addArg( item ) )
-		} else if ( v instanceof type.OSCArg ) {
-			return v
-		} else if ( typeof v === 'object' && typeof v.type === 'string' && typeof v.value !== 'undefined' ) {
-			return type.OSCType.fromObject( v )
-		}
-
-		throw new type.OSCTypeError( 'unknown argument type' )
-	}
-
+	// MARK: address
+	/** String address for packet destination, ascii only */
 	set address( address : string ) { this.#address = new type.OSCAddress( address ) }
 	get address() { return this.#address.value }
 
-	#argBuffer( v : type.OSCArguments[], debug = false ) {
+	// MARK: #argBuffer
+	#argBuffer( v : type.OSCArgument[], debug = false ) {
 		const theseBuffers : Buffer<ArrayBuffer>[] = []
 		const theseTypes   : string[] = []
 		const theseDebugs  : string[] = []
 
+		const arrayOpenTags  = v.filter( ( item ) => item instanceof type.OSCTypeArrayOpen ).length
+		const arrayCloseTags = v.filter( ( item ) => item instanceof type.OSCTypeArrayClose ).length
+
+		if ( arrayCloseTags !== arrayOpenTags ) {
+			throw new type.OSCTypeError( 'incorrect array nesting' )
+		}
+
 		for ( const item of v ) {
-			if ( Array.isArray( item ) ) {
-				const result = this.#argBuffer( item )
-				if ( debug ) {
-					theseDebugs.push( ...result.debugs )
-				}
-				theseBuffers.push( ...result.buffers )
-				theseTypes.push( '[', ...result.types, ']' )
-			} else {
-				if ( debug ) {
-					theseDebugs.push( item.debug )
-				}
-				theseBuffers.push( item.buffer )
-				theseTypes.push( item.typeChar )
+			if ( debug ) {
+				theseDebugs.push( item.debug )
 			}
+			theseBuffers.push( item.buffer )
+			theseTypes.push( item.typeChar )
 		}
 
 		return {
@@ -101,6 +124,8 @@ export class OSCMessage {
 		}
 	}
 
+	// MARK: buffer
+	/** Buffer representation */
 	get buffer() {
 		const buffers = []
 
@@ -120,6 +145,8 @@ export class OSCMessage {
 		return first_null + ( 4 - ( first_null % 4 ) )
 	}
 
+	// MARK: fromBuffer
+	/** Create a new message from a buffer representation */
 	static fromBuffer( buffer_in : Buffer<ArrayBufferLike>, strict = false ) {
 		if ( ! Buffer.isBuffer( buffer_in ) || buffer_in.length === 0 ) {
 			throw new type.OSCDecodeError( 'buffer expected' )
@@ -136,7 +163,7 @@ export class OSCMessage {
 		const first_pos = this.#getFourByte( buffer_in )
 
 		if ( buffer_in.length < first_pos ) {
-			return new OSCMessage( buffer_in.toString( 'utf8' ) )
+			return new OSCMessage( buffer_in.toString( 'utf8' ).replace( /\0+$/, '' ) )
 		}
 
 		const address = type.OSCAddress.fromBuffer( buffer_in.subarray( 0, first_pos ) )
@@ -153,132 +180,170 @@ export class OSCMessage {
 
 		remain = remain.subarray( type_pos )
 
-		const argStack : ArgStack[] = []
-		const parentStack = []
-		let pid           = null
-		let stackHeight   = 0
+		const argStack : type.OSCArgument[] = []
 
-		for ( const [idx, typeChar] of [...types.value].entries() ) {
+		for ( const typeChar of types.value ) {
 			switch ( typeChar ) {
 				case ',' : continue
 				case '[' :
-					stackHeight++
-					argStack.push( { i : idx, p : pid } )
-					pid = idx
-					parentStack.push( idx )
+					argStack.push( new type.OSCTypeArrayOpen )
 					break
 				case ']' :
-					stackHeight--
-					if ( stackHeight < 0 ) {
-						throw new type.OSCDecodeError( 'array nesting mis-match' )
-					}
-					parentStack.pop()
-					if ( parentStack.length !== 0 ) {
-						pid = parentStack[parentStack.length - 1]
-					} else {
-						pid = null
-					}
+					argStack.push( new type.OSCTypeArrayClose )
 					break
 				case 'b' : { // 'blob',
 					const bufLength = type.OSCTypeInteger.fromBuffer( remain.subarray( 0, 4 ) )
 					remain = remain.subarray( 4 )
-					argStack.push( { i : idx, p : pid, v : new type.OSCTypeBlob( remain.subarray( 0, bufLength.value ) ) } )
+					argStack.push( new type.OSCTypeBlob( remain.subarray( 0, bufLength.value ) ) )
 					remain = remain.subarray( bufLength.value )
 					break
 				}
 				case 'c' : // 'char',
-					argStack.push( { i : idx, p : pid, v : type.OSCTypeChar.fromBuffer( remain.subarray( 0, 4 ) ) } )
+					argStack.push( type.OSCTypeChar.fromBuffer( remain.subarray( 0, 4 ) ) )
 					remain = remain.subarray( 4 )
 					break
 				case 'd' : // 'double',
-					argStack.push( { i : idx, p : pid, v : type.OSCTypeDouble.fromBuffer( remain.subarray( 0, 8 ) ) } )
+					argStack.push( type.OSCTypeDouble.fromBuffer( remain.subarray( 0, 8 ) ) )
 					remain = remain.subarray( 8 )
 					break
 				case 'F' : // 'false',
-					argStack.push( { i : idx, p : pid, v : new type.OSCTypeFalse() } )
+					argStack.push( new type.OSCTypeFalse() )
 					break
 				case 'f' : // 'float',
-					argStack.push( { i : idx, p : pid, v : type.OSCTypeFloat.fromBuffer( remain.subarray( 0, 4 ) ) } )
+					argStack.push( type.OSCTypeFloat.fromBuffer( remain.subarray( 0, 4 ) ) )
 					remain = remain.subarray( 4 )
 					break
 				case 'h' : // 'bigint',
-					argStack.push( { i : idx, p : pid, v : type.OSCTypeBigInt.fromBuffer( remain.subarray( 0, 8 ) ) } )
+					argStack.push( type.OSCTypeBigInt.fromBuffer( remain.subarray( 0, 8 ) ) )
 					remain = remain.subarray( 8 )
 					break
 				case 'I' : // 'bang',
-					argStack.push( { i : idx, p : pid, v : new type.OSCTypeBang() } )
+					argStack.push( new type.OSCTypeBang() )
 					break
 				case 'i' : // 'integer',
-					argStack.push( { i : idx, p : pid, v : type.OSCTypeInteger.fromBuffer( remain.subarray( 0, 4 ) ) } )
+					argStack.push( type.OSCTypeInteger.fromBuffer( remain.subarray( 0, 4 ) ) )
 					remain = remain.subarray( 4 )
 					break
 				case 'm' : // 'midi',
-					argStack.push( { i : idx, p : pid, v : type.OSCTypeMidi.fromBuffer( remain.subarray( 0, 4 ) ) } )
+					argStack.push( type.OSCTypeMidi.fromBuffer( remain.subarray( 0, 4 ) ) )
 					remain = remain.subarray( 4 )
 					break
 				case 'N' : // 'null',
-					argStack.push( { i : idx, p : pid, v : new type.OSCTypeNull() } )
+					argStack.push( new type.OSCTypeNull() )
 					break
 				case 'r' : // 'color',
-					argStack.push( { i : idx, p : pid, v : type.OSCTypeColor.fromBuffer( remain.subarray( 0, 4 ) ) } )
+					argStack.push( type.OSCTypeColor.fromBuffer( remain.subarray( 0, 4 ) ) )
 					remain = remain.subarray( 4 )
 					break
 				case 's' : {// 'string',
 					const str_pos = this.#getFourByte( remain )
-					argStack.push( { i : idx, p : pid, v : type.OSCTypeString.fromBuffer( remain.subarray( 0, str_pos ) ) } )
+					argStack.push( type.OSCTypeString.fromBuffer( remain.subarray( 0, str_pos ) ) )
 					remain = remain.subarray( str_pos )
 					break
 				}
 				case 'S' : { // 'symbol',
 					const str_pos = this.#getFourByte( remain )
-					argStack.push( { i : idx, p : pid, v : type.OSCTypeSymbol.fromBuffer( remain.subarray( 0, str_pos ) ) } )
+					argStack.push( type.OSCTypeSymbol.fromBuffer( remain.subarray( 0, str_pos ) ) )
 					remain = remain.subarray( str_pos )
 					break
 				}
 				case 'T' : // 'true',
-					argStack.push( { i : idx, p : pid, v : new type.OSCTypeTrue() } )
+					argStack.push( new type.OSCTypeTrue() )
 					break
 				default  :
 					throw new type.OSCDecodeError( 'unsupported type' )
 			}
 		}
 
-		if ( stackHeight > 0 ) {
-			throw new type.OSCDecodeError( 'array nesting mis-match' )
+		const arrayOpenTags  = argStack.filter( ( item ) => item instanceof type.OSCTypeArrayOpen ).length
+		const arrayCloseTags = argStack.filter( ( item ) => item instanceof type.OSCTypeArrayClose ).length
+
+		if ( arrayCloseTags !== arrayOpenTags ) {
+			throw new type.OSCDecodeError( 'incorrect array nesting' )
 		}
 
 		return new OSCMessage(
 			address.value,
-			OSCMessage.#stripStacker( argStack )
+			argStack
 		)
 	}
 
-	static #stripStacker( data : ArgStack[], topLevel = true ) : type.OSCArguments[] {
-		if ( topLevel === true ) {
-			for ( const item of data ) {
-				item.nodes = data
-					.filter( ( g ) => g.p === item.i )
-			}
-		}
+	// MARK: builder Functions
+	/**
+	 * Add an integer argument
+	 * @param v - any integer
+	 * @returns class instance, suitable for chaining
+	 */
+	i( v : number ) { this.#args.push( new type.OSCTypeInteger( v ) ); return this }
+	integer = this.i
+	
+	/**
+	 * Add a float argument
+	 * @param v - any float
+	 * @returns class instance, suitable for chaining
+	 */
+	f( v : number ) { this.#args.push( new type.OSCTypeFloat( v ) ); return this }
+	float = this.f
 
-		const thisArr : type.OSCArguments[] = []
-		for ( const item of data ) {
-			if ( topLevel === true && item.p !== null ) {
-				continue
-			}
-			if ( typeof item.nodes !== 'undefined' && item.nodes.length !== 0 ) {
-				thisArr.push( OSCMessage.#stripStacker( item.nodes, false ) )
-			} else if ( typeof item.v !== 'undefined' ) {
-				thisArr.push( item.v )
-			}
-		}
-		return thisArr
-	}
+	/**
+	 * Add a string argument
+	 * @param v - any string
+	 * @returns class instance, suitable for chaining
+	 */
+	s( v : string ) { this.#args.push( new type.OSCTypeString( v ) ); return this }
+	string = this.s
+	
+	/**
+	 * Add a blob (binary) argument
+	 * @param v - any buffer
+	 * @returns class instance, suitable for chaining
+	 */
+	b( v : Buffer ) { this.#args.push( new type.OSCTypeBlob( v ) ); return this }
+	blob = this.b
+
+	/**
+	 * Add an auto-typed value as an argument
+	 * 
+	 * Types supported:
+	 * - any string is set to type "string" except the single characters '['  and ']'
+	 * - integers are correctly identified.  12.0 is an integer
+	 * - floats with decimal values are correctly identified. 12.0 is an integer, 12.2 is a float
+	 * - true, false, null, and Infinity map to T,F,N, and I (bang)
+	 * - Symbols with a name are encoded as strings, type 'symbol'
+	 * - BigInts are correctly identified
+	 * - Buffers are encoded as blobs
+	 * @param v Any valid OSC type (almost)
+	 * @returns class instance, suitable for chaining
+	 */
+	any( v : type.OSCArgument['value'] ) { this.#args.push( type.OSCType.fromValue( v ) ); return this}
+
 }
 
-type ArgStack = {
-	i       : number,
-	p       : number | null | undefined,
-	v     ? : type.OSCArgument,
-	nodes ? : ArgStack[]
+// MARK: ArgStackArray
+class ArgStackArray extends Array {
+	push( ...args : OSCMessageArg[] ) {
+		for ( const v of args ) {
+			if ( v instanceof type.OSCArg ) {
+				super.push( v )
+			} else if ( typeof v === 'object' && typeof v.type === 'string' && typeof v.value !== 'undefined' ) {
+				super.push( type.OSCType.fromObject( v ) )
+			} else {
+				throw new type.OSCTypeError( 'unknown argument type' )
+			}
+		}
+		return this.length
+	}
+
+	unshift( ...args : OSCMessageArg[] ) {
+		for ( const v of args ) {
+			if ( v instanceof type.OSCArg ) {
+				super.unshift( v )
+			} else if ( typeof v === 'object' && typeof v.type === 'string' && typeof v.value !== 'undefined' ) {
+				super.unshift( type.OSCType.fromObject( v ) )
+			} else {
+				throw new type.OSCTypeError( 'unknown argument type' )
+			}
+		}
+		return this.length
+	}
 }

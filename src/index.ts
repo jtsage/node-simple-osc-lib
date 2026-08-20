@@ -8,5 +8,32 @@
  *     |_|   Simple OSC Communication Library */
 
 export { OSCType }    from './type'
-export { OSCMessage } from './message'
-export type { OSCMessageArgs } from './message'
+import { OSCMessage, OSCMessageArg } from './message'
+import { OSCBundle, OSCBundleMessage }  from './bundle'
+import { OSCDecodeError, OSCTimeTagCastable, OSCTypeError } from './type'
+
+export { OSCBundle, OSCMessage, OSCTypeError, OSCDecodeError }
+export type { OSCBundleMessage, OSCMessageArg, OSCTimeTagCastable }
+
+export class OSCPacket {
+	constructor() {
+		throw new OSCTypeError(
+			'using the OSCPacket constructor is forbidden, use OSCMessage or OSCBundle instead'
+		)
+	}
+
+	static fromBuffer( buffer_in : Buffer<ArrayBufferLike>, strict = false ) {
+		if ( ! Buffer.isBuffer( buffer_in ) || buffer_in.length === 0 ) {
+			throw new OSCDecodeError( 'buffer expected' )
+		}
+
+		if ( strict && buffer_in.length % 4 !== 0 ) {
+			throw new OSCDecodeError( 'buffer is not a 4-byte multiple' )
+		}
+		
+		if ( buffer_in.subarray( 0, 7 ).toString( 'utf8' ) === '#bundle' ) {
+			return OSCBundle.fromBuffer( buffer_in )
+		}
+		return OSCMessage.fromBuffer( buffer_in )
+	}
+}

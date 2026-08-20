@@ -42,6 +42,7 @@ describe( 'type :: TIMETAG', () => {
 			{ input : 956626230.125, output : [3165615030, 536870912] },
 			{ input : [3165615030, 536870912] as OSCTimeTagArray, output : [3165615030, 536870912] },
 			{ input : true, output : [0, 1] },
+			{ input : OSCTimeTag.fromValue( true ), output : [0, 1]}
 		] )( 'get value $output from $input', ( {input, output} ) => {
 			expect(
 				( OSCTimeTag.fromValue( input ) )

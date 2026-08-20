@@ -4,9 +4,15 @@ const TWO_POW_32 = 4294967296
 const UNIX_EPOCH = 2208988800
 
 /** Result of OSC Address match */
-export type OSCMatchResult = {
+export type OSCAddressMatchResult = {
 	address : string,
 	matches : string[]
+} | null
+
+export type OSCMatchResult = {
+	address : string,
+	matches : string[],
+	args    : OSCArgument[]
 } | null
 
 /** OSC Color - 4 element numeric array (0-255) (4-byte) */
@@ -18,9 +24,11 @@ export type OSCTimeTagArray = [ number, number ]
 /** Time Tag Delta type - e.g. '+50' for 50ms in the future */
 export type OSCTimeTagDelta = `+${number}`
 /** List of types castable to OSCTimeTag by OSCTimeTag.fromValue */
-export type OSCTimeTagCastable = OSCTimeTagArray | OSCTimeTagDelta | number | Date | boolean | null | undefined
+export type OSCTimeTagCastable = OSCTimeTag | OSCTimeTagArray | OSCTimeTagDelta | number | Date | boolean | null | undefined
 
 export type OSCArgument =
+	| OSCTypeArrayClose
+	| OSCTypeArrayOpen
 	| OSCTypeBang
 	| OSCTypeBigInt
 	| OSCTypeBlob
@@ -36,25 +44,25 @@ export type OSCArgument =
 	| OSCTypeSymbol
 	| OSCTypeTrue
 
-export type OSCArguments = OSCArgument | OSCArguments[]
-
 /** Supported OSC arguments */
 export type OSCArgObject =
 	// | { type : 'array';    value : OSCTypeInterface[] }
-	| { type : 'bang';     value : null }
-	| { type : 'bigint';   value : bigint }
-	| { type : 'blob';     value : Buffer }
-	| { type : 'char';     value : string }
-	| { type : 'color';    value : OSCColorArray }
-	| { type : 'double';   value : number }
-	| { type : 'false';    value : null }
-	| { type : 'float';    value : number }
-	| { type : 'integer';  value : number }
-	| { type : 'midi';     value : OSCMidiArray }
-	| { type : 'null';     value : null }
-	| { type : 'string';   value : string }
-	| { type : 'symbol';   value : string }
-	| { type : 'true';     value : null }
+	| { type : 'arrayOpen';  value : null }
+	| { type : 'arrayClose'; value : null }
+	| { type : 'bang';       value : null }
+	| { type : 'bigint';     value : bigint }
+	| { type : 'blob';       value : Buffer }
+	| { type : 'char';       value : string }
+	| { type : 'color';      value : OSCColorArray }
+	| { type : 'double';     value : number }
+	| { type : 'false';      value : null }
+	| { type : 'float';      value : number }
+	| { type : 'integer';    value : number }
+	| { type : 'midi';       value : OSCMidiArray }
+	| { type : 'null';       value : null }
+	| { type : 'string';     value : string }
+	| { type : 'symbol';     value : string }
+	| { type : 'true';       value : null }
 
 /** OSCType[Type] Interface */
 interface OSCTypeInterface {
@@ -106,20 +114,22 @@ export class OSCType {
 			throw new OSCTypeError( 'incorrect object type' )
 		}
 		switch ( v.type ) {
-			case 'bang'    : return new OSCTypeBang()
-			case 'bigint'  : return new OSCTypeBigInt( v.value )
-			case 'blob'    : return new OSCTypeBlob( v.value )
-			case 'char'    : return new OSCTypeChar( v.value )
-			case 'color'   : return new OSCTypeColor( v.value )
-			case 'double'  : return new OSCTypeDouble( v.value )
-			case 'false'   : return new OSCTypeFalse()
-			case 'float'   : return new OSCTypeFloat( v.value )
-			case 'integer' : return new OSCTypeInteger( v.value )
-			case 'midi'    : return new OSCTypeMidi( v.value )
-			case 'null'    : return new OSCTypeNull()
-			case 'string'  : return new OSCTypeString( v.value )
-			case 'symbol'  : return new OSCTypeSymbol( v.value )
-			case 'true'    : return new OSCTypeTrue()
+			case 'arrayOpen'  : return new OSCTypeArrayOpen()
+			case 'arrayClose' : return new OSCTypeArrayClose()
+			case 'bang'       : return new OSCTypeBang()
+			case 'bigint'     : return new OSCTypeBigInt( v.value )
+			case 'blob'       : return new OSCTypeBlob( v.value )
+			case 'char'       : return new OSCTypeChar( v.value )
+			case 'color'      : return new OSCTypeColor( v.value )
+			case 'double'     : return new OSCTypeDouble( v.value )
+			case 'false'      : return new OSCTypeFalse()
+			case 'float'      : return new OSCTypeFloat( v.value )
+			case 'integer'    : return new OSCTypeInteger( v.value )
+			case 'midi'       : return new OSCTypeMidi( v.value )
+			case 'null'       : return new OSCTypeNull()
+			case 'string'     : return new OSCTypeString( v.value )
+			case 'symbol'     : return new OSCTypeSymbol( v.value )
+			case 'true'       : return new OSCTypeTrue()
 			default :
 				throw new OSCTypeError( 'incorrect object type' )
 		}
@@ -146,19 +156,23 @@ export class OSCType {
 			return new OSCTypeBigInt( v )
 		}
 			
-		if ( typeof v === 'number' && ( v === Number.POSITIVE_INFINITY || v === Number.NEGATIVE_INFINITY || v === Infinity ) ) {
-			return new OSCTypeBang()
-		}
-		
-		if ( typeof v === 'number' && Number.isInteger( v ) ) {
-			return new OSCTypeInteger( v )
-		}
-		
 		if ( typeof v === 'number' ) {
+			if ( v === Number.POSITIVE_INFINITY || v === Number.NEGATIVE_INFINITY || v === Infinity ) {
+				return new OSCTypeBang()
+			}
+			if ( Number.isInteger( v ) ) {
+				return new OSCTypeInteger( v )
+			}
 			return new OSCTypeFloat( v )
 		}
 
 		if ( typeof v === 'string' ) {
+			if ( v === '[' ) {
+				return new OSCTypeArrayOpen()
+			}
+			if ( v === ']' ) {
+				return new OSCTypeArrayClose()
+			}
 			return new OSCTypeString( v )
 		}
 		
@@ -170,6 +184,28 @@ export class OSCType {
 	}
 }
 
+
+// MARK: OSCTypeArrayOpen
+/** Array Open - 'arrayOpen', '[', 0-byte null value */
+export class OSCTypeArrayOpen extends OSCArg implements OSCTypeInterface {
+	get bufLen()   { return 0 }
+	get debug()    { return ''}
+	get value()    { return null }
+	get type()     { return 'arrayOpen' }
+	get typeChar() { return '[' }
+	get buffer()   { return Buffer.alloc( 0 ) }
+}
+
+// MARK: OSCTypeArrayClose
+/** Array Close - 'arrayClose', '[', 0-byte null value */
+export class OSCTypeArrayClose extends OSCArg implements OSCTypeInterface {
+	get bufLen()   { return 0 }
+	get debug()    { return ''}
+	get value()    { return null }
+	get type()     { return 'arrayClose' }
+	get typeChar() { return ']' }
+	get buffer()   { return Buffer.alloc( 0 ) }
+}
 
 // MARK: OSCTypeBang
 /** Bang - 'bang', 'I', 0-byte null value */
@@ -686,6 +722,8 @@ export class OSCTimeTag implements OSCTypeInterface {
 			return new OSCTimeTag( [0, 1] )// do it right now!
 		} else if ( Array.isArray( v ) ) {
 			return new OSCTimeTag( v )
+		} else if ( v instanceof OSCTimeTag ) {
+			return v
 		} else if ( v instanceof Date ) { // specific date supplied
 			return new OSCTimeTag( OSCTimeTag.#timeTagFromSeconds( v.getTime() / 1000 ) )
 		} else if ( typeof v === 'number' ) { // raw seconds supplied
@@ -702,7 +740,7 @@ export class OSCTimeTag implements OSCTypeInterface {
 	
 	static fromBuffer( b : Buffer<ArrayBufferLike> ) {
 		if ( !Buffer.isBuffer( b ) || b.length !== 8 ) {
-			throw new OSCDecodeError( 'buffer expected' )
+			throw new OSCDecodeError( '8-byte buffer expected' )
 		}
 		const number1 = b.readUInt32BE()
 		const number2 = b.readUInt32BE( 4 )
@@ -767,7 +805,7 @@ export class OSCAddress implements OSCTypeInterface {
 		return new OSCAddress( v.replace( /\0+$/, '' ) )
 	}
 
-	match( pattern : string | RegExp ) : OSCMatchResult {
+	match( pattern : string | RegExp ) : OSCAddressMatchResult {
 		let regExpCompiled : RegExp
 		
 		if ( pattern instanceof RegExp ) {

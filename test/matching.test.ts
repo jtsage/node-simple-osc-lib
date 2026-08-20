@@ -9,8 +9,7 @@
 /// <reference types="node" />
 /// <reference types="jest" />
 
-import { OSCMessage } from '../src'
-import { OSCTypeError } from '../src/type'
+import { OSCBundle, OSCMessage, OSCType, OSCTypeError } from '../src'
 
 const testData = [
 	{
@@ -74,37 +73,39 @@ describe( 'pattern matching', () => {
 		
 	} )
 
-	// test( 'Match bundle', () => {
-	// 	const cues = [
-	// 		oscLib.newMessage( '/-show/showfile/snippet/010/name' ),
-	// 		oscLib.newMessage( '/-show/showfile/scene/099/name' ),
-	// 		oscLib.newMessage( '/-show/showfile/cue/008/name' ),
-	// 	]
+	test( 'Match bundle', () => {
+		const cues = [
+			new OSCMessage( '/-show/showfile/snippet/010/name' ),
+			new OSCMessage( '/-show/showfile/scene/099/name' ),
+			new OSCMessage( '/-show/showfile/cue/008/name', [OSCType.fromValue( 'test' )] ),
+		]
 
-	// 	const cueBundle = oscLib.newBundle( cues, false )
+		const cueBundle = new OSCBundle( cues, false )
+		const results = cueBundle.match( '/-show/showfile/{scene,snippet,cue}/*/name' )
 
-	// 	expect( cueBundle.match( '/-show/showfile/{scene,snippet,cue}/*/name' ) ).toHaveLength( 3 )
-	// } )
+		expect( results ).toHaveLength( 3 )
+		expect( results[2]?.args ).toEqual( [OSCType.fromValue( 'test' )] )
+	} )
 
-	// test( 'Match bundle of bundles', () => {
-	// 	const stMsgs = [
-	// 		oscLib.newMessage( '/main/st/mix/fader' ),
-	// 		oscLib.newMessage( '/main/st/mix/on' ),
-	// 		oscLib.newMessage( '/main/st/config/name' ),
-	// 	]
-	// 	const mMsgs = [
-	// 		oscLib.newMessage( '/main/m/mix/on' ),
-	// 		oscLib.newMessage( '/main/m/config/name' ),
-	// 	]
+	test( 'Match bundle of bundles', () => {
+		const stMsgs = [
+			new OSCMessage( '/main/st/mix/fader' ),
+			new OSCMessage( '/main/st/mix/on' ),
+			new OSCMessage( '/main/st/config/name' ),
+		]
+		const mMsgs = [
+			new OSCMessage( '/main/m/mix/on' ),
+			new OSCMessage( '/main/m/config/name' ),
+		]
 
-	// 	const stBundle   = oscLib.newBundle( stMsgs, false )
-	// 	const mBundle    = oscLib.newBundle( mMsgs, false )
-	// 	const fullBundle = oscLib.newBundle( [stBundle, mBundle], false )
+		const stBundle   = new OSCBundle( stMsgs, false )
+		const mBundle    = new OSCBundle( mMsgs, false )
+		const fullBundle = new OSCBundle( [stBundle, mBundle], false )
 
-	// 	expect( fullBundle.match( '/main/*/mix/on' ) ).toHaveLength( 2 )
-	// 	expect( fullBundle.match( '/main/*/config/name' ) ).toHaveLength( 2 )
-	// 	expect( fullBundle.match( '/main/*/mix/fader' ) ).toHaveLength( 1 )
-	// } )
+		expect( fullBundle.match( '/main/*/mix/on' ) ).toHaveLength( 2 )
+		expect( fullBundle.match( '/main/*/config/name' ) ).toHaveLength( 2 )
+		expect( fullBundle.match( '/main/*/mix/fader' ) ).toHaveLength( 1 )
+	} )
 
 	test( 'Non-string match fail', () => {
 		const msg = new OSCMessage( '/main/m/mix/on' )

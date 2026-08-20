@@ -9,7 +9,7 @@
 /// <reference types="node" />
 /// <reference types="jest" />
 
-import { OSCTypeTrue, OSCTypeFalse, OSCTypeNull, OSCTypeBang, OSCType } from '../src/type'
+import { OSCTypeTrue, OSCTypeFalse, OSCTypeNull, OSCTypeBang, OSCType, OSCTypeArrayOpen, OSCTypeArrayClose } from '../src/type'
 
 describe( 'argument-less types', () => {
 	test( 'true from object', () => {
@@ -109,6 +109,28 @@ describe( 'argument-less types', () => {
 		expect( input.typeChar ).toEqual( 'I' )
 		expect( input.value ).toEqual( null )
 		expect( input.toJSON() ).toEqual( { type : 'bang', value : null } )
+	} )
+
+	test( 'array open from object', () => {
+		const input = OSCType.fromObject( { type : 'arrayOpen', value : null } )
+
+		expect( input ).toBeInstanceOf( OSCTypeArrayOpen )
+		expect( input.bufLen ).toEqual( 0 )
+		expect( input.buffer ).toHaveLength( 0 )
+		expect( input.type ).toEqual( 'arrayOpen' )
+		expect( input.typeChar ).toEqual( '[' )
+		expect( input.value ).toEqual( null )
+	} )
+
+	test( 'array close from object', () => {
+		const input = OSCType.fromObject( { type : 'arrayClose', value : null } )
+
+		expect( input ).toBeInstanceOf( OSCTypeArrayClose )
+		expect( input.bufLen ).toEqual( 0 )
+		expect( input.buffer ).toHaveLength( 0 )
+		expect( input.type ).toEqual( 'arrayClose' )
+		expect( input.typeChar ).toEqual( ']' )
+		expect( input.value ).toEqual( null )
 	} )
 } )
 

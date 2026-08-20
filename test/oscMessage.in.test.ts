@@ -9,8 +9,8 @@
 /// <reference types="node" />
 /// <reference types="jest" />
 
-import { OSCMessage, OSCType }     from '../src/'
-import { OSCDecodeError } from '../src/type'
+import { OSCMessage, OSCType, OSCDecodeError }     from '../src/'
+import * as type from '../src/type'
 
 const NULL = '\u0000'
 
@@ -57,6 +57,23 @@ const knownPackets = [
 	},
 ]
 
+const roundTripItems : [string, type.OSCArgument][] = [
+	['bang', new type.OSCTypeBang()],
+	['bigint', new type.OSCTypeBigInt( BigInt( 40 ) )],
+	['buffer', new type.OSCTypeBlob( Buffer.from( 'hello there' ) )],
+	['char', new type.OSCTypeChar( 'A' )],
+	['color', new type.OSCTypeColor( [30, 40, 50, 255] )],
+	['double', new type.OSCTypeDouble( 365.25 )],
+	['false', new type.OSCTypeFalse()],
+	['float', new type.OSCTypeFloat( 365.25 )],
+	['integer', new type.OSCTypeInteger( 32 )],
+	['midi', new type.OSCTypeMidi( [1, 180, 60, 60] )],
+	['null', new type.OSCTypeNull()],
+	['string', new type.OSCTypeString( 'hello' )],
+	['symbol', new type.OSCTypeSymbol( 'there' )],
+	['true', new type.OSCTypeTrue()],
+]
+
 describe( 'non-buffer fails', () => {
 	test( 'fromBuffer, non-buffer', () => {
 		// @ts-expect-error testing failure.
@@ -66,6 +83,20 @@ describe( 'non-buffer fails', () => {
 		expect( () => OSCMessage
 			.fromBuffer( Buffer.alloc( 0 ) )
 		).toThrow( OSCDecodeError )
+	} )
+} )
+
+describe( 'roundtrip', () => {
+	test.each( roundTripItems )( 'roundtrip type $a', ( a, b ) => {
+		const input = new OSCMessage(
+			'/testPacket',
+			[b]
+		)
+		const buffer = input.buffer
+		const output = OSCMessage.fromBuffer( buffer )
+		expect( output.address ).toEqual( '/testPacket' )
+		expect( output.argList[0] ).toEqual( b )
+		expect( output.buffer ).toEqual( buffer ) // round trip, yeah?
 	} )
 } )
 
@@ -84,6 +115,12 @@ test( 'pass on no arguments', () => {
 	expect( OSCMessage.fromBuffer( input ).address ).toEqual( '/hello' )
 } )
 
+test( 'pass on short packet', () => {
+	const input = Buffer.from( `/hello${NULL}` )
+	
+	expect( OSCMessage.fromBuffer( input ).address ).toEqual( '/hello' )
+} )
+
 test( 'pass on no arguments with comma', () => {
 	const input = Buffer.from( `/hello${NULL}${NULL},${NULL}${NULL}${NULL}` )
 	expect( OSCMessage.fromBuffer( input ).address ).toEqual( '/hello' )
@@ -92,6 +129,24 @@ test( 'pass on no arguments with comma', () => {
 test( 'fail on mismatched array read (unclosed)', () => {
 	const input = Buffer.from( `/hello${NULL}${NULL},[[I]ss${NULL}${NULL}${NULL}${NULL}${NULL}hi${NULL}${NULL}there${NULL}${NULL}${NULL}` )
 	expect( () => OSCMessage.fromBuffer( input ) ).toThrow( OSCDecodeError )
+} )
+
+test( 'fail on unknown type', () => {
+	const input = Buffer.from( `/hello${NULL}${NULL},x${NULL}${NULL}` )
+	expect( () => OSCMessage.fromBuffer( input ) ).toThrow( 'unsupported' )
+} )
+
+test( 'fail on bundle', () => {
+	const input = Buffer.from( `#bundle${NULL},T${NULL}${NULL}` )
+	expect( () => OSCMessage.fromBuffer( input ) ).toThrow( 'is a bundle' )
+} )
+
+test( 'fail on malformed bundle', () => {
+	const emptyBundle = Buffer.alloc( 16 )
+	emptyBundle.write( '#blundl' ) // cSpell:disable-line
+	emptyBundle.writeUInt32BE( 2222, 8 )
+	emptyBundle.writeUInt32BE( 4444, 12 )
+	expect( () => OSCMessage.fromBuffer( emptyBundle ) ).toThrow( 'invalid characters' )
 } )
 
 test( 'fail on mismatched array read (unopened)', () => {
@@ -123,27 +178,20 @@ test( 'read correct array', () => {
 
 	expect( decoded.address ).toEqual( '/hello' )
 	
-	if ( Array.isArray( decoded.args[0] ) ) {
-		if ( Array.isArray( decoded.args[0][0] ) ) {
-			if ( ! Array.isArray( decoded.args[0][0][0] ) ) {
-				expect( decoded.args[0][0][0].value ).toEqual( null )
-				expect( decoded.args[0][0][0].type ).toEqual( 'bang' )
-			} else {
-				fail( 'wrong nesting' )
-			}
-		} else {
-			fail( 'wrong nesting' )
-		}
-	} else {
-		fail( 'wrong nesting' )
-	}
-	if ( !Array.isArray( decoded.args[1] ) && !Array.isArray( decoded.args[2] ) ) {
-		expect( decoded.args[1].value ).toEqual( 'hi' )
-		expect( decoded.args[2].value ).toEqual( 'there' )
-	} else {
-		fail( 'wrong nesting' )
-	}
-	const expected = '{"address":"/hello","elements":[[[{"type":"bang","value":null}]],{"type":"string","value":"hi"},{"type":"string","value":"there"}],"type":"message"}'
+	expect( decoded.args[0] ).toBeInstanceOf( type.OSCTypeArrayOpen )
+	expect( decoded.args[1] ).toBeInstanceOf( type.OSCTypeArrayOpen )
+	expect( decoded.args[2] ).toBeInstanceOf( type.OSCTypeBang )
+	expect( decoded.args[3] ).toBeInstanceOf( type.OSCTypeArrayClose )
+	expect( decoded.args[4] ).toBeInstanceOf( type.OSCTypeArrayClose )
+	expect( decoded.args[5] ).toBeInstanceOf( type.OSCTypeString )
+	expect( decoded.args[6] ).toBeInstanceOf( type.OSCTypeString )
+	
+	expect( decoded.argList ).toEqual( [
+		OSCType.fromValue( Infinity ),
+		OSCType.fromValue( 'hi' ),
+		OSCType.fromValue( 'there' )
+	] )
+	const expected = '{"address":"/hello","elements":[{"type":"arrayOpen","value":null},{"type":"arrayOpen","value":null},{"type":"bang","value":null},{"type":"arrayClose","value":null},{"type":"arrayClose","value":null},{"type":"string","value":"hi"},{"type":"string","value":"there"}],"type":"message"}'
 	expect( JSON.stringify( decoded ) ).toEqual( expected )
 	expect( decoded.buffer ).toEqual( input )
 } )

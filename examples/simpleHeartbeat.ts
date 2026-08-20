@@ -15,21 +15,25 @@ const heartBeatFrequency = 1000 // in ms
  * Change for installed package
  * const osc              = require('simple-osc-lib')
  */
-const osc   = require('../index.js')
-const dgram = require('node:dgram')
+import { OSCMessage } from '../src'
+import dgram from 'node:dgram'
 
-const oscSocket = dgram.createSocket({type : 'udp4', reuseAddr : true})
-const oscLib    = new osc.simpleOscLib()
+const oscSocket = dgram.createSocket( { type : 'udp4', reuseAddr : true } )
 
-const heartBeatMessage = {
-	address : '/hello',
-	args    : [
-		{ type : 'string', value : 'world' },
-	],
-}
-const heartBeatBuffer = oscLib.buildMessage(heartBeatMessage)
+const heartBeat = new OSCMessage(
+	'/hello',
+	[
+		{ type : 'string', value : 'world' }
+	]
+)
 
-setInterval(() => {
-	oscSocket.send(heartBeatBuffer, 0, heartBeatBuffer.length, oscDevicePort, oscDeviceAddress)
-}, heartBeatFrequency)
+setInterval( () => {
+	oscSocket.send(
+		heartBeat.buffer,
+		0,
+		heartBeat.buffer.length,
+		oscDevicePort,
+		oscDeviceAddress
+	)
+}, heartBeatFrequency )
 

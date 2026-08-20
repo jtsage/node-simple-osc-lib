@@ -178,6 +178,8 @@ test( 'read correct array', () => {
 
 	expect( decoded.address ).toEqual( '/hello' )
 	
+	expect( decoded.isBundle() ).toBeFalsy()
+	expect( decoded.isMessage() ).toBeTruthy()
 	expect( decoded.args[0] ).toBeInstanceOf( type.OSCTypeArrayOpen )
 	expect( decoded.args[1] ).toBeInstanceOf( type.OSCTypeArrayOpen )
 	expect( decoded.args[2] ).toBeInstanceOf( type.OSCTypeBang )

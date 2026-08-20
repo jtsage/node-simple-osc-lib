@@ -59,6 +59,8 @@ export default defineConfig( [
 				'IfStatementConsequent'   : 'always',
 				'SwitchCase'              : { 'multiline' : true },
 				'SwitchStatement'         : 'always',
+				'TryStatementBlock'       : 'always',
+				'TryStatementHandler'     : 'always',
 				'WhileStatement'          : { 'multiline' : true, 'minElements' : 3, 'consistent' : true },
 			}],
 

@@ -108,6 +108,8 @@ describe( 'bundle testing', () => {
 				( new Date() ).getTime() / 1000
 			)
 
+			expect( oscBundle.isMessage() ).toBeFalsy()
+			expect( oscBundle.isBundle() ).toBeTruthy()
 			expect( oscBundle.timeTag.value ).toHaveLength( 2 )
 			expect( oscBundle.buffer ).toHaveLength( 44 )
 			expect( oscBundle.timeTag.sinceNow() ).toBeLessThan( 100 )

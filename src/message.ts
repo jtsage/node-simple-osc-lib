@@ -8,6 +8,7 @@
  *     |_|   Simple OSC Communication Library
  *           OSC Message Type */
 
+import { OSCBundle } from '.'
 import * as type from './type'
 
 export type OSCMessageArg = type.OSCArgument | type.OSCArgObject
@@ -28,6 +29,9 @@ export class OSCMessage {
 			this.args = args
 		}
 	}
+
+	isMessage() : this is OSCMessage { return true }
+	isBundle()  : this is OSCBundle { return false }
 
 	// MARK: match
 	/**

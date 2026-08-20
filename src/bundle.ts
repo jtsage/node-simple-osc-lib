@@ -41,6 +41,9 @@ export class OSCBundle {
 			this.messages = messages
 		}
 	}
+	
+	isMessage() : this is OSCMessage { return false }
+	isBundle()  : this is OSCBundle { return true }
 
 	/** TimeTag */
 	get timeTag() : type.OSCTimeTag { return this.#timeTag }

@@ -125,11 +125,18 @@ describe( 'type :: STRING', () => {
 			expect( output.value ).toEqual( 'hello' )
 		} )
 		test( 'unicode string', () => {
-			// Yes, it's a 6 byte char. Length of 12, cause we can't end on a non-null
-			const input  = stringBuffer( 12, 'he❤️' )
+			// Yes, it's a 4 byte char. Length of 8,
+			const input  = stringBuffer( 8, 'he🧡' )
 			const output = OSCTypeString.fromBuffer( input )
-			expect( output.value ).toEqual( 'he❤️' )
-			expect( output.debug ).toEqual( 'he¿¿¦¿¿¿¿¦••••' )
+			expect( output.value ).toEqual( 'he🧡' )
+			expect( output.debug ).toEqual( 'he¿¿¦¿¿••' )
+		} )
+		test( 'unicode string', () => {
+			// Yes, it's a 13 byte char. Length of 20 to accommodate.  unicode be crazy
+			const input  = stringBuffer( 20, 'heh❤️‍🩹' )
+			const output = OSCTypeString.fromBuffer( input )
+			expect( output.value ).toEqual( 'heh❤️‍🩹' )
+			expect( output.debug ).toEqual( 'heh¿¦¿¿¿¿¦¿¿¿¿¦¿¿¿¿¦••••' )
 		} )
 		test( 'non-buffer', () => {
 			const input  = 'hello'
@@ -142,6 +149,7 @@ describe( 'type :: STRING', () => {
 			const input  = stringBuffer( 4, '' )
 			const output = OSCTypeString.fromBuffer( input )
 			expect( output.value ).toEqual( '' )
+			expect( output.debug ).toEqual( '••••' )
 		} )
 	} )
 } )

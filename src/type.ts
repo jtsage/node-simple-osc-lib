@@ -3,12 +3,16 @@
 const TWO_POW_32 = 4294967296
 const UNIX_EPOCH = 2208988800
 
+/** Result of OSC Address match */
+export type OSCMatchResult = {
+	address : string,
+	matches : string[]
+} | null
+
 /** OSC Color - 4 element numeric array (0-255) (4-byte) */
 export type OSCColorArray   = [ number, number, number, number ]
-
 /** OSC Midi - 4 Byte */
 export type OSCMidiArray    = [ number, number, number, number ]
-
 /** OSC Time Tag - 8 byte. */
 export type OSCTimeTagArray = [ number, number ]
 /** Time Tag Delta type - e.g. '+50' for 50ms in the future */
@@ -16,11 +20,27 @@ export type OSCTimeTagDelta = `+${number}`
 /** List of types castable to OSCTimeTag by OSCTimeTag.fromValue */
 export type OSCTimeTagCastable = OSCTimeTagArray | OSCTimeTagDelta | number | Date | boolean | null | undefined
 
+export type OSCArgument =
+	| OSCTypeBang
+	| OSCTypeBigInt
+	| OSCTypeBlob
+	| OSCTypeChar
+	| OSCTypeColor
+	| OSCTypeDouble
+	| OSCTypeFalse
+	| OSCTypeFloat
+	| OSCTypeInteger
+	| OSCTypeMidi
+	| OSCTypeNull
+	| OSCTypeString
+	| OSCTypeSymbol
+	| OSCTypeTrue
 
+export type OSCArguments = OSCArgument | OSCArguments[]
 
 /** Supported OSC arguments */
 export type OSCArgObject =
-	| { type : 'array';    value : OSCTypeInterface[] }
+	// | { type : 'array';    value : OSCTypeInterface[] }
 	| { type : 'bang';     value : null }
 	| { type : 'bigint';   value : bigint }
 	| { type : 'blob';     value : Buffer }
@@ -36,7 +56,7 @@ export type OSCArgObject =
 	| { type : 'symbol';   value : string }
 	| { type : 'true';     value : null }
 
-
+/** OSCType[Type] Interface */
 interface OSCTypeInterface {
 	buffer   : Buffer<ArrayBufferLike>
 	bufLen   : number
@@ -47,14 +67,20 @@ interface OSCTypeInterface {
 	toJSON   : unknown
 }
 
-
-
 // MARK: OSCArg (parent class)
-export class OSCArg {
+export class OSCArg implements OSCTypeInterface {
 	/* istanbul ignore next */
-	get type() : unknown { return null }
+	get type() { return 'unknown' }
 	/* istanbul ignore next */
 	get value() : unknown { return null }
+	/* istanbul ignore next */
+	get debug() { return ''}
+	/* istanbul ignore next */
+	get typeChar() { return 'x' }
+	/* istanbul ignore next */
+	get buffer() { return Buffer.alloc( 0 ) }
+	/* istanbul ignore next */
+	get bufLen() { return 0 }
 
 	
 	constructor() {
@@ -532,9 +558,13 @@ export class OSCTypeString extends OSCArg implements OSCTypeInterface {
 		}
 
 		const lastIdx = parts.length - 1
-		parts[lastIdx] = ( parts[lastIdx] || '' ).padEnd( 4, '\u2022' )
-		if ( parts[parts.length - 1]?.[3] !== '\u2022' ) {
+		if ( parts.length === 0 ) {
 			parts.push( '\u2022\u2022\u2022\u2022' )
+		} else {
+			parts[lastIdx] = parts[lastIdx]!.padEnd( 4, '\u2022' )
+			if ( parts[parts.length - 1]?.[3] !== '\u2022' ) {
+				parts.push( '\u2022\u2022\u2022\u2022' )
+			}
 		}
 
 		return parts.join( '\xA6' )
@@ -693,7 +723,7 @@ export class OSCAddress implements OSCTypeInterface {
 			throw new OSCTypeError( 'expected string' )
 		}
 		if ( ! ( /^[\w!"$%&'()+-./:;<=>@^`|~]*$/ ).test( v ) ) {
-			throw new OSCTypeError( 'address has invalid characters' )
+			throw new OSCTypeError( `Address has invalid characters "${v}"` )
 		}
 		this.#value = v
 	}
@@ -705,7 +735,7 @@ export class OSCAddress implements OSCTypeInterface {
 		}
 
 		const lastIdx = parts.length - 1
-		parts[lastIdx] = ( parts[lastIdx] || '' ).padEnd( 4, '\u2022' )
+		parts[lastIdx] = parts[lastIdx]!.padEnd( 4, '\u2022' )
 		if ( parts[parts.length - 1]?.[3] !== '\u2022' ) {
 			parts.push( '\u2022\u2022\u2022\u2022' )
 		}
@@ -736,6 +766,35 @@ export class OSCAddress implements OSCTypeInterface {
 
 		return new OSCAddress( v.replace( /\0+$/, '' ) )
 	}
+
+	match( pattern : string | RegExp ) : OSCMatchResult {
+		let regExpCompiled : RegExp
+		
+		if ( pattern instanceof RegExp ) {
+			regExpCompiled = pattern
+		} else if ( typeof pattern === 'string' && pattern.length !== 0 ) {
+			const regExpPattern = pattern
+				.replaceAll( '.', '\\.' )
+				.replaceAll( /{(.+?)}/g, ( _, grp ) => `(${grp.replaceAll( ',', '|' )})` )
+				.replaceAll( /\[(.+?)]/g, '([$1])' )
+				.replaceAll( '?', '([^/])' )
+				.replaceAll( '*', '([^/]*)' )
+				.replaceAll( '\\', '\\\\' )
+
+			regExpCompiled = new RegExp( `^${regExpPattern}$` )
+		} else {
+			throw new OSCTypeError( 'must supply a pattern' )
+		}
+
+		const matches = regExpCompiled.exec( this.#value )
+
+		return ( matches === null ) ?
+			null :
+			{
+				address : matches[0],
+				matches : matches.slice( 1 ),
+			}
+	}
 }
 
 // MARK: Error Classes
@@ -748,48 +807,3 @@ export class OSCDecodeError extends TypeError {
 export class OSCTypeError extends TypeError {
 	constructor( message : string, opts ? : ErrorOptions ) { super( message, opts ) }
 }
-
-
-
-
-
-// /** Array - 'array', '[]', 0-byte */
-// export class OSCTypeArray extends OSCArg implements OSCTypeInterface {
-// 	#value : OSCTypeInterface[] = []
-
-// 	constructor( v : OSCTypeInterface[] ) { super(); this.value = v }
-
-// 	push( v : OSCTypeInterface | OSCTypeInterface[] ) {
-// 		if ( Array.isArray( v ) ) {
-// 			for ( const item of v ) { this.push( item ) }
-// 		} else if ( v instanceof OSCArg ) {
-// 			this.#value.push( v )
-// 		} else {
-// 			throw new OSCTypeError( 'arrays can only contain OSCType* items' )
-// 		}
-// 	}
-
-// 	set value( v : OSCTypeInterface[] ) {
-// 		this.#value.length = 0
-// 		for ( const item of v ) {
-// 			if ( item instanceof OSCArg ) {
-// 				this.#value.push( item )
-// 			} else {
-// 				throw new OSCTypeError( 'arrays can only contain OSCType* items' )
-// 			}
-// 		}
-// 	}
-
-// 	get bufLen()   { return 8 }
-// 	get value()    { return this.#value }
-// 	get type()     { return 'bigint' }
-// 	get typeChar() {
-// 		const chars = this.#value.map( ( item ) => item.typeChar )
-// 		return `[${chars.join( '' )}]`
-// 	}
-
-// 	get buffer() {
-// 		const buffers = this.#value.map( ( item ) => item.buffer )
-// 		return Buffer.concat( buffers )
-// 	}
-// }

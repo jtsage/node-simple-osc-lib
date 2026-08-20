@@ -9,9 +9,14 @@
 /// <reference types="node" />
 /// <reference types="jest" />
 
-import { OSCType, OSCTypeError } from '../src/type'
+import { OSCArg, OSCType, OSCTypeError } from '../src/type'
 
 describe( 'class checks', () => {
+	test( 'init parent', () => {
+		expect( () => new OSCArg() )
+			.toThrow( 'instantiate OSCArg directly' )
+	} )
+
 	test( 'init parent', () => {
 		expect( () => new OSCType() )
 			.toThrow( 'use fromObject or fromValue method' )

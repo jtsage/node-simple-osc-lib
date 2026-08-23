@@ -78,6 +78,7 @@ describe( 'type :: STRING', () => {
 			expect( output.bufLen ).toEqual( 4 )
 			expect( output.type ).toEqual( 'symbol' )
 			expect( output.debug ).toEqual( 'hell¦••••' )
+			expect( output.toJSON() ).toEqual( { type : 'symbol', value : 'hell' } )
 			expect( output.typeChar ).toEqual( 'S' )
 			expect( output.buffer ).toEqual( expected )
 			expect( output ).toBeInstanceOf( OSCTypeString )

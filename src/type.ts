@@ -15,6 +15,19 @@ export type OSCMatchResult = {
 	args    : OSCArgument[]
 } | null
 
+
+export type OSCMessageObject = {
+	address  : string,
+	elements : OSCArgObject[],
+	type     : 'message',
+}
+
+export type OSCBundleObject = {
+	messages : Array<OSCMessageObject | OSCBundleObject>,
+	timeTag  : OSCTimeTagArray,
+	type     : 'bundle',
+}
+
 /** OSC Color - 4 element numeric array (0-255) (4-byte) */
 export type OSCColorArray   = [ number, number, number, number ]
 /** OSC Midi - 4 Byte */
@@ -97,12 +110,8 @@ export class OSCArg implements OSCTypeInterface {
 		}
 	}
 
-	toJSON() {
-		return {
-			type  : this.type,
-			value : this.value,
-		}
-	}
+	/* istanbul ignore next */
+	toJSON() : OSCArgObject { return { type  : 'null', value : null } }
 }
 
 // MARK: OSCType
@@ -194,6 +203,7 @@ export class OSCTypeArrayOpen extends OSCArg implements OSCTypeInterface {
 	get type()     { return 'arrayOpen' }
 	get typeChar() { return '[' }
 	get buffer()   { return Buffer.alloc( 0 ) }
+	toJSON() : OSCArgObject { return { type  : 'arrayOpen', value : null } }
 }
 
 // MARK: OSCTypeArrayClose
@@ -205,6 +215,7 @@ export class OSCTypeArrayClose extends OSCArg implements OSCTypeInterface {
 	get type()     { return 'arrayClose' }
 	get typeChar() { return ']' }
 	get buffer()   { return Buffer.alloc( 0 ) }
+	toJSON() : OSCArgObject { return { type  : 'arrayClose', value : null } }
 }
 
 // MARK: OSCTypeBang
@@ -216,6 +227,7 @@ export class OSCTypeBang extends OSCArg implements OSCTypeInterface {
 	get typeChar() { return 'I' }
 	get buffer()   { return Buffer.alloc( 0 ) }
 	get debug()    { return '' }
+	toJSON() : OSCArgObject { return { type  : 'bang', value : null } }
 }
 
 // MARK: OSCTypeBigInt
@@ -237,6 +249,7 @@ export class OSCTypeBigInt extends OSCArg implements OSCTypeInterface {
 	get value()    { return this.#value }
 	get type()     { return 'bigint' }
 	get typeChar() { return 'h' }
+	toJSON() : OSCArgObject { return { type  : 'bigint', value : this.#value } }
 
 	get buffer() {
 		const buffer_out = Buffer.alloc( 8 )
@@ -272,6 +285,7 @@ export class OSCTypeBlob extends OSCArg implements OSCTypeInterface {
 	get debug()    { return `-b-${this.bufLen}-`}
 	get type()     { return 'blob' }
 	get typeChar() { return 'b' }
+	toJSON() : OSCArgObject { return { type  : 'blob', value : this.#value } }
 
 	get buffer() { // Includes required size tag
 		const inputSize    = this.#value.length
@@ -304,6 +318,7 @@ export class OSCTypeChar extends OSCArg implements OSCTypeInterface {
 	get debug()    { return `c::${this.#value}`}
 	get type()     { return 'char' }
 	get typeChar() { return 'c' }
+	toJSON() : OSCArgObject { return { type  : 'char', value : this.#value } }
 
 	get buffer() {
 		const buffer_out = Buffer.alloc( 4 )
@@ -346,6 +361,7 @@ export class OSCTypeColor extends OSCArg implements OSCTypeInterface {
 	get value()    { return this.#value }
 	get type()     { return 'color' }
 	get typeChar() { return 'r' }
+	toJSON() : OSCArgObject { return { type  : 'color', value : this.#value } }
 
 	get buffer() {
 		const buffer_out = Buffer.alloc( 4 )
@@ -389,6 +405,7 @@ export class OSCTypeDouble extends OSCArg implements OSCTypeInterface {
 	get value()    { return this.#value }
 	get type()     { return 'double' }
 	get typeChar() { return 'd' }
+	toJSON() : OSCArgObject { return { type  : 'double', value : this.#value } }
 
 	get buffer() {
 		const buffer_out = Buffer.alloc( 8 )
@@ -414,6 +431,7 @@ export class OSCTypeFalse extends OSCArg implements OSCTypeInterface {
 	get type()     { return 'false' }
 	get typeChar() { return 'F' }
 	get buffer()   { return Buffer.alloc( 0 ) }
+	toJSON() : OSCArgObject { return { type  : 'false', value : null } }
 }
 
 // MARK: OSCTypeFloat
@@ -435,6 +453,7 @@ export class OSCTypeFloat extends OSCArg implements OSCTypeInterface {
 	get value()    { return this.#value }
 	get type()     { return 'float' }
 	get typeChar() { return 'f' }
+	toJSON() : OSCArgObject { return { type  : 'float', value : this.#value } }
 
 	get buffer() {
 		const buffer_out = Buffer.alloc( 4 )
@@ -470,6 +489,7 @@ export class OSCTypeInteger extends OSCArg implements OSCTypeInterface {
 	get value()    { return this.#value }
 	get type()     { return 'integer' }
 	get typeChar() { return 'i' }
+	toJSON() : OSCArgObject { return { type  : 'integer', value : this.#value } }
 
 	get buffer() {
 		const buffer_out = Buffer.alloc( 4 )
@@ -525,6 +545,7 @@ export class OSCTypeMidi extends OSCArg implements OSCTypeInterface {
 	get value()    { return this.#value }
 	get type()     { return 'midi' }
 	get typeChar() { return 'm' }
+	toJSON() : OSCArgObject { return { type  : 'midi', value : this.#value } }
 
 	get buffer() {
 		const buffer_out = Buffer.alloc( 4 )
@@ -558,6 +579,7 @@ export class OSCTypeNull extends OSCArg implements OSCTypeInterface {
 	get type()     { return 'null' }
 	get typeChar() { return 'N' }
 	get buffer()   { return Buffer.alloc( 0 ) }
+	toJSON() : OSCArgObject { return { type  : 'null', value : null } }
 }
 
 // MARK: OSCTypeString
@@ -610,6 +632,7 @@ export class OSCTypeString extends OSCArg implements OSCTypeInterface {
 	get value()    { return this.#value }
 	get type()     { return 'string' }
 	get typeChar() { return 's' }
+	toJSON() : OSCArgObject { return { type  : 'string', value : this.#value } }
 
 	get buffer() {
 		const strByteLength = this.bufLen
@@ -633,6 +656,7 @@ export class OSCTypeString extends OSCArg implements OSCTypeInterface {
 export class OSCTypeSymbol extends OSCTypeString implements OSCTypeInterface {
 	get type()     { return 'symbol' }
 	get typeChar() { return 'S' }
+	toJSON() : OSCArgObject { return { type  : 'symbol', value : this.value } }
 
 	static fromBuffer( b : Buffer<ArrayBufferLike> ) {
 		if ( !Buffer.isBuffer( b ) ) {
@@ -652,6 +676,7 @@ export class OSCTypeTrue extends OSCArg implements OSCTypeInterface {
 	get type()     { return 'true' }
 	get typeChar() { return 'T' }
 	get buffer()   { return Buffer.alloc( 0 ) }
+	toJSON() : OSCArgObject { return { type  : 'true', value : null } }
 }
 
 // MARK: OSCTimeTag

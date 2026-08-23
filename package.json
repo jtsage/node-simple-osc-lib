@@ -1,8 +1,16 @@
 {
   "name": "simple-osc-lib",
-  "version": "1.9.12",
+  "version": "1.9.13",
   "description": "Simple to use modern Open Sound Control implementation",
   "main": "dist/index.js",
+  "exports" : {
+    "." : "./dist/index.js",
+    "./type" : "./dist/type.js",
+    "./bundle" : "./dist/bundle.js",
+    "./message" : "./dist/message.js",
+    "./x32" : "./dist/x32/index.js",
+    "./x32/types" : "./dist/x32/types.js"
+  },
   "scripts": {
     "clean": "node -e \"fs.rmSync('dist', { recursive: true, force: true })\"",
     "test:coverage": "npx jest --coverage",

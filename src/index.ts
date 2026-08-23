@@ -10,10 +10,10 @@
 export { OSCType }    from './type'
 import { OSCMessage, OSCMessageArg } from './message'
 import { OSCBundle, OSCBundleMessage }  from './bundle'
-import { OSCDecodeError, OSCTimeTagCastable, OSCTypeError } from './type'
+import { OSCDecodeError, OSCTimeTagCastable, OSCTypeError, OSCArgObject } from './type'
 
 export { OSCBundle, OSCMessage, OSCTypeError, OSCDecodeError }
-export type { OSCBundleMessage, OSCMessageArg, OSCTimeTagCastable }
+export type { OSCBundleMessage, OSCMessageArg, OSCTimeTagCastable, OSCArgObject }
 
 export class OSCPacket {
 	constructor() {

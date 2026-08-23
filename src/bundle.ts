@@ -57,10 +57,12 @@ export class OSCBundle {
 	}
 
 	/** For JSON.stringify() */
-	toJSON() {
+	toJSON() : type.OSCBundleObject {
 		return {
-			messages : this.#messages,
-			timeTag  : this.#timeTag,
+			messages : this.#messages
+				.filter( ( item ) => item instanceof OSCBundle || item instanceof OSCMessage )
+				.map( ( item ) => item.toJSON() ),
+			timeTag  : this.#timeTag.toJSON(),
 			type     : 'bundle',
 		}
 	}

@@ -50,10 +50,10 @@ export class OSCMessage {
 
 	// MARK: toJSON
 	/** For JSON.stringify() */
-	toJSON() {
+	toJSON() : type.OSCMessageObject {
 		return {
 			address  : this.address,
-			elements : this.args,
+			elements : this.#args.map( ( item ) => item.toJSON() ),
 			type     : 'message',
 		}
 	}

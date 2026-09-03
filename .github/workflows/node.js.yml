@@ -1,27 +1,24 @@
 name: CI
 on: [push]
-
+name: Node.js CI
+on:
+  push:
 jobs:
   build:
-    name: Test
-    runs-on: ubuntu-latest
+    name: Build Project
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
 
-      - name: Set Node.js 16.x
-        uses: actions/setup-node@v3
-        with:
-          node-version: 16.x
+      - name: Setup Yarn
+        uses: threeal/setup-yarn-action@v2.0.0
 
-      - name: Run install
-        uses: borales/actions-yarn@v4
-        with:
-          cmd: install # will run `yarn install` command
-      - name: Build production bundle
-        uses: borales/actions-yarn@v4
-        with:
-          cmd: build # will run `yarn build:prod` command
-      - name: Test the app
-        uses: borales/actions-yarn@v4
-        with:
-          cmd: test # will run `yarn test` command
+      - name: Install Deps
+        run: yarn install
+      
+      - name: Build
+        run: yarn build
+
+      - name: Test
+        run: yarn test

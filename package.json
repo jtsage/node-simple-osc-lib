@@ -17,7 +17,7 @@
     "test": "npx jest",
     "docs": "npx typedoc",
     "build": "npx tsc",
-    "prepare": "npm run build"
+    "prepack": "npm run build"
   },
   "keywords": [
     "osc"

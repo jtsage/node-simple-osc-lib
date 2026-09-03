@@ -41,7 +41,7 @@ const buffer = new OSCMessage(
         { type : 'string', value : 'hi' },
         OSCType.fromValue( 'there' ),
     ],
-)
+).buffer
 ```
 
 ### Build an OSC Bundle Buffer for sending
@@ -50,14 +50,14 @@ const buffer = new OSCMessage(
 const oscMessage1 = new OSCMessage( '/hello' )
 const oscMessage2 = new OSCMessage( '/goodbye' )
 
-// Generate a timetag half a second into the future
-const timeTag = oscRegular.getTimeTagBufferFromDelta(0.5)
-
+// With a timetag 50ms into the future
 const bundle = new OSCBundle(
-    [ oscMessage1, oscMessage2],
+    [oscMessage1, oscMessage2],
     '+50'
-)
+).buffer
 ```
+
+Time tag can be a date, a number of seconds since epoch, a time tag array, a positive number of milliseconds in the future (`+###`), or the special value false/null (the date right now), or the special value true (immediate processing [0,1])
 
 ### Decode an OSC Packet from receiving
 
@@ -97,5 +97,48 @@ if ( oscBundle.timeTag.sinceNow() < 100 ) {
     // Negative values are "## milliseconds in the future"
 }
 ```
+
+## Changes since 1.x.x
+
+```javascript
+/// Removed the meta object
+const oscRegular = new osc.simpleOscLib( /* options */)
+
+/** Message Building */
+/// OLD WAY
+const buffer = oscRegular.buildMessage({
+    address : '/hello',
+    args    : [
+        { type : 'string', value : 'hi' },
+        { type : 'string', value : 'there' },
+    ],
+})
+
+/// NEW WAY
+const buffer = new OSCMessage(
+    '/hello',
+    [
+        { type : 'string', value : 'hi' },
+        OSCType.fromValue( 'there' ),
+    ],
+).buffer
+
+/** Bundle Sending */
+
+/// OLD WAY
+const buffer = oscRegular.buildBundle({
+    timetag : oscRegular.getTimeTagBufferFromDelta(0.5),
+    elements : [oscMessage1, oscMessage2],
+})
+
+/// NEW WAY
+const bundle = new OSCBundle(
+    [oscMessage1, oscMessage2],
+    '+500'
+).buffer
+
+```
+
+Note that the type of return has changed on messages, bundles, and arguments.  Care has been taken to ensure that arguments still have the same `type` and `value` property they did in early versions.
 
 &copy; 2026 J.T.Sage - ISC License

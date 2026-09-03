@@ -4,11 +4,13 @@
 		"Barbossa",
 		"Behringer",
 		"concat",
+		"fxrtn",
 		"prefs",
 		"prepos",
 		"showfile",
 		"SMAART",
 		"timetag",
 		"timetags"
-	]
+	],
+	"findUnusedExports.detectCircularImports": true
 }

@@ -3,3 +3,6 @@ node_modules/
 coverage/*
 !coverage/coverage-summary.json
 build/osc-coverage.hbs
+dist/*
+/dist
+/docs

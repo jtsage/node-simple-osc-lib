@@ -8,6 +8,8 @@ Here we implement the OSC 1.1 specification.  OSC is a transport-independent pro
 
 This package was heavily influenced by the [osc-min](https://github.com/russellmcc/node-osc-min) API
 
+**Version 2.0.0 is not API compatible with 1.x.x - see below for what changes need made**
+
 ## Input types
 
 + `b` :: `blob` - node.js Buffer value (Buffer padded to 32 bit block with nulls)

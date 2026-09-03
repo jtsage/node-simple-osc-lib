@@ -9,6 +9,7 @@
 /// <reference types="node" />
 /// <reference types="jest" />
 
+import { OSCMessage } from '../src'
 import { OSCTypeString, OSCTypeSymbol, OSCTypeError, OSCDecodeError, OSCType } from '../src/type'
 
 const stringBuffer = ( size : number, content : string ) => {
@@ -111,6 +112,13 @@ describe( 'type :: STRING', () => {
 
 		describe( 'bad symbol(undef) symbol', () => {
 			expect( () => OSCType.fromValue( Symbol() ) )
+				.toThrow( OSCTypeError )
+		} )
+
+		describe( 'bad symbol(undef) symbol (chain build)', () => {
+			const message = new OSCMessage( '/hello' )
+
+			expect( () => message.S( Symbol() ) )
 				.toThrow( OSCTypeError )
 		} )
 	} )

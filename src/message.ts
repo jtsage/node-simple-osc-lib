@@ -306,6 +306,72 @@ export class OSCMessage {
 	blob = this.b
 
 	/**
+	 * Add a bang argument
+	 * @returns class instance, suitable for chaining
+	 */
+	I() { this.#args.push( new type.OSCTypeBang() ); return this }
+
+	/**
+	 * Add a true argument
+	 * @returns class instance, suitable for chaining
+	 */
+	T() { this.#args.push( new type.OSCTypeTrue() ); return this }
+
+	/**
+	 * Add a false argument
+	 * @returns class instance, suitable for chaining
+	 */
+	F() { this.#args.push( new type.OSCTypeFalse() ); return this }
+
+	/**
+	 * Add a null argument
+	 * @returns class instance, suitable for chaining
+	 */
+	N() { this.#args.push( new type.OSCTypeNull() ); return this }
+
+	/**
+	 * Add a bigint argument
+	 * @param v - bigint
+	 * @returns class instance, suitable for chaining
+	 */
+	h( v : bigint ) { this.#args.push( new type.OSCTypeBigInt( v ) ); return this }
+
+	/**
+	 * Add a character argument
+	 * @param v - character (single, ascii only)
+	 * @returns class instance, suitable for chaining
+	 */
+	c( v : string ) { this.#args.push( new type.OSCTypeChar( v ) ); return this }
+
+	/**
+	 * Add a color argument
+	 * @param v - type.OSCColorArray - 4 element numeric array, 0-255 
+	 * @returns class instance, suitable for chaining
+	 */
+	r( v : type.OSCColorArray ) { this.#args.push( new type.OSCTypeColor( v ) ); return this }
+
+	/**
+	 * Add a double argument
+	 * @param v - double-precision floating value
+	 * @returns class instance, suitable for chaining
+	 */
+	d( v : number ) { this.#args.push( new type.OSCTypeDouble( v ) ); return this }
+
+	/**
+	 * Add a midi argument
+	 * @param v - type.OSCMidiArray - 4 element numeric array
+	 * @returns class instance, suitable for chaining
+	 */
+	m( v : type.OSCMidiArray ) { this.#args.push( new type.OSCTypeMidi( v ) ); return this }
+
+	/**
+	 * Add a symbol argument
+	 * @param v - string or symbol
+	 * @returns class instance, suitable for chaining
+	 */
+	S( v : string | symbol ) { this.#args.push( new type.OSCTypeSymbol( v ) ); return this }
+
+	/**
 	 * Add an auto-typed value as an argument
 	 * 
 	 * Types supported:

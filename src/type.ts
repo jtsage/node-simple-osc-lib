@@ -658,6 +658,19 @@ export class OSCTypeSymbol extends OSCTypeString implements OSCTypeInterface {
 	get typeChar() { return 'S' }
 	toJSON() : OSCArgObject { return { type  : 'symbol', value : this.value } }
 
+	constructor( v : string | symbol, ascii : boolean = false ) {
+		if ( typeof v === 'symbol' ) {
+			const desc = v.description
+			if ( typeof desc === 'string' ) {
+				super( desc, ascii )
+			} else {
+				throw new OSCTypeError( 'unable to use this symbol' )
+			}
+		} else {
+			super( v, ascii )
+		}
+	}
+
 	static fromBuffer( b : Buffer<ArrayBufferLike> ) {
 		if ( !Buffer.isBuffer( b ) ) {
 			throw new OSCDecodeError( 'buffer expected' )

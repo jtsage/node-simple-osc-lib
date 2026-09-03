@@ -21,10 +21,22 @@ describe( 'message builder', () => {
 			.any( 'hello' )
 			.string( 'world' )
 			.blob( Buffer.from( 'AaBbCc' ) )
+			.T()
+			.F()
+			.N()
+			.I()
+			.h( BigInt( 23 ) )
+			.c( 'A' )
+			.d( 69.69 )
+			.r( [127, 127, 127, 255] )
+			.m( [0, 130, 0, 127] )
+			.S( Symbol( 23 ) )
+			.S( 'goodbye' )
 
-		const results = Buffer.from( '2f746573740000002c6966737362000000000014428b614868656c6c6f000000776f726c64000000000000064161426243630000', 'hex' )
-		const debug   = '/tes¦t•••¦,ifs¦sb••¦.i4.¦.f4.¦hell¦o•••¦worl¦d•••¦-b-6-' // cSpell:disable-line
+		const results = Buffer.from( '2f746573740000002c696673736254464e49686364726d535300000000000014428b614868656c6c6f000000776f726c6400000000000006416142624363000000000000000000170000004140516c28f5c28f5c7f7f7fff0082007f32330000676f6f6462796500', 'hex' )
+		const debug   = '/tes¦t•••¦,ifs¦sbTF¦NIhc¦drmS¦S•••¦.i4.¦.f4.¦hell¦o•••¦worl¦d•••¦-b-6-¦..h..8..¦c::A¦..d..8..¦.r4.¦.m4.¦23••¦good¦bye•' // cSpell:disable-line
 		
+
 		test( 'buffer identical', () => {
 			expect( testBuilder.buffer )
 				.toEqual( results )

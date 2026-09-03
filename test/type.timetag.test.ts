@@ -66,6 +66,14 @@ describe( 'type :: TIMETAG', () => {
 		} )
 	} )
 
+	test( 'compare immediate', () => {
+		const immediate = OSCTimeTag.fromValue( true )
+
+		expect(
+			immediate.sinceNow()
+		).toEqual( 0 )
+	} )
+
 	test( 'current makeTimeTag()', () => {
 		const nowMS = ( new Date() ).getTime()
 		

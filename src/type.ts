@@ -723,6 +723,9 @@ export class OSCTimeTag implements OSCTypeInterface {
 	}
 
 	sinceNow( now ? : Date ) {
+		if ( this.#value[0] === 0 && this.#value[1] === 1 ) {
+			return 0
+		}
 		const nowTime = ( typeof now === 'undefined' || ! ( now instanceof Date ) ) ?
 			( new Date() ).getTime() :
 			now.getTime()

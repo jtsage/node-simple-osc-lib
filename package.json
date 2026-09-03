@@ -11,6 +11,9 @@
     "./x32" : "./dist/x32/index.js",
     "./x32/types" : "./dist/x32/types.js"
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "clean": "node -e \"fs.rmSync('dist', { recursive: true, force: true })\"",
     "test:coverage": "npx jest --coverage",
